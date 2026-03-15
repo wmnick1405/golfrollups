@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<div id="nav-placeholder"></div>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rollup History</title>
+
+<style>
+body{
+  font-family:Arial;
+  background:#f2f2f2;
+  padding:30px;
+}
+
+.nav{
+  background:#2e7d32;
+  color:white;
+  padding:10px;
+  margin-bottom:20px;
+}
+
+.nav a{
+  color:white;
+  margin-right:15px;
+  text-decoration:none;
+}
+
+.container{
+  max-width:600px;
+  margin:auto;
+  background:white;
+  padding:25px;
+  border-radius:8px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.1);
+}
+
+.rollup{
+  padding:10px;
+  border-bottom:1px solid #ddd;
+}
+
+.rollup a{
+  text-decoration:none;
+  color:#2e7d32;
+  font-weight:bold;
+}
+
+.message{
+  padding:10px;
+  font-style:italic;
+  color:#555;
+}
+</style>
+</head>
+
+<body>
+
+
+<div class="container">
+  <h2>Rollup History</h2>
+  <div id="history"></div>
+</div>
+
+<script>
+async function loadHistory(){
+  const div = document.getElementById("history")
+  div.innerHTML = "<p class='message'>Loading rollups...</p>"
+
+  try{
+    const response = await fetch('/api/rollups')
+    if(!response.ok){
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const rollups = await response.json()
+
+    div.innerHTML = "" // clear loading message
+
+    if(rollups.length === 0){
+      div.innerHTML = "<p class='message'>No rollups found.</p>"
+      return
+    }
+
+    rollups.forEach(r=>{
+      const d = new Date(r.date)
+      const row = document.createElement("div")
+      row.className = "rollup"
+      row.innerHTML = `<a href="/bookingsheet.html?id=${r._id}">${d.toDateString()}</a>`
+      div.appendChild(row)
+    })
+
+  } catch(err){
+    console.error("Failed to load rollup history:", err)
+    div.innerHTML = "<p class='message'>Error loading rollups.</p>"
+  }
+}
+
+// load history when page opens
+loadHistory()
+
+fetch('nav.html')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('nav-placeholder').innerHTML = data;
+            });
+
+</script>
+
+</body>
+</html>

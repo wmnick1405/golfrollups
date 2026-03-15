@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html>
+<div id="nav-placeholder"></div>
+<head>
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Golf Rollup Generator</title>
+
+<style>
+
+body{
+font-family:Arial;
+background:#f2f2f2;
+padding:30px;
+}
+
+.nav{
+background:#2e7d32;
+color:white;
+padding:10px;
+margin-bottom:20px;
+}
+
+.nav a{
+color:white;
+margin-right:15px;
+text-decoration:none;
+}
+
+.container{
+max-width:600px;
+margin:auto;
+background:white;
+padding:25px;
+border-radius:8px;
+box-shadow:0 4px 10px rgba(0,0,0,0.1);
+}
+
+button{
+margin-top:15px;
+padding:10px;
+width:100%;
+background:#2e7d32;
+color:white;
+border:none;
+border-radius:5px;
+font-size:16px;
+}
+
+.group{
+margin-top:20px;
+padding:10px;
+background:#f8f8f8;
+border-radius:5px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div id="nav-placeholder"></div>
+
+    <div class="container">
+        <h2>Generate Golf Rollup</h2>
+        <label>Select Date</label>
+        <input type="date" id="date">
+        <button onclick="generate()">Generate Groups</button>
+        <div id="groups"></div>
+    </div>
+
+<script>
+
+function shuffle(array){
+
+for(let i=array.length-1;i>0;i--){
+
+let j=Math.floor(Math.random()*(i+1))
+
+let temp=array[i]
+array[i]=array[j]
+array[j]=temp
+
+}
+
+return array
+}
+
+
+function buildGroups(players) {
+    let total = players.length;
+    if (total < 3) {
+        alert("Not enough players for a group!");
+        return [];
+    }
+
+    let fours = 0;
+    let threes = 0;
+
+    // This logic ensures only 3s and 4s are used
+    if (total % 4 === 0) {
+        fours = total / 4;
+    } else if (total % 4 === 3) {
+        fours = Math.floor(total / 4);
+        threes = 1;
+    } else if (total % 4 === 2) {
+        fours = Math.floor(total / 4) - 1;
+        threes = 2;
+    } else if (total % 4 === 1) {
+        fours = Math.floor(total / 4) - 2;
+        threes = 3;
+    }
+
+    let groups = [];
+    for (let i = 0; i < fours; i++) groups.push(players.splice(0, 4));
+    for (let i = 0; i < threes; i++) groups.push(players.splice(0, 3));
+    return groups;
+}
+
+function chooseBooker(group){
+
+group.sort((a,b)=>{
+
+if(a.booking_count!==b.booking_count){
+return a.booking_count-b.booking_count
+}
+
+return new Date(a.last_booked)-new Date(b.last_booked)
+
+})
+
+return group
+}
+
+async function generate(){
+
+const date=document.getElementById('date').value
+
+if(!date){
+alert("Please select a date first")
+return
+}
+
+// 1. Check if it exists FIRST before doing any math
+    const checkRes = await fetch(`/api/rollups/find?date=${date}`);
+    if (checkRes.ok) {
+        const existing = await checkRes.json();
+        alert("A rollup already exists for this date.");
+        if (confirm("View existing sheet?")) {
+            window.location.href = "/bookingsheet.html?id=" + existing._id;
+        }
+        return; // STOP HERE
+    }
+
+const response=await fetch(`/api/available?date=${date}`)
+
+if (response.status === 401) {
+        alert("Please log in first");
+        window.location.href = "/";
+        return;
+    }
+
+const players=await response.json()
+
+shuffle(players)
+
+const groups=buildGroups(players)
+
+const div=document.getElementById('groups')
+div.innerHTML=""
+
+let saveGroups=[]
+
+groups.forEach((group,i)=>{
+
+group=chooseBooker(group)
+
+const g=document.createElement('div')
+g.className="group"
+
+let html=`<b>Group ${i+1}</b><br>`
+
+let saveGroup=[]
+
+group.forEach((p,index)=>{
+
+if(index===0){
+
+fetch("/api/booker/"+p._id,{method:"POST"})
+
+html+="<b>"+p.name+" (Booker)</b><br>"
+
+saveGroup.push({
+golfer_id:p._id,
+name:p.name,
+booker:true
+})
+
+}
+else{
+
+html+=p.name+"<br>"
+
+saveGroup.push({
+golfer_id:p._id,
+name:p.name,
+booker:false
+})
+
+}
+
+})
+
+saveGroups.push(saveGroup)
+
+g.innerHTML=html
+div.appendChild(g)
+
+})
+console.log("Saving rollup", saveGroups)
+
+
+const saveResponse = await fetch('/api/rollups',{
+method:'POST',
+headers:{
+'Content-Type':'application/json'
+},
+body:JSON.stringify({
+date:date,
+groups:saveGroups
+})
+})
+
+const result = await saveResponse.json()
+
+if(result.exists){
+
+alert("A rollup already exists for this date")
+
+if(confirm("Would you like to view the existing booking sheet?")){
+window.location.href = "/bookingsheet.html?id=" + result.rollup._id
+}
+
+return
+}
+
+if(result.success){
+
+console.log("Rollup saved successfully")
+
+}
+
+}
+
+fetch('nav.html')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('nav-placeholder').innerHTML = data;
+            });
+</script>
+
+</body>
+
+</html>

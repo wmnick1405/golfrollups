@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+    <div id="nav-placeholder"></div>
+<head>
+<title>Booking Sheet</title>
+<style>
+body { font-family:Arial; padding:30px; }
+.group { margin-top:20px; padding:10px; background:#f8f8f8; border-radius:5px; }
+.group b { color:#2e7d32; }
+</style>
+</head>
+<body>
+
+
+<h2>Booking Sheet</h2>
+<div id="sheet"></div>
+
+
+<script>
+async function loadBookingSheet(){
+    const params = new URLSearchParams(window.location.search)
+    const rollupId = params.get("id")
+    if(!rollupId){
+        document.getElementById("sheet").innerHTML = "<p>No rollup selected</p>"
+        return
+    }
+
+    try {
+        const response = await fetch(`/api/rollups/${rollupId}`)
+        if(!response.ok) throw new Error("Rollup not found")
+        const rollup = await response.json()
+
+        const div = document.getElementById("sheet")
+        div.innerHTML = `<h3>${new Date(rollup.date).toDateString()}</h3>`
+
+        rollup.groups.forEach((group, i)=>{
+            const gdiv = document.createElement("div")
+            gdiv.className = "group"
+
+            let html = `<b>Group ${i+1}</b><br>`
+            group.forEach(p=>{
+                html += p.booker ? `<b>${p.name} (Booker)</b><br>` : `${p.name}<br>`
+            })
+
+            gdiv.innerHTML = html
+            div.appendChild(gdiv)
+        })
+    } catch(err){
+        console.error(err)
+        document.getElementById("sheet").innerHTML = "<p>Error loading rollup</p>"
+    }
+}
+
+loadBookingSheet()
+
+fetch('nav.html')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('nav-placeholder').innerHTML = data;
+            });
+</script>
+
+</body>
+</html>

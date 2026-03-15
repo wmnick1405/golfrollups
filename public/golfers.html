@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<div id="nav-placeholder"></div>
+
+<head>
+<title>Golfers Admin</title>
+
+<style>
+body{font-family:Arial;margin:40px}
+table{border-collapse:collapse;width:100%}
+th,td{border:1px solid #ccc;padding:8px}
+button{padding:5px 10px}
+</style>
+
+</head>
+
+<body>
+
+
+<h2>Golfers</h2>
+<p>You can update golfer information in this page and it will be stored in the database</p>
+<p></p>
+
+<table id="golfersTable">
+<thead>
+<tr>
+<th>Name</th>
+<th>Phone</th>
+<th>Email</th>
+<th>Playing Days</th>
+<th>Actions</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+
+<script>
+
+async function loadGolfers(){
+
+const res = await fetch('/api/golfers')
+const golfers = await res.json()
+
+const tbody = document.querySelector("#golfersTable tbody")
+tbody.innerHTML=""
+
+golfers.forEach(g => {
+
+const row = document.createElement("tr")
+
+row.innerHTML = `
+<td><input value="${g.name}" id="name_${g._id}"></td>
+<td><input value="${g.tel||''}" id="tel_${g._id}"></td>
+<td><input value="${g.email||''}" id="email_${g._id}"></td>
+<td><input value="${(g.play_days||[]).join(',')}" id="days_${g._id}"></td>
+<td>
+<button onclick="saveGolfer('${g._id}')">Save</button>
+<button onclick="deleteGolfer('${g._id}')">Delete</button>
+</td>
+`
+
+tbody.appendChild(row)
+
+})
+
+}
+
+async function saveGolfer(id){
+
+const name=document.getElementById("name_"+id).value
+const phone=document.getElementById("phone_"+id).value
+const email=document.getElementById("email_"+id).value
+const days=document.getElementById("days_"+id).value.split(",")
+
+await fetch("/api/golfers/"+id,{
+method:"PUT",
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({
+name,
+phone,
+email,
+preferred_days:days
+})
+})
+
+alert("Saved")
+
+}
+
+async function deleteGolfer(id){
+
+if(!confirm("Delete this golfer?")) return
+
+await fetch("/api/golfers/"+id,{
+method:"DELETE"
+})
+
+loadGolfers()
+
+}
+
+loadGolfers()
+
+fetch('nav.html')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('nav-placeholder').innerHTML = data;
+            });
+</script>
+
+</body>
+</html>

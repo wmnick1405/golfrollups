@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<!--  -->
+<head>
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Golf Rollup Manager</title>
+
+<style>
+
+body{
+font-family:Arial;
+background:#f2f2f2;
+padding:30px;
+}
+
+.container{
+max-width:700px;
+margin:auto;
+background:white;
+padding:30px;
+border-radius:8px;
+box-shadow:0 4px 10px rgba(0,0,0,0.1);
+text-align:center;
+}
+
+h1{
+margin-bottom:30px;
+}
+
+.navbutton{
+display:block;
+margin:10px 0;
+padding:15px;
+background:#2e7d32;
+color:white;
+text-decoration:none;
+border-radius:6px;
+font-size:18px;
+}
+
+.navbutton:hover{
+background:#1b5e20;
+}
+
+.footer{
+margin-top:30px;
+font-size:12px;
+color:#777;
+}
+
+</style>
+
+</head>
+
+<body>
+
+    <div id="login-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:9999; display:flex; justify-content:center; align-items:center;">
+    <form id="login-form" style="border:1px solid #ccc; padding:20px; border-radius:8px;">
+        <h2>Golf Rollup Login</h2>
+        <input type="text" id="username" placeholder="Username" required style="display:block; margin-bottom:10px;">
+        <input type="password" id="password" placeholder="Password" required style="display:block; margin-bottom:10px;">
+        <button type="submit">Login</button>
+    </form>
+</div>
+
+<div class="container">
+
+<h1>Golf Rollup Manager</h1>
+
+<a class="navbutton" href="/addgolfer.html">
+Add Golfer
+</a>
+
+<a class="navbutton" href="/golfers.html">
+Manage Golfers
+</a>
+
+<a class="navbutton" href="/unavailable.html">
+Record Unavailability
+</a>
+
+<a class="navbutton" href="/indefinite_unavailable_golfers.html">
+Indefinitely Unavailable Golfers
+</a>
+
+<a class="navbutton" href="/golfer-status.html">
+Golfer Availability and Management
+</a>
+
+
+<a class="navbutton" href="/rollup.html">
+Generate Rollup Groups
+</a>
+
+<a class="navbutton" href="/calendar.html">
+Rollup Calendar
+</a>
+
+<a class="navbutton" href="/history.html">
+Rollup History
+</a>
+
+<button onclick="handleLogout()" style="background:#d32f2f; color:white; border:none; padding:8px 15px; border-radius:4px; cursor:pointer;">
+    Logout
+</button>
+
+<div id="admin-panel" style="border-top: 2px solid #eee; margin-top: 20px; padding: 10px;">
+    <h3>Create New User</h3>
+    <input type="text" id="new-user" placeholder="New Username">
+    <input type="password" id="new-pass" placeholder="New Password">
+    <button onclick="createNewUser()">Create User</button>
+</div>
+
+<div class="footer">
+Rollup System
+</div>
+
+</div>
+
+</body>
+
+<script>
+    // 1. Check login status immediately when page loads
+window.onload = async () => {
+    try {
+        const response = await fetch('/api/golfers'); // Attempt to fetch golfers
+        if (response.ok) {
+            // If the server says OK, hide the login screen
+            document.getElementById('login-overlay').style.display = 'flex';
+            // Now run your existing code to load the golfers
+            loadGolfers(); 
+        }
+    } catch (err) {
+        console.log("Not logged in yet");
+    }
+};
+
+// 2. Handle the login form submission
+document.getElementById('login-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+
+    const response = await fetch('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+    });
+
+    if (response.ok) {
+        const overlay = document.getElementById('login-overlay');
+if (overlay) overlay.remove();
+        loadGolfers(); // Your existing function to populate the page
+    } else {
+        alert("Login Failed");
+    }
+};
+
+
+// 3. Handle logout
+async function handleLogout() {
+    try {
+        const response = await fetch('/api/logout', { method: 'POST' });
+        if (response.ok) {
+            // Option A: Just reload the page. 
+            // The 'onload' check will now see you aren't logged in and show the overlay.
+            window.location.reload(); 
+        } else {
+            alert("Logout failed");
+        }
+    } catch (err) {
+        console.error("Logout error:", err);
+    }
+}
+
+// 3. Admin function to create new users
+async function createNewUser() {
+    const username = document.getElementById('new-user').value;
+    const password = document.getElementById('new-pass').value;
+
+    const res = await fetch('/api/admin/create-user', {
+        method: 'POST',
+        headers: { 
+            'Content-Type': 'application/json' // <--- THIS LINE IS KEY
+        },
+        body: JSON.stringify({ username, password })
+    });
+
+    const data = await res.json();
+    alert(data.message || data.error);
+}
+
+</script>
+
+</html>

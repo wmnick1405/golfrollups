@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<div id="nav-placeholder"></div>
+<head>
+    <title>Golfer Availability Lookup</title>
+    <style>
+        body { font-family: Arial; margin: 40px; }
+        .controls, .quick-add { margin-bottom: 20px; padding: 20px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 8px; }
+        .quick-add { background: #eef9f0; border-color: #c3e6cb; }
+        table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+        th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
+        .indefinite-notice { 
+            padding: 20px; background-color: #fff3cd; border: 1px solid #ffeeba; 
+            color: #856404; border-radius: 4px; font-weight: bold; margin-bottom: 10px;
+        }
+        select, input { padding: 8px; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 8px 15px; cursor: pointer; background: #2196F3; color: white; border: none; border-radius: 4px; }
+        button:hover { background: #0b7dda; }
+        .hidden { display: none; }
+        .form-group { margin-bottom: 10px; display: inline-block; }
+    </style>
+</head>
+<body>
+
+    <h2>Golfer Availability & Management</h2>
+    
+    <div class="controls">
+        <label><strong>Select Golfer:</strong> </label>
+        <select id="golferSelect" onchange="fetchGolferStatus()">
+            <option value="">-- Choose a Golfer --</option>
+        </select>
+    </div>
+
+    <div id="quickAddSection" class="quick-add hidden">
+        <h3>Add New Unavailability</h3>
+        <div class="form-group">
+            <label>From:</label>
+            <input type="date" id="newDateFrom">
+        </div>
+        <div class="form-group" id="dateToGroup">
+            <label>To:</label>
+            <input type="date" id="newDateTo">
+        </div>
+        <div class="form-group">
+            <label><input type="checkbox" id="newIndefinite" onchange="toggleDateTo()"> Indefinite</label>
+        </div>
+        <button onclick="saveUnavailability()">Add Record</button>
+    </div>
+
+    <div id="statusResult">
+        <div id="indefiniteNotice" class="indefinite-notice hidden">
+            This golfer is currently marked as Indefinitely Unavailable.
+        </div>
+
+        <div id="tableContainer" class="hidden">
+            <h3>Scheduled Absence Dates</h3>
+            <table id="datesTable">
+                <thead>
+                    <tr>
+                        <th>From</th>
+                        <th>To</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        
+        <div id="noDataMessage" class="hidden">
+            <p>This golfer has no upcoming unavailability recorded.</p>
+        </div>
+    </div>
+
+    <script>
+        async function loadGolfers() {
+            const res = await fetch('/api/golfers');
+            const golfers = await res.json();
+            const select = document.getElementById('golferSelect');
+            golfers.forEach(g => {
+                const opt = document.createElement('option');
+                opt.value = g._id;
+                opt.textContent = g.name;
+                select.appendChild(opt);
+            });
+        }
+
+        function toggleDateTo() {
+            const isIndefinite = document.getElementById('newIndefinite').checked;
+            document.getElementById('dateToGroup').style.opacity = isIndefinite ? "0.3" : "1.0";
+            document.getElementById('newDateTo').disabled = isIndefinite;
+        }
+
+        async function fetchGolferStatus() {
+            const golferId = document.getElementById('golferSelect').value;
+            const quickAddSection = document.getElementById('quickAddSection');
+            const indefiniteNotice = document.getElementById('indefiniteNotice');
+            const tableContainer = document.getElementById('tableContainer');
+            const noDataMessage = document.getElementById('noDataMessage');
+            const tbody = document.querySelector("#datesTable tbody");
+
+            // Reset UI
+            indefiniteNotice.classList.add('hidden');
+            tableContainer.classList.add('hidden');
+            noDataMessage.classList.add('hidden');
+            tbody.innerHTML = "";
+
+            if (!golferId) {
+                quickAddSection.classList.add('hidden');
+                return;
+            }
+
+            quickAddSection.classList.remove('hidden');
+
+            const res = await fetch(`/api/unavailable/golfer/${golferId}`);
+            const records = await res.json();
+
+            if (records.length === 0) {
+                noDataMessage.classList.remove('hidden');
+                return;
+            }
+
+            const isIndefinite = records.some(r => r.indefinite === true);
+
+            if (isIndefinite) {
+                indefiniteNotice.classList.remove('hidden');
+                // Even if indefinite, we show the record in the table so it can be deleted
+            } 
+            
+            tableContainer.classList.remove('hidden');
+            records.forEach(rec => {
+                const row = document.createElement("tr");
+                const dateToText = rec.indefinite ? "<em>Indefinite</em>" : new Date(rec.date_to).toLocaleDateString();
+                row.innerHTML = `
+                    <td>${new Date(rec.date_from).toLocaleDateString()}</td>
+                    <td>${dateToText}</td>
+                    <td><button style="background:#ff4444" onclick="deleteRecord('${rec._id}')">Delete</button></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        async function saveUnavailability() {
+            const golfer_id = document.getElementById('golferSelect').value;
+            const date_from = document.getElementById('newDateFrom').value;
+            const date_to = document.getElementById('newDateTo').value;
+            const indefinite = document.getElementById('newIndefinite').checked;
+
+            if (!date_from) return alert("Please select a starting date");
+
+            const res = await fetch('/api/unavailable', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ golfer_id, date_from, date_to, indefinite })
+            });
+
+            if (res.ok) {
+                // Clear inputs
+                document.getElementById('newDateFrom').value = "";
+                document.getElementById('newDateTo').value = "";
+                document.getElementById('newIndefinite').checked = false;
+                toggleDateTo();
+                fetchGolferStatus(); // Refresh the list
+            } else {
+                alert("Failed to save record.");
+            }
+        }
+
+        async function deleteRecord(id) {
+            if(!confirm("Remove this unavailability?")) return;
+            await fetch(`/api/unavailable/${id}`, { method: 'DELETE' });
+            fetchGolferStatus();
+        }
+
+        loadGolfers();
+
+        fetch('nav.html')
+            .then(response => response.text())
+            .then(data => { document.getElementById('nav-placeholder').innerHTML = data; });
+    </script>
+</body>
+</html>

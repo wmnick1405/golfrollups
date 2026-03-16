@@ -90,54 +90,73 @@
             document.getElementById('newDateTo').disabled = isIndefinite;
         }
 
-        async function fetchGolferStatus() {
-            const golferId = document.getElementById('golferSelect').value;
-            const quickAddSection = document.getElementById('quickAddSection');
-            const indefiniteNotice = document.getElementById('indefiniteNotice');
-            const tableContainer = document.getElementById('tableContainer');
-            const noDataMessage = document.getElementById('noDataMessage');
-            const tbody = document.querySelector("#datesTable tbody");
+//        
+async function fetchGolferStatus() {
+    const golferId = document.getElementById('golferSelect').value;
+    const quickAddSection = document.getElementById('quickAddSection');
+    const indefiniteNotice = document.getElementById('indefiniteNotice');
+    const tableContainer = document.getElementById('tableContainer');
+    const noDataMessage = document.getElementById('noDataMessage');
+    const tbody = document.querySelector("#datesTable tbody");
 
-            // Reset UI
-            indefiniteNotice.classList.add('hidden');
-            tableContainer.classList.add('hidden');
-            noDataMessage.classList.add('hidden');
-            tbody.innerHTML = "";
+    // Reset UI
+    indefiniteNotice.classList.add('hidden');
+    tableContainer.classList.add('hidden');
+    noDataMessage.classList.add('hidden');
+    tbody.innerHTML = "";
 
-            if (!golferId) {
-                quickAddSection.classList.add('hidden');
-                return;
-            }
+    if (!golferId) {
+        quickAddSection.classList.add('hidden');
+        return;
+    }
 
-            quickAddSection.classList.remove('hidden');
+    quickAddSection.classList.remove('hidden');
 
-            const res = await fetch(`/api/unavailable/golfer/${golferId}`);
-            const records = await res.json();
-
-            if (records.length === 0) {
-                noDataMessage.classList.remove('hidden');
-                return;
-            }
-
-            const isIndefinite = records.some(r => r.indefinite === true);
-
-            if (isIndefinite) {
-                indefiniteNotice.classList.remove('hidden');
-                // Even if indefinite, we show the record in the table so it can be deleted
-            } 
-            
-            tableContainer.classList.remove('hidden');
-            records.forEach(rec => {
-                const row = document.createElement("tr");
-                const dateToText = rec.indefinite ? "<em>Indefinite</em>" : new Date(rec.date_to).toLocaleDateString();
-                row.innerHTML = `
-                    <td>${new Date(rec.date_from).toLocaleDateString()}</td>
-                    <td>${dateToText}</td>
-                    <td><button style="background:#ff4444" onclick="deleteRecord('${rec._id}')">Delete</button></td>
-                `;
-                tbody.appendChild(row);
-            });
+    try {
+        const res = await fetch(`/api/unavailable/golfer/${golferId}`);
+        
+        if (res.status === 401) {
+            alert("Session expired. Please log in.");
+            window.location.href = "/";
+            return;
         }
+
+        const records = await res.json();
+
+        if (records.length === 0) {
+            noDataMessage.classList.remove('hidden');
+            return;
+        }
+
+        // Show the table if there are records
+        tableContainer.classList.remove('hidden');
+
+        records.forEach(rec => {
+            if (rec.indefinite) {
+                indefiniteNotice.classList.remove('hidden');
+            }
+
+            const row = document.createElement("tr");
+            
+            // Format the dates for display
+            const fromDate = new Date(rec.date_from).toLocaleDateString('en-GB');
+            const toDate = rec.indefinite ? 
+                "<em>Indefinite</em>" : 
+                new Date(rec.date_to).toLocaleDateString('en-GB');
+
+            row.innerHTML = `
+                <td>${fromDate}</td>
+                <td>${toDate}</td>
+                <td>
+                    <button style="background:#ff4444" onclick="deleteRecord('${rec._id}')">Delete</button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    } catch (err) {
+        console.error("Error fetching status:", err);
+    }
+}
 
         async function saveUnavailability() {
             const golfer_id = document.getElementById('golferSelect').value;

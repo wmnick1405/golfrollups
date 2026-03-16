@@ -102,6 +102,27 @@ app.post('/api/golfers', protect, async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+//Post golfer unavailability (can be a date range or indefinite) - this is where we save the unavailability records to the database
+app.post('/api/unavailable', protect, async (req, res) => {
+    try {
+        const { golfer_id, date_from, date_to, indefinite } = req.body;
+
+        const record = new Unavailable({
+            golfer_id,
+            date_from,
+            // If indefinite is true, date_to should be null or empty
+            date_to: indefinite ? null : date_to, 
+            indefinite
+        });
+
+        await record.save();
+        res.json({ success: true, message: "Unavailability recorded" });
+    } catch (err) {
+        console.error("Save unavailability error:", err);
+        res.status(500).json({ error: "Failed to save record" });
+    }
+});
+
 app.get('/api/available', protect, async (req, res) => {
     try {
         const date = new Date(req.query.date);
@@ -116,6 +137,38 @@ app.get('/api/available', protect, async (req, res) => {
         const available = golfers.filter(g => !unavailableIds.includes(g._id.toString()));
         res.json(available);
     } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+
+// GET unavailability for a specific golfer
+app.get('/api/unavailable/golfer/:id', protect, async (req, res) => {
+    try {
+        // Find all records for this golfer, sorted by start date
+        const records = await Unavailable.find({ golfer_id: req.params.id })
+            .sort({ date_from: 1 });
+        
+        res.json(records);
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch golfer status" });
+    }
+});
+
+// GET golfers who are indefinitely unavailable
+app.get('/api/unavailable/indefinite', protect, async (req, res) => {
+    try {
+        // This looks in the "unavailables" collection for records marked indefinite
+        const list = await Unavailable.find({ indefinite: true })
+            .populate('golfer_id') // This "joins" the golfer data so we get the Name
+            .exec();
+
+        // Filter out records where the golfer might have been deleted but the record remains
+        const validList = list.filter(item => item.golfer_id !== null);
+        
+        res.json(validList);
+    } catch (err) {
+        console.error("Indefinite list error:", err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // GET rollup history

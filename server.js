@@ -100,14 +100,13 @@ app.get('/api/golfers', protect, async (req, res) => {
 // Create a new golfer - this is where we save the golfer records to the database
 app.post('/api/golfers', protect, async (req, res) => {
     try {
-        const { name, phone, email, play_days } = req.body;
+        const { name, tel, email, play_days } = req.body; // Using 'tel'
 
-        // Backend Validation
         if (!name) {
             return res.status(400).json({ error: "Golfer name is required" });
         }
 
-        const golfer = new Golfer({ name, phone, email, play_days });
+        const golfer = new Golfer({ name, tel, email, play_days });
         await golfer.save();
 
         res.json({ success: true, message: "Golfer added" });
@@ -119,11 +118,11 @@ app.post('/api/golfers', protect, async (req, res) => {
 // Update golfer details - this is where we update the golfer records in the database
 app.put('/api/golfers/:id', protect, async (req, res) => {
     try {
-        const { name, phone, email, play_days } = req.body;
+        const { name, tel, email, play_days } = req.body; // Using 'tel'
 
         await Golfer.findByIdAndUpdate(req.params.id, {
             name,
-            phone,
+            tel,
             email,
             play_days
         });

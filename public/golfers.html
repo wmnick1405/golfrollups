@@ -56,43 +56,41 @@ button{padding:5px 10px}
         setTimeout(() => { msg.textContent = ""; }, 5000);
     }
 
+// Add a new golfer
     async function addGolfer() {
-        const name = document.getElementById("newName").value.trim();
-        const phone = document.getElementById("newPhone").value.trim();
-        const email = document.getElementById("newEmail").value.trim();
-        const daysInput = document.getElementById("newDays").value;
-        
-        // --- VALIDATION ---
-        if (!name) return showMsg("Error: Name is required", true);
-        
-        // Clean up the days array
-        const play_days = daysInput.split(",").map(d => d.trim()).filter(d => d !== "");
+    const name = document.getElementById("newName").value.trim();
+    const tel = document.getElementById("newPhone").value.trim(); // Map input to 'tel'
+    const email = document.getElementById("newEmail").value.trim();
+    const daysInput = document.getElementById("newDays").value;
+    
+    if (!name) return showMsg("Error: Name is required", true);
+    
+    const play_days = daysInput.split(",").map(d => d.trim()).filter(d => d !== "");
 
-        try {
-            const res = await fetch("/api/golfers", {
-                method: "POST",
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, phone, email, play_days })
-            });
+    try {
+        const res = await fetch("/api/golfers", {
+            method: "POST",
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, tel, email, play_days }) // Using 'tel'
+        });
 
-            const data = await res.json();
+        const data = await res.json();
 
-            if (res.ok) {
-                showMsg(`Success: ${name} added!`);
-                // Clear inputs
-                document.getElementById("newName").value = "";
-                document.getElementById("newPhone").value = "";
-                document.getElementById("newEmail").value = "";
-                document.getElementById("newDays").value = "";
-                loadGolfers();
-            } else {
-                showMsg("Error: " + (data.error || "Could not add golfer"), true);
-            }
-        } catch (err) {
-            showMsg("Server connection failed", true);
+        if (res.ok) {
+            showMsg(`Success: ${name} added!`);
+            document.getElementById("newName").value = "";
+            document.getElementById("newPhone").value = "";
+            document.getElementById("newEmail").value = "";
+            document.getElementById("newDays").value = "";
+            loadGolfers();
+        } else {
+            showMsg("Error: " + (data.error || "Could not add golfer"), true);
         }
+    } catch (err) {
+        showMsg("Server connection failed", true);
     }
-
+}
+// Load and display golfers in the table
     async function loadGolfers() {
         try {
             const res = await fetch('/api/golfers');
@@ -106,7 +104,7 @@ button{padding:5px 10px}
                 const row = document.createElement("tr");
                 row.innerHTML = `
                     <td><input type="text" value="${g.name}" id="name_${g._id}"></td>
-                    <td><input type="text" value="${g.phone || ''}" id="phone_${g._id}"></td>
+                    <td><input type="text" value="${g.tel || ''}" id="tel_${g._id}"></td>
                     <td><input type="email" value="${g.email || ''}" id="email_${g._id}"></td>
                     <td><input type="text" value="${(g.play_days || []).join(', ')}" id="days_${g._id}"></td>
                     <td>
@@ -119,28 +117,31 @@ button{padding:5px 10px}
         } catch (err) { console.error("Load failed", err); }
     }
 
-    async function saveGolfer(id) {
-        const name = document.getElementById("name_" + id).value.trim();
-        const phone = document.getElementById("phone_" + id).value.trim();
-        const email = document.getElementById("email_" + id).value.trim();
-        const days = document.getElementById("days_" + id).value.split(",").map(d => d.trim());
 
-        if (!name) return alert("Name cannot be empty");
+// Save updates to a golfer
+async function saveGolfer(id) {
+    const name = document.getElementById("name_" + id).value.trim();
+    const tel = document.getElementById("tel_" + id).value.trim(); // Using 'tel'
+    const email = document.getElementById("email_" + id).value.trim();
+    const days = document.getElementById("days_" + id).value.split(",").map(d => d.trim());
 
-        const res = await fetch("/api/golfers/" + id, {
-            method: "PUT",
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, phone, email, play_days: days })
-        });
+    if (!name) return alert("Name cannot be empty");
 
-        if (res.ok) {
-            alert("Golfer updated successfully");
-            loadGolfers();
-        } else {
-            alert("Failed to update golfer");
-        }
+    const res = await fetch("/api/golfers/" + id, {
+        method: "PUT",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, tel, email, play_days: days }) // Using 'tel'
+    });
+
+    if (res.ok) {
+        alert("Golfer updated successfully");
+        loadGolfers();
+    } else {
+        alert("Failed to update golfer");
     }
+}
 
+// Delete a golfer
     async function deleteGolfer(id) {
         if (!confirm("Delete this golfer?")) return;
         await fetch("/api/golfers/" + id, { method: "DELETE" });

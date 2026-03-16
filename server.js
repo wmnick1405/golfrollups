@@ -78,6 +78,7 @@ app.post('/api/logout', (req, res) => {
 });
 
 // 6. PROTECTED API ROUTES (All start with /api)
+// Create new user (for admin purposes, can be used to create the first user)
 app.post('/api/admin/create-user', protect, async (req, res) => {
     try {
         const { username, password } = req.body;
@@ -89,17 +90,48 @@ app.post('/api/admin/create-user', protect, async (req, res) => {
     }
 });
 
+
+// CRUD for golfers
 app.get('/api/golfers', protect, async (req, res) => {
     const golfers = await Golfer.find().sort({ name: 1 });
     res.json(golfers);
 });
 
+// Create a new golfer - this is where we save the golfer records to the database
 app.post('/api/golfers', protect, async (req, res) => {
     try {
-        const golfer = new Golfer(req.body);
+        const { name, phone, email, play_days } = req.body;
+
+        // Backend Validation
+        if (!name) {
+            return res.status(400).json({ error: "Golfer name is required" });
+        }
+
+        const golfer = new Golfer({ name, phone, email, play_days });
         await golfer.save();
-        res.json({ message: "Golfer added" });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+
+        res.json({ success: true, message: "Golfer added" });
+    } catch (err) {
+        res.status(500).json({ error: "Database error: " + err.message });
+    }
+});
+
+// Update golfer details - this is where we update the golfer records in the database
+app.put('/api/golfers/:id', protect, async (req, res) => {
+    try {
+        const { name, phone, email, play_days } = req.body;
+
+        await Golfer.findByIdAndUpdate(req.params.id, {
+            name,
+            phone,
+            email,
+            play_days
+        });
+
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: "Update failed" });
+    }
 });
 
 //Post golfer unavailability (can be a date range or indefinite) - this is where we save the unavailability records to the database
@@ -123,6 +155,7 @@ app.post('/api/unavailable', protect, async (req, res) => {
     }
 });
 
+// GET available golfers for a specific date
 app.get('/api/available', protect, async (req, res) => {
     try {
         const date = new Date(req.query.date);

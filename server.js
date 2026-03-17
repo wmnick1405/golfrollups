@@ -77,7 +77,9 @@ app.post('/api/logout', (req, res) => {
     });
 });
 
-// 6. PROTECTED API ROUTES (All start with /api)
+
+
+// PROTECTED API ROUTES (All start with /api)
 // Create new user (for admin purposes, can be used to create the first user)
 app.post('/api/admin/create-user', protect, async (req, res) => {
     try {

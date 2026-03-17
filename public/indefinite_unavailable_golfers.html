@@ -3,6 +3,7 @@
 <div id="nav-placeholder"></div>
 
 <head>
+    <link href="../css/style.css" rel="stylesheet" />
     <title>Unavailable Golfers</title>
     <style>
         body { font-family: Arial; margin: 40px; line-height: 1.6; }
@@ -59,7 +60,7 @@
 
             const row = document.createElement("tr");
             row.innerHTML = `
-                <td><strong>${golferName}</strong></td>
+                <td>${golferName}</td>
                 <td>${startDate}</td>
                 <td><span class="status-badge">INDEFINITE</span></td>
                 <td>

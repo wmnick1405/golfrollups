@@ -35,7 +35,7 @@ mongoose.connect('mongodb://localhost:27017/rollups')
 // 4. SCHEMAS
 const Golfer = mongoose.model('Golfer', new mongoose.Schema({
     name: { type: String, required: true },
-    phone: String,
+    tel: String,
     email: String,
     play_days: [String],
     booking_count: { type: Number, default: 0 },
@@ -93,8 +93,13 @@ app.post('/api/admin/create-user', protect, async (req, res) => {
 
 // CRUD for golfers
 app.get('/api/golfers', protect, async (req, res) => {
-    const golfers = await Golfer.find().sort({ name: 1 });
-    res.json(golfers);
+    try {
+        // .sort({ name: 1 }) sorts alphabetically A-Z
+        const golfers = await Golfer.find().sort({ name: 1 });
+        res.json(golfers);
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch golfers" });
+    }
 });
 
 // Create a new golfer - this is where we save the golfer records to the database

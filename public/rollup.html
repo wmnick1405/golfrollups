@@ -1,143 +1,221 @@
-function shuffle(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        let j = Math.floor(Math.random() * (i + 1));
-        let temp = array[i];
-        array[i] = array[j];
-        array[j] = temp;
-    }
-    return array;
-}
+<!DOCTYPE html>
+<html>
 
-// Build groups of 3 and 4 based on the total number of players
-
-function buildGroups(players) {
-    let total = players.length;
-    if (total === 0) {
-        alert("No golfers available for this date");
-        return [];
-    }
-    if (total < 3) {
-        alert("Not enough golfers to form a group (minimum 3 required)");
-        return [];
-    }
-
-    let fours = 0;
-    let threes = 0;
-
-    // Logic to ensure only groups of 3 and 4 are created
-    if (total % 4 === 0) {
-        fours = total / 4;
-    } else if (total % 4 === 3) {
-        fours = Math.floor(total / 4);
-        threes = 1;
-    } else if (total % 4 === 2) {
-        // e.g., 6 or 10 players -> split into 3s
-        fours = Math.floor(total / 4) - 1;
-        threes = 2;
-    } else if (total % 4 === 1) {
-        // e.g., 5, 9, or 13 players -> split into 3s
-        fours = Math.floor(total / 4) - 2;
-        threes = 3;
-    }
-
-    let groups = [];
-    // Extract the players into the calculated group sizes
-    for (let i = 0; i < fours; i++) {
-        groups.push(players.splice(0, 4));
-    }
-    for (let i = 0; i < threes; i++) {
-        groups.push(players.splice(0, 3));
-    }
-
-    return groups;
-}
-
-function chooseBooker(group) {
-    group.sort((a, b) => {
-        if (a.booking_count !== b.booking_count) {
-            return a.booking_count - b.booking_count;
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Golf Rollup Generator</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #f2f2f2;
+            padding: 30px;
         }
-        return new Date(a.last_booked) - new Date(b.last_booked);
-    });
-    return group;
-}
 
-async function generate() {
-    const date = document.getElementById('date').value;
-    if (!date) {
-        alert("Please select a date first");
-        return;
-    }
-
-    // --- 1. DUPLICATE CHECK (Check before generating) ---
-    const checkResponse = await fetch(`/api/rollups/find?date=${date}`);
-    if (checkResponse.ok) {
-        const existing = await checkResponse.json();
-        alert("A rollup already exists for this date.");
-        if (confirm("Would you like to view the existing booking sheet?")) {
-            window.location.href = "/bookingsheet.html?id=" + existing._id;
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
         }
-        return; // Stop the function here
-    }
 
-    // --- 2. GET AVAILABLE PLAYERS ---
-    const response = await fetch(`/api/available?date=${date}`);
-    if (response.status === 401) {
-        alert("Session expired. Please log in.");
-        window.location.href = "/";
-        return;
-    }
-    
-    const players = await response.json();
-    shuffle(players);
+        button {
+            margin-top: 15px;
+            padding: 10px;
+            width: 100%;
+            background: #2e7d32;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
 
-    // --- 3. BUILD GROUPS ---
-    const groups = buildGroups(players);
-    if (groups.length === 0) return;
+        button:hover {
+            background: #256328;
+        }
 
-    const div = document.getElementById('groups');
-    div.innerHTML = "";
-    let saveGroups = [];
+        .group {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f8f8f8;
+            border-radius: 5px;
+            border-left: 5px solid #2e7d32;
+        }
+    </style>
+</head>
 
-    groups.forEach((group, i) => {
-        group = chooseBooker(group);
-        const g = document.createElement('div');
-        g.className = "group";
-        let html = `<b>Group ${i + 1}</b><br>`;
-        let saveGroup = [];
+<body>
+    <div id="nav-placeholder"></div>
 
-        group.forEach((p, index) => {
-            if (index === 0) {
-                fetch("/api/booker/" + p._id, { method: "POST" });
-                html += "<b>" + p.name + " (Booker)</b><br>";
-                saveGroup.push({ golfer_id: p._id, name: p.name, booker: true });
-            } else {
-                html += p.name + "<br>";
-                saveGroup.push({ golfer_id: p._id, name: p.name, booker: false });
+    <div class="container">
+        <h2>Generate Golf Rollup</h2>
+        <label>Select Date</label>
+        <input type="date" id="date">
+        <button onclick="generate()">Generate Groups</button>
+        <div id="groups"></div>
+    </div>
+
+    <script>
+        // 1. SHUFFLE FUNCTION
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                let j = Math.floor(Math.random() * (i + 1));
+                let temp = array[i];
+                array[i] = array[j];
+                array[j] = temp;
             }
+            return array;
+        }
+
+        // 2. BUILD GROUPS LOGIC
+        function buildGroups(players) {
+            let total = players.length;
+            if (total === 0) { alert("No golfers available for this date"); return []; }
+            if (total < 3) { alert("Minimum 3 golfers required"); return []; }
+
+            if (total === 5) {
+                return [players.splice(0, 3), players.splice(0, 2)];
+            }
+
+            let fours = 0;
+            let threes = 0;
+
+            if (total % 4 === 0) {
+                fours = total / 4;
+            } else if (total % 4 === 3) {
+                fours = Math.floor(total / 4);
+                threes = 1;
+            } else if (total % 4 === 2) {
+                fours = Math.floor(total / 4) - 1;
+                threes = 2;
+            } else if (total % 4 === 1) {
+                fours = Math.floor(total / 4) - 2;
+                threes = 3;
+            }
+
+            let groups = [];
+            for (let i = 0; i < fours; i++) {
+                groups.push(players.splice(0, 4));
+            }
+            for (let i = 0; i < threes; i++) {
+                groups.push(players.splice(0, 3));
+            }
+
+            if (players.length > 0) {
+                groups[groups.length - 1].push(...players);
+            }
+
+            return groups;
+        }
+
+        // 3. CHOOSE BOOKER
+        function chooseBooker(group) {
+            return group.sort((a, b) => {
+                if (a.booking_count !== b.booking_count) return a.booking_count - b.booking_count;
+                return new Date(a.last_booked) - new Date(b.last_booked);
+            });
+        }
+
+        // 4. MAIN GENERATE FUNCTION
+async function generate() {
+    const dateInput = document.getElementById('date').value;
+    if (!dateInput) return alert("Please select a date first");
+
+    try {
+        // 1. DUPLICATE CHECK
+        const checkRes = await fetch(`/api/rollups/find?date=${dateInput}`);
+        if (checkRes.ok) {
+            const existing = await checkRes.json();
+            if (existing && existing._id) {
+                alert("A rollup already exists for this date.");
+                if (confirm("View existing booking sheet?")) {
+                    window.location.href = "/bookingsheet.html?id=" + existing._id;
+                }
+                return; // STOP
+            }
+        }
+
+        // 2. GET PLAYERS
+        const res = await fetch(`/api/available?date=${dateInput}`);
+        if (res.status === 401) { window.location.href = "/"; return; }
+        
+        const players = await res.json();
+        if (!players || players.length === 0) return alert("No players available.");
+
+        // 3. LOGIC
+        shuffle(players);
+        const groups = buildGroups(players);
+        
+        const div = document.getElementById('groups');
+        div.innerHTML = "";
+        let saveGroups = [];
+
+        // Prepare the data for saving and display
+        for (let i = 0; i < groups.length; i++) {
+            const sortedGroup = chooseBooker(groups[i]);
+            const gDiv = document.createElement('div');
+            gDiv.className = "group";
+            
+            let html = "<b>Group " + (i + 1) + "</b><br>";
+            let saveGroup = [];
+
+            for (let j = 0; j < sortedGroup.length; j++) {
+                const p = sortedGroup[j];
+                const isBooker = (j === 0);
+
+                if (isBooker) {
+                    html += "<b>" + p.name + " (Booker)</b><br>";
+                } else {
+                    html += p.name + "<br>";
+                }
+                
+                saveGroup.push({ golfer_id: p._id, name: p.name, booker: isBooker });
+            }
+
+            saveGroups.push(saveGroup);
+            gDiv.innerHTML = html;
+            div.appendChild(gDiv);
+        }
+
+        // 4. SAVE THE ROLLUP (The most important part)
+        const saveRes = await fetch('/api/rollups', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ date: dateInput, groups: saveGroups })
         });
+        
+        const result = await saveRes.json();
 
-        saveGroups.push(saveGroup);
-        g.innerHTML = html;
-        div.appendChild(g);
-    });
+        if (result.success) {
+            // 5. ONLY NOW UPDATE BOOKER COUNTS
+            // We do this after the save is confirmed
+            for (const group of saveGroups) {
+                const booker = group.find(p => p.booker === true);
+                if (booker) {
+                    fetch("/api/booker/" + booker.golfer_id, { method: "POST" });
+                }
+            }
+            alert("Rollup generated and saved successfully!");
+        } else {
+            alert("Server failed to save the rollup: " + (result.error || "Unknown error"));
+        }
 
-    // --- 4. SAVE THE NEW ROLLUP ---
-    const saveResponse = await fetch('/api/rollups', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date: date, groups: saveGroups })
-    });
-    
-    const result = await saveResponse.json();
-    if (result.success) {
-        console.log("Rollup saved successfully");
+    } catch (err) {
+        console.log("Process Error:", err);
+        alert("An error occurred. Check the console for details.");
     }
 }
 
-// Nav Placeholder loader
-fetch('nav.html')
-    .then(response => response.text())
-    .then(data => {
-        document.getElementById('nav-placeholder').innerHTML = data;
-    });
+        // 5. NAV LOADER
+        fetch('nav.html')
+            .then(res => res.text())
+            .then(data => {
+                document.getElementById('nav-placeholder').innerHTML = data;
+            })
+            .catch(e => console.log("Nav load failed"));
+    </script>
+</body>
+
+</html>

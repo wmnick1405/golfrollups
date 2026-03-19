@@ -24,12 +24,15 @@
 
     <h2>Golfer Availability & Management</h2>
     
+
+
     <div class="controls">
-        <label><strong>Select Golfer:</strong> </label>
-        <select id="golferSelect" onchange="fetchGolferStatus()">
-            <option value="">-- Choose a Golfer --</option>
-        </select>
-    </div>
+    <label><strong>Select Golfer:</strong> </label>
+    <select id="golferSelect" onchange="fetchGolferStatus()">
+        <option value="">-- Choose a Golfer --</option>
+    </select>
+    <div id="preferredDaysDisplay" style="margin-top: 10px; color: #2e7d32; font-weight: bold;"></div>
+</div>
 
     <div id="quickAddSection" class="quick-add hidden">
         <h3>Add New Unavailability</h3>
@@ -72,17 +75,23 @@
     </div>
 
     <script>
-        async function loadGolfers() {
-            const res = await fetch('/api/golfers');
-            const golfers = await res.json();
-            const select = document.getElementById('golferSelect');
-            golfers.forEach(g => {
-                const opt = document.createElement('option');
-                opt.value = g._id;
-                opt.textContent = g.name;
-                select.appendChild(opt);
-            });
-        }
+async function loadGolfers() {
+    const res = await fetch('/api/golfers');
+    const golfers = await res.json();
+    const select = document.getElementById('golferSelect');
+    
+    // Clear existing options except the first one
+    select.innerHTML = '<option value="">-- Choose a Golfer --</option>';
+
+    golfers.forEach(g => {
+        const opt = document.createElement('option');
+        opt.value = g._id;
+        opt.textContent = g.name;
+        // Store the play_days as a data attribute (converted to string)
+        opt.dataset.days = (g.play_days || []).join(', ');
+        select.appendChild(opt);
+    });
+}
 
         function toggleDateTo() {
             const isIndefinite = document.getElementById('newIndefinite').checked;
@@ -93,12 +102,25 @@
 // Global variable to hold current records for conflict checking
         window.currentRecords = [];         
 async function fetchGolferStatus() {
-    const golferId = document.getElementById('golferSelect').value;
+
+    const select = document.getElementById('golferSelect');
+    const golferId = select.value;
+    const daysDisplay = document.getElementById('preferredDaysDisplay');
+     //const golferId = document.getElementById('golferSelect').value;
     const quickAddSection = document.getElementById('quickAddSection');
     const indefiniteNotice = document.getElementById('indefiniteNotice');
     const tableContainer = document.getElementById('tableContainer');
     const noDataMessage = document.getElementById('noDataMessage');
     const tbody = document.querySelector("#datesTable tbody");
+
+    // Show preferred days from the selected option's data attribute
+    const selectedOption = select.options[select.selectedIndex];
+    if (golferId && selectedOption.dataset.days) {
+        daysDisplay.textContent = "Preferred Days: " + selectedOption.dataset.days;
+    } else {
+        daysDisplay.textContent = "";
+    }
+   
 
     indefiniteNotice.classList.add('hidden');
     tableContainer.classList.add('hidden');
@@ -139,7 +161,7 @@ async function fetchGolferStatus() {
 }
 
 
-// Function to sync 'To' date with 'From' date when user inputs a 'From' date, but only if 'Indefinite' is NOT checked
+//
 function syncDates() {
     const dateFrom = document.getElementById('newDateFrom').value;
     const dateToInput = document.getElementById('newDateTo');
@@ -213,16 +235,6 @@ async function saveUnavailability() {
         fetch('nav.html')
             .then(response => response.text())
             .then(data => { document.getElementById('nav-placeholder').innerHTML = data; });
-
-            // This allows you to press 'Enter' to save while focused on the date inputs
-[document.getElementById('newDateFrom'), document.getElementById('newDateTo')].forEach(input => {
-    input.addEventListener("keypress", function(event) {
-        if (event.key === "Enter") {
-            event.preventDefault();
-            saveUnavailability();
-        }
-    });
-});
     </script>
 </body>
 </html>

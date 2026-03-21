@@ -154,6 +154,21 @@ app.get('/api/unavailable/indefinite', protect, async (req, res) => {
     res.json(list.filter(i => i.golfer_id));
 });
 
+// GET all unavailability records for the absence report
+app.get('/api/unavailable/all', protect, async (req, res) => {
+    try {
+        // Find ALL records, join golfer info, sort by date
+        const list = await Unavailable.find({})
+            .populate('golfer_id')
+            .sort({ date_from: -1 });
+        
+        // Clean up records that don't have a valid golfer attached
+        res.json(list.filter(item => item.golfer_id));
+    } catch (err) {
+        res.status(500).json({ error: "Report data failed" });
+    }
+});
+
 app.delete('/api/unavailable/:id', protect, async (req, res) => {
     try {
         await Unavailable.findByIdAndDelete(req.params.id);

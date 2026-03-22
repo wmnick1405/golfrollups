@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt');
 const User = require('./user'); 
 const path = require('path');
 const session = require('express-session');
+const fs = require('fs');
 
 const app = express();
 
@@ -27,7 +28,7 @@ const protect = (req, res, next) => {
 };
 
 // 3. DATABASE CONNECTION
-mongoose.connect('mongodb://localhost:27017/rollups')
+mongoose.connect('mongodb://localhost:27017/rollupsdb')
 .then(()=>console.log("Connected to MongoDB"))
 .catch(err=>console.error("MongoDB connection error:",err));
 
@@ -38,7 +39,8 @@ const Golfer = mongoose.model('Golfer', new mongoose.Schema({
     email: String,
     play_days: [String],
     booking_count: { type: Number, default: 0 },
-    last_booked: { type: Date, default: new Date("2000-01-01") }
+    last_booked: { type: Date, default: new Date("2000-01-01") },
+    booking_exempt: { type: Boolean, default: false }
 }));
 
 const Unavailable = mongoose.model('Unavailable', new mongoose.Schema({
@@ -74,6 +76,28 @@ app.post('/api/logout', (req, res) => {
         res.clearCookie('connect.sid');
         res.json({ success: true });
     });
+});
+
+// GET the date of the last successful backup
+app.get('/api/admin/backup-status', protect, async (req, res) => {
+    const backupDir = '/mnt/golf_backups';
+    
+    try {
+        if (!fs.existsSync(backupDir)) {
+            return res.json({ lastBackup: "Never (Folder missing)" });
+        }
+
+        const folders = fs.readdirSync(backupDir);
+        if (folders.length === 0) {
+            return res.json({ lastBackup: "No backups found" });
+        }
+
+        // Sort folders by name (since they are named by date YYYY-MM-DD)
+        const latest = folders.sort().reverse()[0];
+        res.json({ lastBackup: latest });
+    } catch (err) {
+        res.status(500).json({ error: "Could not read backup status" });
+    }
 });
 
 // 6. GOLFER ROUTES
@@ -118,7 +142,7 @@ app.get('/api/available', protect, async (req, res) => {
         const dayName = dayNames[targetDate.getDay()];
 
         // Find golfers who usually play on this day
-        const golfers = await Golfer.find({ play_days: dayName });
+        const golfers = await Golfer.find({ play_days: dayName }).lean();
 
         // Find golfers away on this specific date
         const away = await Unavailable.find({
@@ -134,6 +158,58 @@ app.get('/api/available', protect, async (req, res) => {
         
         res.json(available);
     } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// 7b. PARTICIPATION REPORT
+app.get('/api/reports/participation', protect, async (req, res) => {
+    try {
+        // Change RollupHistory to Rollup to match your definition above
+        const history = await Rollup.find({}).lean();
+        
+        console.log(`Found ${history.length} records in rollups collection.`);
+
+        const stats = {};
+
+        history.forEach(rollup => {
+            if (!rollup.groups || !Array.isArray(rollup.groups)) return;
+
+            rollup.groups.forEach(groupArray => {
+                if (!Array.isArray(groupArray)) return;
+
+                groupArray.forEach(player => {
+                    if (!player || !player.name) return;
+
+                    const name = player.name;
+                    if (!stats[name]) {
+                        stats[name] = { played: 0, booked: 0 };
+                    }
+
+                    stats[name].played++;
+                    
+                    if (player.booker === true) {
+                        stats[name].booked++;
+                    }
+                });
+            });
+        });
+
+        const reportData = Object.keys(stats).map(name => {
+            const p = stats[name].played;
+            const b = stats[name].booked;
+            return {
+                name: name,
+                played: p,
+                booked: b,
+                percentage: p > 0 ? ((b / p) * 100).toFixed(1) + '%' : '0.0%'
+            };
+        });
+
+        reportData.sort((a, b) => a.name.localeCompare(b.name));
+        res.json(reportData);
+    } catch (err) {
+        console.error("REPORT ERROR:", err);
+        res.status(500).json([]);
+    }
 });
 
 app.post('/api/unavailable', protect, async (req, res) => {

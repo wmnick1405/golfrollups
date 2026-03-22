@@ -99,7 +99,7 @@ Update golfer availability for specific dates
 Generate rollup groups for a specific date
 </a>
 
-<a class ="navbutton" href="/absence report.html">
+<a class ="navbutton" href="/absence-report.html">
 View Absence Report (all players)
 </a>
 
@@ -107,12 +107,19 @@ View Absence Report (all players)
 Rollup history by date
 </a>
 
+<a class="navbutton" href="/participation-report.html">
+View Participation Report (season-long)
+</a>
+
+
 <button onclick="handleLogout()" style="background:#d32f2f; color:white; border:none; padding:8px 15px; border-radius:4px; cursor:pointer;">
     Logout
 </button>
 
 <div id="admin-panel" style="border-top: 2px solid #eee; margin-top: 20px; padding: 10px;">
-    <h3>Create New System User</h3>
+    <h3>System Administration</h3>
+    <p><strong>Last Database Backup:</strong> <span id="backup-date">Checking...</span></p>
+    
     <input type="text" id="new-user" placeholder="New Username">
     <input type="password" id="new-pass" placeholder="New Password">
     <button onclick="createNewUser()">Create User</button>
@@ -129,37 +136,46 @@ Seniors Rollup System - all rights belong to Nicholas Osborne - 2026
 <script>
     // 1. Check login status immediately when page loads
 window.onload = async () => {
+    const overlay = document.getElementById('login-overlay');
     try {
-        const response = await fetch('/api/golfers'); // Attempt to fetch golfers
+        // We use a simple check to see if we are authorized
+        const response = await fetch('/api/golfers'); 
+        
         if (response.ok) {
-            // If the server says OK, hide the login screen
-            document.getElementById('login-overlay').style.display = 'flex';
-            // Now run your existing code to load the golfers
-            loadGolfers(); 
+            // IF LOGGED IN: Hide the login screen so we can see the manager
+            overlay.style.display = 'none';
+            checkBackupStatus(); // Check backup status immediately on load
+        } else {
+            // IF NOT LOGGED IN: Ensure the login screen is visible
+            overlay.style.display = 'flex';
         }
     } catch (err) {
-        console.log("Not logged in yet");
+        // Connection error or not logged in
+        overlay.style.display = 'flex';
     }
 };
 
-// 2. Handle the login form submission
+// Handle the login form submission
 document.getElementById('login-form').onsubmit = async (e) => {
     e.preventDefault();
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
 
-    const response = await fetch('/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-    });
+    try {
+        const response = await fetch('/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
 
-    if (response.ok) {
-        const overlay = document.getElementById('login-overlay');
-if (overlay) overlay.remove();
-        loadGolfers(); // Your existing function to populate the page
-    } else {
-        alert("Login Failed");
+        if (response.ok) {
+            // Hide the overlay immediately on successful login
+            document.getElementById('login-overlay').style.display = 'none';
+        } else {
+            alert("Login Failed: Check username and password");
+        }
+    } catch (err) {
+        alert("Server error during login");
     }
 };
 
@@ -195,6 +211,17 @@ async function createNewUser() {
 
     const data = await res.json();
     alert(data.message || data.error);
+}
+
+async function checkBackupStatus() {
+    try {
+        const res = await fetch('/api/admin/backup-status');
+        const data = await res.json();
+        // This updates the <span> we added to the HTML
+        document.getElementById('backup-date').textContent = data.lastBackup || "Unknown";
+    } catch (err) {
+        document.getElementById('backup-date').textContent = "Error checking status";
+    }
 }
 
 </script>

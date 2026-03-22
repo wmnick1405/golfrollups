@@ -1,36 +1,38 @@
 <!DOCTYPE html>
 <html>
-<div id="nav-placeholder"></div>
-
 <head>
-<title>Golfers Admin</title>
-
-<style>
-body{font-family:Arial;margin:40px}
-table{border-collapse:collapse;width:100%}
-th,td{border:1px solid #ccc;padding:8px}
-button{padding:5px 10px}
-</style>
-
+    <title>Golfers Admin</title>
+    <style>
+        body { font-family: Arial; margin: 40px; background-color: #f4f4f4; }
+        table { border-collapse: collapse; width: 100%; background: white; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        th { background-color: #2e7d32; color: white; }
+        button { padding: 5px 10px; cursor: pointer; }
+        .exempt-cell { text-align: center; width: 80px; }
+    </style>
 </head>
 
 <body>
     <div id="nav-placeholder"></div>
 
-    <div style="max-width: 900px; margin: auto;">
+    <div style="max-width: 1000px; margin: auto;">
         <h2>Golfers Admin</h2>
         
         <div style="background: #f0f4f8; padding: 20px; border-radius: 8px; border: 1px solid #d1d9e6; margin-bottom: 30px;">
             <h3>Add New Golfer</h3>
             <div id="msg" style="margin-bottom: 10px; font-weight: bold;"></div>
-            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
                 <input type="text" id="newName" placeholder="Name (Required)" style="padding: 8px; flex: 1;">
                 <input type="text" id="newPhone" placeholder="Phone" style="padding: 8px; flex: 1;">
                 <input type="email" id="newEmail" placeholder="Email" style="padding: 8px; flex: 1;">
-                <input type="text" id="newDays" placeholder="Days (e.g. Monday, Wednesday)" style="padding: 8px; flex: 1;">
-                <button onclick="addGolfer()" style="background: #2e7d32; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">Add Golfer</button>
+                <input type="text" id="newDays" placeholder="Days (e.g. Mon, Wed)" style="padding: 8px; flex: 1;">
+                
+                <label style="font-size: 0.9em; display: flex; align-items: center; gap: 5px;">
+                    <input type="checkbox" id="newExempt"> Booking Exempt
+                </label>
+
+                <button onclick="addGolfer()" style="background: #2e7d32; color: white; border: none; padding: 10px 20px; border-radius: 4px;">Add Golfer</button>
             </div>
-            <small style="display: block; margin-top: 5px; color: #666;">Separate days with commas.</small>
         </div>
 
         <table id="golfersTable">
@@ -40,7 +42,7 @@ button{padding:5px 10px}
                     <th>Phone</th>
                     <th>Email</th>
                     <th>Playing Days</th>
-                    <th>Actions</th>
+                    <th class="exempt-cell">Booking Exempt</th> <th>Actions</th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -48,7 +50,6 @@ button{padding:5px 10px}
     </div>
 
 <script>
-    // Show feedback messages
     function showMsg(text, isError = false) {
         const msg = document.getElementById("msg");
         msg.textContent = text;
@@ -56,41 +57,41 @@ button{padding:5px 10px}
         setTimeout(() => { msg.textContent = ""; }, 5000);
     }
 
-// Add a new golfer
     async function addGolfer() {
-    const name = document.getElementById("newName").value.trim();
-    const tel = document.getElementById("newPhone").value.trim(); // Map input to 'tel'
-    const email = document.getElementById("newEmail").value.trim();
-    const daysInput = document.getElementById("newDays").value;
-    
-    if (!name) return showMsg("Error: Name is required", true);
-    
-    const play_days = daysInput.split(",").map(d => d.trim()).filter(d => d !== "");
+        const name = document.getElementById("newName").value.trim();
+        const tel = document.getElementById("newPhone").value.trim();
+        const email = document.getElementById("newEmail").value.trim();
+        const daysInput = document.getElementById("newDays").value;
+        const booking_exempt = document.getElementById("newExempt").checked; // NEW FIELD
+        
+        if (!name) return showMsg("Error: Name is required", true);
+        
+        const play_days = daysInput.split(",").map(d => d.trim()).filter(d => d !== "");
 
-    try {
-        const res = await fetch("/api/golfers", {
-            method: "POST",
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, tel, email, play_days }) // Using 'tel'
-        });
+        try {
+            const res = await fetch("/api/golfers", {
+                method: "POST",
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, tel, email, play_days, booking_exempt }) // NEW FIELD
+            });
 
-        const data = await res.json();
-
-        if (res.ok) {
-            showMsg(`Success: ${name} added!`);
-            document.getElementById("newName").value = "";
-            document.getElementById("newPhone").value = "";
-            document.getElementById("newEmail").value = "";
-            document.getElementById("newDays").value = "";
-            loadGolfers();
-        } else {
-            showMsg("Error: " + (data.error || "Could not add golfer"), true);
+            if (res.ok) {
+                showMsg(`Success: ${name} added!`);
+                document.getElementById("newName").value = "";
+                document.getElementById("newPhone").value = "";
+                document.getElementById("newEmail").value = "";
+                document.getElementById("newDays").value = "";
+                document.getElementById("newExempt").checked = false; // Reset checkbox
+                loadGolfers();
+            } else {
+                const data = await res.json();
+                showMsg("Error: " + (data.error || "Could not add golfer"), true);
+            }
+        } catch (err) {
+            showMsg("Server connection failed", true);
         }
-    } catch (err) {
-        showMsg("Server connection failed", true);
     }
-}
-// Load and display golfers in the table
+
     async function loadGolfers() {
         try {
             const res = await fetch('/api/golfers');
@@ -102,11 +103,15 @@ button{padding:5px 10px}
 
             golfers.forEach(g => {
                 const row = document.createElement("tr");
+                // NEW FIELD: Added checkbox in table row
                 row.innerHTML = `
                     <td><input type="text" value="${g.name}" id="name_${g._id}"></td>
                     <td><input type="text" value="${g.tel || ''}" id="tel_${g._id}"></td>
                     <td><input type="email" value="${g.email || ''}" id="email_${g._id}"></td>
                     <td><input type="text" value="${(g.play_days || []).join(', ')}" id="days_${g._id}"></td>
+                    <td class="exempt-cell">
+                        <input type="checkbox" id="exempt_${g._id}" ${g.booking_exempt ? 'checked' : ''}>
+                    </td>
                     <td>
                         <button onclick="saveGolfer('${g._id}')">Save</button>
                         <button onclick="deleteGolfer('${g._id}')" style="background:#ffcccc; color:#900; border:1px solid #900;">Delete</button>
@@ -117,31 +122,29 @@ button{padding:5px 10px}
         } catch (err) { console.error("Load failed", err); }
     }
 
+    async function saveGolfer(id) {
+        const name = document.getElementById("name_" + id).value.trim();
+        const tel = document.getElementById("tel_" + id).value.trim();
+        const email = document.getElementById("email_" + id).value.trim();
+        const days = document.getElementById("days_" + id).value.split(",").map(d => d.trim());
+        const booking_exempt = document.getElementById("exempt_" + id).checked; // NEW FIELD
 
-// Save updates to a golfer
-async function saveGolfer(id) {
-    const name = document.getElementById("name_" + id).value.trim();
-    const tel = document.getElementById("tel_" + id).value.trim(); // Using 'tel'
-    const email = document.getElementById("email_" + id).value.trim();
-    const days = document.getElementById("days_" + id).value.split(",").map(d => d.trim());
+        if (!name) return alert("Name cannot be empty");
 
-    if (!name) return alert("Name cannot be empty");
+        const res = await fetch("/api/golfers/" + id, {
+            method: "PUT",
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, tel, email, play_days: days, booking_exempt }) // NEW FIELD
+        });
 
-    const res = await fetch("/api/golfers/" + id, {
-        method: "PUT",
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, tel, email, play_days: days }) // Using 'tel'
-    });
-
-    if (res.ok) {
-        alert("Golfer updated successfully");
-        loadGolfers();
-    } else {
-        alert("Failed to update golfer");
+        if (res.ok) {
+            alert("Golfer updated successfully");
+            loadGolfers();
+        } else {
+            alert("Failed to update golfer");
+        }
     }
-}
 
-// Delete a golfer
     async function deleteGolfer(id) {
         if (!confirm("Delete this golfer?")) return;
         await fetch("/api/golfers/" + id, { method: "DELETE" });

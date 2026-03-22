@@ -133,7 +133,7 @@ async function generate() {
                 if (confirm("View existing booking sheet?")) {
                     window.location.href = "/bookingsheet.html?id=" + existing._id;
                 }
-                return; // STOP
+                return;
             }
         }
 
@@ -152,9 +152,27 @@ async function generate() {
         div.innerHTML = "";
         let saveGroups = [];
 
-        // Prepare the data for saving and display
         for (let i = 0; i < groups.length; i++) {
-            const sortedGroup = chooseBooker(groups[i]);
+            let currentGroup = groups[i];
+
+            // --- EXEMPTION SWAP LOGIC ---
+            // Sort by booker logic first (if your chooseBooker function does that)
+            let sortedGroup = chooseBooker(currentGroup);
+
+            // Check if the person at index 0 (the Booker) is exempt
+            if (sortedGroup[0].booking_exempt) {
+                // Find the first person in this group who is NOT exempt
+                const nonExemptIndex = sortedGroup.findIndex(p => !p.booking_exempt);
+
+                // If we found a valid replacement, swap them into position 0
+                if (nonExemptIndex !== -1) {
+                    const temp = sortedGroup[0];
+                    sortedGroup[0] = sortedGroup[nonExemptIndex];
+                    sortedGroup[nonExemptIndex] = temp;
+                }
+            }
+            // ----------------------------
+
             const gDiv = document.createElement('div');
             gDiv.className = "group";
             
@@ -168,7 +186,9 @@ async function generate() {
                 if (isBooker) {
                     html += "<b>" + p.name + " (Booker)</b><br>";
                 } else {
-                    html += p.name + "<br>";
+                    // Add a small tag if someone is exempt so you can see it worked
+                    const exemptTag = p.booking_exempt ? " <i style='color:#888; font-size:0.8em;'>(Exempt)</i>" : "";
+                    html += p.name + exemptTag + "<br>";
                 }
                 
                 saveGroup.push({ golfer_id: p._id, name: p.name, booker: isBooker });
@@ -179,7 +199,7 @@ async function generate() {
             div.appendChild(gDiv);
         }
 
-        // 4. SAVE THE ROLLUP (The most important part)
+        // 4. SAVE THE ROLLUP
         const saveRes = await fetch('/api/rollups', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -189,8 +209,7 @@ async function generate() {
         const result = await saveRes.json();
 
         if (result.success) {
-            // 5. ONLY NOW UPDATE BOOKER COUNTS
-            // We do this after the save is confirmed
+            // 5. UPDATE BOOKER COUNTS
             for (const group of saveGroups) {
                 const booker = group.find(p => p.booker === true);
                 if (booker) {
@@ -199,15 +218,14 @@ async function generate() {
             }
             alert("Rollup generated and saved successfully!");
         } else {
-            alert("Server failed to save the rollup: " + (result.error || "Unknown error"));
+            alert("Server failed to save: " + (result.error || "Unknown error"));
         }
 
     } catch (err) {
         console.log("Process Error:", err);
-        alert("An error occurred. Check the console for details.");
+        alert("An error occurred. Check the console.");
     }
 }
-
         // 5. NAV LOADER
         fetch('nav.html')
             .then(res => res.text())

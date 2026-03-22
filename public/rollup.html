@@ -20,17 +20,22 @@
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
         }
 
-        button {
-            margin-top: 15px;
-            padding: 10px;
-            width: 100%;
-            background: #2e7d32;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            cursor: pointer;
-        }
+        /* This will now IGNORE the nav bar buttons */
+.controls-section button {
+    margin-top: 15px;
+    padding: 10px;
+    width: 100%;
+    background: #2e7d32;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.controls-section button:hover {
+    background: #256328;
+}
 
         button:hover {
             background: #256328;
@@ -56,6 +61,10 @@
         <button onclick="generate()">Generate Groups</button>
         <div id="groups"></div>
     </div>
+
+    <div class="controls-section">
+    <button onclick="generate()">Generate Rollup</button>
+</div>
 
     <script>
         // 1. SHUFFLE FUNCTION
@@ -227,12 +236,9 @@ async function generate() {
     }
 }
         // 5. NAV LOADER
-        fetch('nav.html')
-            .then(res => res.text())
-            .then(data => {
-                document.getElementById('nav-placeholder').innerHTML = data;
-            })
-            .catch(e => console.log("Nav load failed"));
+           fetch('nav.html')
+        .then(response => response.text())
+        .then(data => { document.getElementById('nav-placeholder').innerHTML = data; });
     </script>
 </body>
 

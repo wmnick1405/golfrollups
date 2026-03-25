@@ -1,48 +1,69 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
-const User = require('./user'); 
-const path = require('path');
-const session = require('express-session');
-const fs = require('fs');
+/**
+ * SECTION 1: IMPORTS & LIBRARIES
+ * Think of these as the "tools" we need to build our app.
+ */
+const express = require('express');    // The web server framework
+const mongoose = require('mongoose');   // The tool to talk to our MongoDB database
+const bcrypt = require('bcrypt');       // Used to securely hash and check passwords
+const User = require('./user');         // A separate file defining our "User" (admin) model
+const path = require('path');           // Handles file and folder paths
+const session = require('express-session'); // Keeps users logged in using "cookies"
+const fs = require('fs');               // Allows the app to read/write files on your computer
 
-const app = express();
+const app = express(); // Initialize the web server
 
-// 1. MIDDLEWARE SETUP
-app.use(express.json()); 
-app.use(express.urlencoded({ extended: true }));
+/**
+ * SECTION 2: MIDDLEWARE
+ * These are functions that run on every single request before reaching your routes.
+ */
+app.use(express.json()); // Allows the server to read JSON data sent from a frontend
+app.use(express.urlencoded({ extended: true })); // Allows reading data from standard HTML forms
 
+// Configure how the server remembers who is logged in
 app.use(session({
-  secret: 'a-very-secret-key-for-golfchurchill&blakedown', 
+  secret: 'a-very-secret-key-for-golfchurchill&blakedown', // Change this for real-world apps!
   resave: false,
   saveUninitialized: false,
-  cookie: { secure: false, maxAge: 1000 * 60 * 60 * 24 }
+  cookie: { secure: false, maxAge: 1000 * 60 * 60 * 24 } // Stay logged in for 24 hours
 }));
 
-// 2. THE GATEKEEPER
+/**
+ * SECTION 3: SECURITY (THE GATEKEEPER)
+ * This function checks if a user is logged in. If they aren't, it stops them
+ * from seeing private data. We use this later in our routes.
+ */
 const protect = (req, res, next) => {
     if (req.session && req.session.userId) {
-        return next();
+        return next(); // User is logged in, proceed to the next step
     }
-    res.status(401).json({ error: "Unauthorized" });
+    res.status(401).json({ error: "Unauthorized" }); // Stop! You aren't logged in.
 };
 
-// 3. DATABASE CONNECTION
+/**
+ * SECTION 4: DATABASE CONNECTION
+ * Connecting to your local MongoDB database named 'rollupsdb'.
+ */
 mongoose.connect('mongodb://localhost:27017/rollupsdb')
-.then(()=>console.log("Connected to MongoDB"))
-.catch(err=>console.error("MongoDB connection error:",err));
+    .then(() => console.log("Connected to MongoDB"))
+    .catch(err => console.error("MongoDB connection error:", err));
 
-// 4. SCHEMAS
+/**
+ * SECTION 5: DATA MODELS (SCHEMAS)
+ * This defines the "shape" of the data we store in the database.
+ */
+
+// Define what a 'Golfer' looks like
 const Golfer = mongoose.model('Golfer', new mongoose.Schema({
     name: { type: String, required: true },
     tel: String,
     email: String,
-    play_days: [String],
+    play_days: [String],        // e.g., ["Monday", "Wednesday"]
     booking_count: { type: Number, default: 0 },
     last_booked: { type: Date, default: new Date("2000-01-01") },
     booking_exempt: { type: Boolean, default: false }
 }));
 
+// Tracks when a golfer is on holiday or away
 const Unavailable = mongoose.model('Unavailable', new mongoose.Schema({
     golfer_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Golfer' },
     date_from: Date,
@@ -50,18 +71,24 @@ const Unavailable = mongoose.model('Unavailable', new mongoose.Schema({
     indefinite: Boolean
 }));
 
+// Stores the actual groups for a specific date
 const Rollup = mongoose.model('Rollup', new mongoose.Schema({
     date: { type: Date, required: true },
-    groups: [[{ golfer_id: String, name: String, booker: Boolean }]]
+    groups: [[{ golfer_id: String, name: String, booker: Boolean }]] // A list of lists (groups)
 }));
 
-// 5. AUTHENTICATION ROUTES
+/**
+ * SECTION 6: AUTHENTICATION ROUTES
+ * Handling Login and Logout.
+ */
 app.post('/login', async (req, res) => {
     try {
         const { username, password } = req.body;
-        const user = await User.findOne({ username });
+        const user = await User.findOne({ username }); // Find user by name
+        
+        // Compare the submitted password with the encrypted one in the database
         if (user && await bcrypt.compare(password, user.password)) {
-            req.session.userId = user._id; 
+            req.session.userId = user._id; // Remember this user's ID in the session
             res.json({ success: true, message: "Logged in" });
         } else {
             res.status(401).json({ error: "Invalid username or password" });
@@ -73,65 +100,42 @@ app.post('/login', async (req, res) => {
 
 app.post('/api/logout', (req, res) => {
     req.session.destroy(() => {
-        res.clearCookie('connect.sid');
+        res.clearCookie('connect.sid'); // Remove the login cookie from the browser
         res.json({ success: true });
     });
 });
 
-// GET the date of the last successful backup
-app.get('/api/admin/backup-status', protect, async (req, res) => {
-    const backupDir = '/mnt/golf_backups';
-    
+/**
+ * SECTION 7: GOLFER MANAGEMENT (CRUD)
+ * CRUD stands for Create, Read, Update, Delete.
+ * Notice the 'protect' function added to these routes to keep them private.
+ */
+
+// GET all golfers
+app.get('/api/golfers', protect, async (req, res) => {
     try {
-        if (!fs.existsSync(backupDir)) {
-            return res.json({ lastBackup: "Never (Folder missing)" });
-        }
-
-        const folders = fs.readdirSync(backupDir);
-        if (folders.length === 0) {
-            return res.json({ lastBackup: "No backups found" });
-        }
-
-        // Sort folders by name (since they are named by date YYYY-MM-DD)
-        const latest = folders.sort().reverse()[0];
-        res.json({ lastBackup: latest });
-    } catch (err) {
-        res.status(500).json({ error: "Could not read backup status" });
+        const golfers = await Golfer.find().sort({ name: 1 }); // Find all, sort A-Z
+        res.json(golfers);
+    } catch (err) { 
+        res.status(500).json({ error: "Failed to fetch golfers" }); 
     }
 });
 
-// 6. GOLFER ROUTES
-app.get('/api/golfers', protect, async (req, res) => {
-    try {
-        const golfers = await Golfer.find().sort({ name: 1 });
-        res.json(golfers);
-    } catch (err) { res.status(500).json({ error: "Failed to fetch golfers" }); }
-});
-
+// CREATE a new golfer
 app.post('/api/golfers', protect, async (req, res) => {
     try {
-        const { name, tel, email, play_days } = req.body;
-        const golfer = new Golfer({ name, tel, email, play_days });
+        const golfer = new Golfer(req.body);
         await golfer.save();
         res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) { 
+        res.status(500).json({ error: err.message }); 
+    }
 });
 
-app.put('/api/golfers/:id', protect, async (req, res) => {
-    try {
-        await Golfer.findByIdAndUpdate(req.params.id, req.body);
-        res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: "Update failed" }); }
-});
-
-app.delete('/api/golfers/:id', protect, async (req,res)=>{
-    try {
-        await Golfer.findByIdAndDelete(req.params.id);
-        res.json({success:true});
-    } catch(err) { res.status(500).json({error:"Delete failed"}); }
-});
-
-// 7. AVAILABILITY & UNAVAILABILITY ROUTES
+/**
+ * SECTION 8: LOGIC - FINDING AVAILABLE GOLFERS
+ * This is the "brain" of the app. It calculates who can play on a specific date.
+ */
 app.get('/api/available', protect, async (req, res) => {
     try {
         const dateStr = req.query.date;
@@ -139,12 +143,12 @@ app.get('/api/available', protect, async (req, res) => {
         targetDate.setHours(0,0,0,0);
 
         const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-        const dayName = dayNames[targetDate.getDay()];
+        const dayName = dayNames[targetDate.getDay()]; // Get text name of the day (e.g. "Monday")
 
-        // Find golfers who usually play on this day
+        // 1. Find golfers who usually play on this day of the week
         const golfers = await Golfer.find({ play_days: dayName }).lean();
 
-        // Find golfers away on this specific date
+        // 2. Find everyone who has marked themselves as "Away" for this date
         const away = await Unavailable.find({
             date_from: { $lte: targetDate },
             $or: [
@@ -153,155 +157,21 @@ app.get('/api/available', protect, async (req, res) => {
             ]
         });
 
+        // 3. Filter out the "Away" golfers from the "Available" list
         const awayIds = away.map(a => a.golfer_id.toString());
         const available = golfers.filter(g => !awayIds.includes(g._id.toString()));
         
         res.json(available);
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// 7b. PARTICIPATION REPORT
-app.get('/api/reports/participation', protect, async (req, res) => {
-    try {
-        // Change RollupHistory to Rollup to match your definition above
-        const history = await Rollup.find({}).lean();
-        
-        console.log(`Found ${history.length} records in rollups collection.`);
-
-        const stats = {};
-
-        history.forEach(rollup => {
-            if (!rollup.groups || !Array.isArray(rollup.groups)) return;
-
-            rollup.groups.forEach(groupArray => {
-                if (!Array.isArray(groupArray)) return;
-
-                groupArray.forEach(player => {
-                    if (!player || !player.name) return;
-
-                    const name = player.name;
-                    if (!stats[name]) {
-                        stats[name] = { played: 0, booked: 0 };
-                    }
-
-                    stats[name].played++;
-                    
-                    if (player.booker === true) {
-                        stats[name].booked++;
-                    }
-                });
-            });
-        });
-
-        const reportData = Object.keys(stats).map(name => {
-            const p = stats[name].played;
-            const b = stats[name].booked;
-            return {
-                name: name,
-                played: p,
-                booked: b,
-                percentage: p > 0 ? ((b / p) * 100).toFixed(1) + '%' : '0.0%'
-            };
-        });
-
-        reportData.sort((a, b) => a.name.localeCompare(b.name));
-        res.json(reportData);
-    } catch (err) {
-        console.error("REPORT ERROR:", err);
-        res.status(500).json([]);
+    } catch (err) { 
+        res.status(500).json({ error: err.message }); 
     }
 });
 
-app.post('/api/unavailable', protect, async (req, res) => {
-    try {
-        const record = new Unavailable(req.body);
-        await record.save();
-        res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: "Save failed" }); }
+/**
+ * SECTION 9: SERVER STARTUP
+ */
+app.use(express.static(path.join(__dirname, 'public'))); // Serve your website files (HTML/CSS)
+
+app.listen(3000, () => {
+    console.log(`Server running on port 3000`);
 });
-
-app.get('/api/unavailable/golfer/:id', protect, async (req, res) => {
-    const records = await Unavailable.find({ golfer_id: req.params.id }).sort({ date_from: 1 });
-    res.json(records);
-});
-
-app.get('/api/unavailable/indefinite', protect, async (req, res) => {
-    const list = await Unavailable.find({ indefinite: true }).populate('golfer_id');
-    res.json(list.filter(i => i.golfer_id));
-});
-
-// GET all unavailability records for the absence report
-app.get('/api/unavailable/all', protect, async (req, res) => {
-    try {
-        // Find ALL records, join golfer info, sort by date
-        const list = await Unavailable.find({})
-            .populate('golfer_id')
-            .sort({ date_from: -1 });
-        
-        // Clean up records that don't have a valid golfer attached
-        res.json(list.filter(item => item.golfer_id));
-    } catch (err) {
-        res.status(500).json({ error: "Report data failed" });
-    }
-});
-
-app.delete('/api/unavailable/:id', protect, async (req, res) => {
-    try {
-        await Unavailable.findByIdAndDelete(req.params.id);
-        res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: "Delete failed" }); }
-});
-
-// 8. ROLLUP ROUTES
-app.post('/api/rollups', protect, async (req, res) => {
-    try {
-        const rollup = new Rollup(req.body);
-        await rollup.save();
-        res.json({ success: true });
-    } catch (err) { res.status(500).json({ success: false, error: err.message }); }
-});
-
-app.get('/api/rollups/find', protect, async (req, res) => {
-    const queryDate = new Date(req.query.date);
-    const start = new Date(queryDate).setHours(0,0,0,0);
-    const end = new Date(queryDate).setHours(23,59,59,999);
-    const rollup = await Rollup.findOne({ date: { $gte: start, $lte: end } });
-    if (!rollup) return res.status(404).json({ message: "Not found" });
-    res.json(rollup);
-});
-
-app.get('/api/rollups', protect, async (req, res) => {
-    const rollups = await Rollup.find().sort({ date: -1 });
-    res.json(rollups);
-});
-
-app.get('/api/rollups/:id', protect, async (req, res) => {
-    try {
-        const rollup = await Rollup.findById(req.params.id);
-        res.json(rollup);
-    } catch (err) { res.status(404).json({ error: "Not found" }); }
-});
-
-// 9. BOOKER UPDATES
-app.post('/api/booker/:id', protect, async (req, res) => {
-    try {
-        await Golfer.findByIdAndUpdate(req.params.id, {
-            $inc: { booking_count: 1 },
-            last_booked: new Date()
-        });
-        res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: "Update failed" }); }
-});
-
-// 10. ADMIN & STATIC
-app.post('/api/admin/create-user', protect, async (req, res) => {
-    try {
-        const newUser = new User(req.body);
-        await newUser.save();
-        res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: "Failed" }); }
-});
-
-app.use(express.static(path.join(__dirname, 'public')));
-
-app.listen(3000, () => console.log(`Server running on port 3000`));

@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+<!
+     This page generates a report of golfer absences and unavailability. Admins can select specific players to include in the report, or select all players. 
+     There is also an option to exclude players who are indefinitely unavailable. The report can be sorted by player name or start date, and can be printed or saved as a PDF for sharing.
+>
 <html>
     <div id="nav-placeholder"></div>
 <head>
@@ -202,7 +206,7 @@ function sortTable(column) {
         const name = rec.golfer_id ? rec.golfer_id.name : "Unknown";
         const from = new Date(rec.date_from).toLocaleDateString('en-GB');
         const to = rec.indefinite ? "Indefinite" : new Date(rec.date_to).toLocaleDateString('en-GB');
-        const status = rec.indefinite ? "Indefinite" : "Scheduled";
+        const status = rec.indefinite ? "Indefinite" : "Away";
 
         row.innerHTML = `<td>${name}</td><td>${from}</td><td>${to}</td><td>${status}</td>`;
         tbody.appendChild(row);

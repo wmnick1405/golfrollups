@@ -4,7 +4,6 @@
      There is also an option to exclude players who are indefinitely unavailable. The report can be sorted by player name or start date, and can be printed or saved as a PDF for sharing.
 >
 <html>
-    <div id="nav-placeholder"></div>
 <head>
     <title>Absence Report</title>
     <style>
@@ -79,6 +78,8 @@
             </table>
         </div>
     </div>
+
+<script src="js/shared.js"></script>
 
 <script>
     let allAbsences = [];
@@ -214,11 +215,6 @@ function sortTable(column) {
 }
 
     init();
-    fetch('nav.html')
-            .then(response => response.text())
-            .then(data => {
-                document.getElementById('nav-placeholder').innerHTML = data;
-            });
 </script>
 </body>
 </html>

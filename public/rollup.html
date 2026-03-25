@@ -115,6 +115,8 @@ If a rollup already exists for the selected date, the admin is alerted and given
         <div id="groups"></div>
     </div>
 
+    <script src="js/shared.js"></script>
+
     <script>
         function shuffle(array) {
             for (let i = array.length - 1; i > 0; i--) {
@@ -233,9 +235,6 @@ If a rollup already exists for the selected date, the admin is alerted and given
             }
         }
 
-        fetch('nav.html')
-            .then(response => response.text())
-            .then(data => { document.getElementById('nav-placeholder').innerHTML = data; });
     </script>
 </body>
 </html>

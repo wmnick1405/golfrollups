@@ -63,6 +63,8 @@ body{
   <div id="history"></div>
 </div>
 
+<script src="js/shared.js"></script>
+
 <script>
 async function loadHistory(){
   const div = document.getElementById("history")
@@ -99,12 +101,6 @@ async function loadHistory(){
 
 // load history when page opens
 loadHistory()
-
-fetch('nav.html')
-            .then(response => response.text())
-            .then(data => {
-                document.getElementById('nav-placeholder').innerHTML = data;
-            });
 
 </script>
 

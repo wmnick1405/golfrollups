@@ -217,16 +217,7 @@ app.get('/api/rollups/:id', protect, async (req, res) => {
 
 app.get('/api/reports/participation', protect, async (req, res) => {
     try {
-        const { from, to } = req.query;
-        let query = {};
-        
-        if (from || to) {
-            query.date = {};
-            if (from) query.date.$gte = new Date(from);
-            if (to) query.date.$lte = new Date(to);
-        }
-
-        const history = await Rollup.find(query).lean();
+        const history = await Rollup.find({}).lean();
         const stats = {};
         history.forEach(rollup => {
             rollup.groups.forEach(group => {
@@ -245,55 +236,6 @@ app.get('/api/reports/participation', protect, async (req, res) => {
         })).sort((a, b) => a.name.localeCompare(b.name));
         res.json(report);
     } catch (err) { res.status(500).json([]); }
-});
-
-// NEW: PLAYER HISTORY REPORT
-app.get('/api/reports/player-history', protect, async (req, res) => {
-    try {
-        const { name, from, to } = req.query;
-        const searchName = name.trim();
-        const nameRegex = new RegExp(`^${searchName}$`, 'i');
-
-        // NEW SEARCH STRATEGY: Look into the nested arrays
-        let query = { 
-            groups: { 
-                $elemMatch: { 
-                    $elemMatch: { name: nameRegex } 
-                } 
-            } 
-        };
-        
-        if (from || to) {
-            query.date = {};
-            if (from) query.date.$gte = new Date(from);
-            if (to) query.date.$lte = new Date(to);
-        }
-
-        const rollups = await Rollup.find(query).sort({ date: -1 }).lean();
-        console.log(`Deep Search found ${rollups.length} matches for ${searchName}`);
-
-        const results = rollups.map(r => {
-            let isBooker = false;
-            // Flatten the groups to find the player easily
-            const allPlayersInThisRollup = r.groups.flat();
-            const me = allPlayersInThisRollup.find(p => 
-                p.name.trim().toLowerCase() === searchName.toLowerCase()
-            );
-            
-            if (me && me.booker) isBooker = true;
-
-            return {
-                date: r.date,
-                isBooker: isBooker,
-                rollupId: r._id
-            };
-        });
-
-        res.json(results);
-    } catch (err) {
-        console.error("Deep Search Error:", err);
-        res.status(500).json({ error: "Failed to fetch history" });
-    }
 });
 
 // 10. BOOKER UPDATES

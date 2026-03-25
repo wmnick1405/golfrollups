@@ -39,6 +39,9 @@
             </tbody>
     </table>
 
+
+    <script src="js/shared.js"></script>
+
     <script>
         async function loadUnavailable() {
     try {
@@ -98,15 +101,8 @@ async function makeAvailable(unavailabilityId) {
 }
 
 // Initialize
-loadUnavailable();
+    loadUnavailable();
 
-// Load Nav
-fetch('nav.html')
-    .then(response => response.text())
-    .then(data => {
-        document.getElementById('nav-placeholder').innerHTML = data;
-    })
-    .catch(err => console.warn("Navigation file not found."));
     </script>
 
 </body>

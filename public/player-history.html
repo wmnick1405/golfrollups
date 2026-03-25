@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Player History</title>
+    <style>
+        body {
+            font-family: Arial;
+            margin: 30px;
+            background: #f4f4f4;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: auto;
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .filter-box {
+            background: #eef2f7;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            border: 1px solid #d1d9e6;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #2e7d32;
+            color: white;
+        }
+
+        .booker-star {
+            color: #d32f2f;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="nav-placeholder"></div>
+    <div class="container">
+        <a href="participation-report.html" style="text-decoration:none; color:#2e7d32; font-weight:bold;">← Back to
+            Summary</a>
+        <h2 id="headerName">Player History</h2>
+
+        <div class="filter-box">
+            From: <input type="date" id="dateFrom">
+            To: <input type="date" id="dateTo">
+            <label><input type="checkbox" id="allDates" onchange="toggleDates()"> All Dates</label>
+            <button onclick="loadHistory()" style="margin-left:10px;">Update</button>
+        </div>
+
+        <table id="historyTable">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Role</th>
+                    <th>Sheet</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script src="js/shared.js"></script>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const golferName = params.get("name");
+        document.getElementById('headerName').textContent = `History: ${golferName}`;
+
+        // Set default dates from URL or today
+        document.getElementById('dateFrom').value = params.get("from") || "";
+        document.getElementById('dateTo').value = params.get("to") || new Date().toISOString().split('T')[0];
+
+        function toggleDateInputs() {
+            const isAll = document.getElementById('allDates').checked;
+            const fromInput = document.getElementById('dateFrom');
+            const toInput = document.getElementById('dateTo');
+
+            fromInput.disabled = isAll;
+            toInput.disabled = isAll;
+
+            if (isAll) {
+                fromInput.value = "";
+                // Keep 'To' as today or clear it, depending on your preference
+            }
+            loadPlayerHistory();
+        }
+
+        async function loadHistory() {
+            const from = document.getElementById('dateFrom').value;
+            const to = document.getElementById('dateTo').value;
+            const isAll = document.getElementById('allDates').checked;
+
+            let url = `/api/reports/player-history?name=${encodeURIComponent(golferName)}`;
+            if (!isAll) {
+                if (from) url += `&from=${from}`;
+                if (to) url += `&to=${to}`;
+            }
+
+            const data = await apiFetch(url);
+            const tbody = document.querySelector("#historyTable tbody");
+            tbody.innerHTML = "";
+
+            data.forEach(item => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${formatDate(item.date)}</td>
+                    <td>${item.isBooker ? '<span class="booker-star">Booker ⭐</span>' : 'Player'}</td>
+                    <td><a href="bookingsheet.html?id=${item.rollupId}">View</a></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+
+        async function loadPlayerHistory() {
+            const from = document.getElementById('dateFrom').value;
+            const to = document.getElementById('dateTo').value;
+            const isAll = document.getElementById('allDates').checked;
+
+            // IMPORTANT: encodeURIComponent handles the spaces in names
+            let url = `/api/reports/player-history?name=${encodeURIComponent(golferName)}`;
+            if (!isAll) {
+                if (from) url += `&from=${from}`;
+                if (to) url += `&to=${to}`;
+            }
+
+            console.log("Fetching from URL:", url);
+            const data = await apiFetch(url);
+            const tbody = document.querySelector("#historyTable tbody");
+            tbody.innerHTML = "";
+
+            if (!data || data.length === 0) {
+                tbody.innerHTML = "<tr><td colspan='3' style='text-align:center; padding:20px;'>No games found for this period.</td></tr>";
+                return;
+            }
+
+            if (!data || data.length === 0) {
+                tbody.innerHTML = "<tr><td colspan='3' style='text-align:center; padding:20px;'>No games found for this period.</td></tr>";
+                return;
+            }
+
+            if (!data || data.length === 0) {
+                tbody.innerHTML = "<tr><td colspan='3' style='text-align:center;'>No records found. Check if the name matches exactly.</td></tr>";
+                return;
+            }
+
+            data.forEach(item => {
+                const row = document.createElement("tr");
+                const role = item.isBooker ? '<span style="color:red; font-weight:bold;">Booker ⭐</span>' : 'Player';
+                row.innerHTML = `
+            <td>${formatDate(item.date)}</td>
+            <td>${role}</td>
+            <td><a href="bookingsheet.html?id=${item.rollupId}">View Sheet</a></td>
+        `;
+                tbody.appendChild(row);
+            });
+        }
+        loadPlayerHistory();
+    </script>
+</body>
+
+</html>

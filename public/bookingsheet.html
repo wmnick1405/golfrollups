@@ -20,6 +20,7 @@ body { font-family:Arial; padding:30px; }
 <h2>Booking Sheet</h2>
 <div id="sheet"></div>
 
+<script src="js/shared.js"></script>
 
 <script>
 async function loadBookingSheet(){
@@ -58,11 +59,6 @@ async function loadBookingSheet(){
 
 loadBookingSheet()
 
-fetch('nav.html')
-            .then(response => response.text())
-            .then(data => {
-                document.getElementById('nav-placeholder').innerHTML = data;
-            });
 </script>
 
 </body>

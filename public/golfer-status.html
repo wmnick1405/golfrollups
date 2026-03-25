@@ -80,6 +80,8 @@
         </div>
     </div>
 
+<script src="js/shared.js"></script>
+
     <script>
 async function loadGolfers() {
     const res = await fetch('/api/golfers');
@@ -237,10 +239,6 @@ async function saveUnavailability() {
         }
 
         loadGolfers();
-
-        fetch('nav.html')
-            .then(response => response.text())
-            .then(data => { document.getElementById('nav-placeholder').innerHTML = data; });
     </script>
 </body>
 </html>

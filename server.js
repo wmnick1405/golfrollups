@@ -113,10 +113,35 @@ app.get('/api/golfers', protect, async (req, res) => {
 
 app.post('/api/golfers', protect, async (req, res) => {
     try {
+        const { name } = req.body;
+        
+        // 1. Basic Validation: Ensure name isn't just empty spaces
+        if (!name || name.trim().length === 0) {
+            return res.status(400).json({ error: "Golfer name is required." });
+        }
+
+        const cleanName = name.trim();
+
+        // 2. Duplicate Check: Search for this name (Case-Insensitive)
+        // The 'i' flag makes it ignore capital vs lowercase
+        const existing = await Golfer.findOne({ 
+            name: { $regex: new RegExp(`^${cleanName}$`, 'i') } 
+        });
+
+        if (existing) {
+            // 400 means "Bad Request" - the user sent something we can't accept
+            return res.status(400).json({ error: `The golfer "${cleanName}" already exists in the database.` });
+        }
+
+        // 3. If we get here, the name is unique! Save it.
         const golfer = new Golfer(req.body);
         await golfer.save();
         res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+
+    } catch (err) { 
+        console.error("Add Golfer Error:", err);
+        res.status(500).json({ error: "Server error while adding golfer." }); 
+    }
 });
 
 app.put('/api/golfers/:id', protect, async (req, res) => {

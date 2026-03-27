@@ -155,21 +155,35 @@
                 const tbody = document.querySelector("#golfersTable tbody");
                 tbody.innerHTML = "";
 
+                const weekDays = ["Monday", "Wednesday", "Friday"];
+
                 golfers.forEach(g => {
                     const row = document.createElement("tr");
+
+                    // Create the HTML for the checkboxes for this specific golfer
+                    let daysHtml = `<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; font-size: 0.8em;">`;
+                    weekDays.forEach(day => {
+                        const checked = (g.play_days || []).includes(day) ? 'checked' : '';
+                        daysHtml += `
+                    <label style="display:block;">
+                        <input type="checkbox" class="edit-day-${g._id}" value="${day}" ${checked}> ${day.substring(0, 3)}
+                    </label>`;
+                    });
+                    daysHtml += `</div>`;
+
                     row.innerHTML = `
-                        <td><input type="text" value="${g.name}" id="name_${g._id}"></td>
-                        <td><input type="text" value="${g.tel || ''}" id="tel_${g._id}"></td>
-                        <td><input type="email" value="${g.email || ''}" id="email_${g._id}"></td>
-                        <td><input type="text" value="${(g.play_days || []).join(', ')}" id="days_${g._id}"></td>
-                        <td class="exempt-cell">
-                            <input type="checkbox" id="exempt_${g._id}" ${g.booking_exempt ? 'checked' : ''}>
-                        </td>
-                        <td>
-                            <button onclick="saveGolfer('${g._id}')">Save</button>
-                            <button onclick="deleteGolfer('${g._id}')" style="background:#ffcccc; color:#900; border:1px solid #900;">Delete</button>
-                        </td>
-                    `;
+                <td><input type="text" value="${g.name}" id="name_${g._id}" style="width:120px;"></td>
+                <td><input type="text" value="${g.tel || ''}" id="tel_${g._id}" style="width:100px;"></td>
+                <td><input type="email" value="${g.email || ''}" id="email_${g._id}" style="width:150px;"></td>
+                <td>${daysHtml}</td>
+                <td class="exempt-cell">
+                    <input type="checkbox" id="exempt_${g._id}" ${g.booking_exempt ? 'checked' : ''}>
+                </td>
+                <td>
+                    <button onclick="saveGolfer('${g._id}')">Save</button>
+                    <button onclick="deleteGolfer('${g._id}')" style="background:#ffcccc; color:#900; border:1px solid #900;">Delete</button>
+                </td>
+            `;
                     tbody.appendChild(row);
                 });
             } catch (err) { console.error("Load failed", err); }
@@ -180,25 +194,32 @@
             const name = document.getElementById("name_" + id).value.trim();
             const tel = document.getElementById("tel_" + id).value.trim();
             const email = document.getElementById("email_" + id).value.trim();
-            const days = document.getElementById("days_" + id).value.split(",").map(d => d.trim());
             const booking_exempt = document.getElementById("exempt_" + id).checked;
+
+            // NEW: Collect checkboxes for THIS specific row
+            const play_days = Array.from(document.querySelectorAll(`.edit-day-${id}:checked`))
+                .map(cb => cb.value);
 
             if (!name) return alert("Name cannot be empty");
 
-            const res = await fetch("/api/golfers/" + id, {
-                method: "PUT",
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, tel, email, play_days: days, booking_exempt })
-            });
+            try {
+                const res = await fetch("/api/golfers/" + id, {
+                    method: "PUT",
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, tel, email, play_days, booking_exempt })
+                });
 
-            if (res.ok) {
-                alert("Golfer updated successfully");
-                loadGolfers();
-            } else {
-                alert("Failed to update golfer");
+                if (res.ok) {
+                    showMsg("Success: Golfer updated!");
+                    loadGolfers();
+                } else {
+                    const data = await res.json();
+                    alert("Error: " + (data.error || "Update failed"));
+                }
+            } catch (err) {
+                alert("Server error");
             }
         }
-
         // Delete function
         async function deleteGolfer(id) {
             if (!confirm("Delete this golfer?")) return;

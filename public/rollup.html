@@ -1,100 +1,101 @@
 <!DOCTYPE html>
-<! This page allows admins to generate rollup groups for a specific date. Admins can select the date they want to generate for, and the system will automatically create balanced groups based on golfer availability and booking history.
-The grouping algorithm first shuffles the available players to ensure randomness, then creates groups of 4 or 3 based on the total number of players. The player with the least booking history is assigned as the booker for each group, with an exemption for players marked as booking exempt. 
-Once the groups are generated, they are displayed on the page and also saved to the database. 
-Admins can then view the booking sheet for the generated rollup, which can be printed or saved as a PDF to share with players. 
-If a rollup already exists for the selected date, the admin is alerted and given the option to view the existing booking sheet
- instead of generating a new rollup. This ensures that duplicate rollups are not created for the same date.>
->
 <html>
 
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Golf Rollup Generator</title>
+    <title>Generate Rollup</title>
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f4f7f6;
-            margin: 0;
-            padding: 20px;
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f4f4f4;
         }
 
-        .container {
-            max-width: 500px;
-            margin: 40px auto;
+        .layout {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+
+        /* Sidebar for Available Players */
+        .sidebar {
+            width: 250px;
             background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
 
-        h2 {
-            color: #2c3e50;
-            margin-top: 0;
-            text-align: center;
+        /* Main Area for Groups */
+        .main-content {
+            flex: 1;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
 
-        .input-group {
-            margin-bottom: 20px;
+        /* Drag and Drop Styling */
+        .player-tag {
+            background: #e1f5fe;
+            border: 1px solid #01579b;
+            padding: 8px 12px;
+            margin: 5px;
+            border-radius: 20px;
+            cursor: grab;
+            display: inline-block;
+            font-size: 0.9em;
+            user-select: none;
         }
 
-        label {
-            display: block;
-            margin-bottom: 8px;
+        .player-tag:active {
+            cursor: grabbing;
+        }
+
+        .player-tag.is-booker {
+            border: 2px solid #d32f2f;
+            background: #ffebee;
             font-weight: bold;
-            color: #555;
         }
 
-        input[type="date"] {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            box-sizing: border-box;
-            font-size: 16px;
+        .group-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
         }
 
-        /* Scoped specifically to buttons inside .container to avoid nav bar issues */
-        .container button {
-            width: 100%;
+        .group-box {
+            border: 2px dashed #ccc;
+            padding: 15px;
+            border-radius: 8px;
+            min-height: 100px;
+            transition: all 0.2s;
+        }
+
+        /* Visual feedback when hovering over a group */
+        .group-box.drag-over {
+            border-color: #2e7d32;
+            background: #e8f5e9;
+            transform: scale(1.02);
+        }
+
+        .controls {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #eee;
+            border-radius: 5px;
+        }
+
+        button {
+            padding: 10px 20px;
+            cursor: pointer;
             background: #2e7d32;
             color: white;
             border: none;
-            padding: 14px;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background 0.3s;
+            border-radius: 4px;
         }
 
-        .container button:hover {
-            background: #256328;
-        }
-
-        #groups {
-            margin-top: 25px;
-        }
-
-        .group {
-            margin-bottom: 15px;
-            padding: 15px;
-            background: #ffffff;
-            border: 1px solid #e0e0e0;
-            border-left: 6px solid #2e7d32;
-            border-radius: 8px;
-            line-height: 1.6;
-        }
-
-        .booker-label {
-            color: #2e7d32;
-            font-weight: bold;
-        }
-
-        .exempt-label {
-            color: #888;
-            font-size: 0.85em;
-            font-style: italic;
+        button.secondary {
+            background: #666;
         }
     </style>
 </head>
@@ -102,139 +103,204 @@ If a rollup already exists for the selected date, the admin is alerted and given
 <body>
     <div id="nav-placeholder"></div>
 
-    <div class="container">
-        <h2>Rollup Generator</h2>
-        
-        <div class="input-group">
-            <label for="date">Select Play Date</label>
-            <input type="date" id="date">
+    <div class="layout">
+        <div class="sidebar">
+            <h3>Available Pool</h3>
+            <p style="font-size:0.8em; color:#666;">Drag players from here into groups.</p>
+            <div id="playerPool" class="group-box" ondragover="allowDrop(event)" ondrop="dropToPool(event)">
+            </div>
         </div>
 
-        <button onclick="generate()">Generate & Save Groups</button>
-        
-        <div id="groups"></div>
+        <div class="main-content">
+            <h2>Generate Rollup</h2>
+            <p>To use: select required date, click the "Get Available" button, then click the "Auto-Group" button. Drag players between groups as needed. When complete, click the "Save Rollup" button.</p>
+            <div class="controls">
+                <input type="date" id="rollupDate">
+                <button onclick="fetchAvailable()">1. Get Available</button>
+                <button class="secondary" onclick="autoDistribute()">2. Auto-Group (4s & 3s)</button>
+                <button onclick="resetPool()" style="background:#d32f2f;">Reset All</button>
+                <button onclick="saveRollup()" style="float:right; background:#1565c0;">3. Save Rollup</button>
+            </div>
+
+            <div id="groupsContainer" class="group-container">
+            </div>
+        </div>
     </div>
 
     <script src="js/shared.js"></script>
-
     <script>
-        function shuffle(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                let j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
-            }
-            return array;
+        let pool = [];   // Players not in a group
+        let groups = []; // Array of Arrays [[p1, p2], [p3, p4]]
+
+        // 1. FETCH DATA
+        async function fetchAvailable() {
+            const date = document.getElementById("rollupDate").value;
+            if (!date) return alert("Select a date first");
+
+            const data = await apiFetch(`/api/available?date=${date}`);
+            pool = data.map(p => ({ golfer_id: p._id, name: p.name, booker: false }));
+            groups = []; // Clear existing groups
+            renderAll();
         }
 
-        function buildGroups(players) {
-            let total = players.length;
-            if (total === 0) return [];
-            
-            if (total === 5) {
-                return [players.splice(0, 3), players.splice(0, 2)];
+        // 2. AUTOMATIC DISTRIBUTION (Optional starting point)
+        function autoDistribute() {
+            if (pool.length === 0) return alert("No players in pool to distribute.");
+
+            // 1. Shuffle the pool to keep things fair and random
+            let tempPool = [...pool].sort(() => Math.random() - 0.5);
+            const total = tempPool.length;
+            groups = [];
+
+            // 2. The Golf Math: Determine how many 4s and 3s
+            let num4s = Math.floor(total / 4);
+            let remainder = total % 4;
+
+            // Logic: If we have a remainder of 1 (e.g., 9, 13 players) 
+            // or 2 (e.g., 10, 14 players), we convert 4-person groups into 3s.
+            if (remainder === 1 && num4s > 0) {
+                num4s -= 2; // We turn two 4s into three 3s
+            } else if (remainder === 2 && num4s > 0) {
+                num4s -= 1; // We turn one 4 into two 3s
+            } else if (remainder === 3) {
+                // Remainder 3 is perfect—it just becomes its own group of 3
             }
 
-            let fours = 0, threes = 0;
-            if (total % 4 === 0) fours = total / 4;
-            else if (total % 4 === 3) { fours = Math.floor(total / 4); threes = 1; }
-            else if (total % 4 === 2) { fours = Math.floor(total / 4) - 1; threes = 2; }
-            else if (total % 4 === 1) { fours = Math.floor(total / 4) - 2; threes = 3; }
+            // Safety check: ensure num4s doesn't go negative for very small groups
+            num4s = Math.max(0, num4s);
 
-            let groups = [];
-            for (let i = 0; i < fours; i++) groups.push(players.splice(0, 4));
-            for (let i = 0; i < threes; i++) groups.push(players.splice(0, 3));
-            if (players.length > 0) groups[groups.length - 1].push(...players);
+            // 3. Create the 4-person groups
+            for (let i = 0; i < num4s; i++) {
+                groups.push(tempPool.splice(0, 4));
+            }
 
-            return groups;
+            // 4. Everything else goes into 3-person groups (or the final remainder)
+            while (tempPool.length > 0) {
+                let size = (tempPool.length >= 3) ? 3 : tempPool.length;
+                groups.push(tempPool.splice(0, size));
+            }
+
+            pool = []; // Clear the pool as everyone is now in a group
+            renderAll();
         }
 
-        function chooseBooker(group) {
-            return group.sort((a, b) => {
-                if (a.booking_count !== b.booking_count) return a.booking_count - b.booking_count;
-                return new Date(a.last_booked) - new Date(b.last_booked);
+        function resetPool() {
+            if (groups.length === 0) return;
+            if (!confirm("Move everyone back to the pool and clear all groups?")) return;
+
+            // Flatten all groups back into the pool array
+            groups.forEach(group => {
+                pool.push(...group);
+            });
+
+            groups = []; // Delete all group boxes
+            renderAll();
+        }
+
+        // 3. RENDER LOGIC
+        function renderAll() {
+            renderPool();
+            renderGroups();
+        }
+
+        function renderPool() {
+            const container = document.getElementById("playerPool");
+            container.innerHTML = "";
+            pool.forEach((player, idx) => {
+                container.appendChild(createPlayerTag(player, "pool", idx));
             });
         }
 
-        async function generate() {
-            const dateInput = document.getElementById('date').value;
-            if (!dateInput) return alert("Please select a date first");
+        function renderGroups() {
+    const container = document.getElementById("groupsContainer");
+    container.innerHTML = "";
 
-            try {
-                const checkRes = await fetch(`/api/rollups/find?date=${dateInput}`);
-                if (checkRes.ok) {
-                    const existing = await checkRes.json();
-                    if (existing && existing._id) {
-                        alert("A rollup already exists for this date.");
-                        if (confirm("View existing booking sheet?")) {
-                            window.location.href = "/bookingsheet.html?id=" + existing._id;
-                        }
-                        return;
-                    }
-                }
+    groups.forEach((group, gIdx) => {
+        // We create the element and call it 'groupDiv'
+        const groupDiv = document.createElement("div");
+        groupDiv.className = "group-box";
+        
+        // NOW use 'groupDiv' here:
+        groupDiv.innerHTML = `<strong>Group ${gIdx + 1} <span style="color:#666; font-size:0.8em;">(${group.length} players)</span></strong><hr>`;
+        
+        // Set up Drop Zone
+        groupDiv.ondragover = allowDrop;
+        groupDiv.ondragenter = () => groupDiv.classList.add('drag-over');
+        groupDiv.ondragleave = () => groupDiv.classList.remove('drag-over');
+        groupDiv.ondrop = (e) => handleDrop(e, gIdx);
 
-                const res = await fetch(`/api/available?date=${dateInput}`);
-                if (res.status === 401) { window.location.href = "/"; return; }
-                
-                const players = await res.json();
-                if (!players || players.length === 0) return alert("No players available for this day.");
+        group.forEach((player, pIdx) => {
+            const tag = createPlayerTag(player, gIdx, pIdx);
+            tag.onclick = () => {
+                player.booker = !player.booker;
+                renderAll();
+            };
+            groupDiv.appendChild(tag); // Add player to groupDiv
+        });
+        
+        container.appendChild(groupDiv); // Add groupDiv to the page
+    });
+}
 
-                shuffle(players);
-                const groups = buildGroups(players);
-                
-                const div = document.getElementById('groups');
-                div.innerHTML = "";
-                let saveGroups = [];
+        function createPlayerTag(player, gIdx, pIdx) {
+            const span = document.createElement("span");
+            span.className = `player-tag ${player.booker ? 'is-booker' : ''}`;
+            span.draggable = true;
+            span.textContent = player.name + (player.booker ? " ⭐" : "");
 
-                for (let i = 0; i < groups.length; i++) {
-                    let sortedGroup = chooseBooker(groups[i]);
-
-                    // Exemption Swap Logic
-                    if (sortedGroup[0].booking_exempt) {
-                        const nonExemptIndex = sortedGroup.findIndex(p => !p.booking_exempt);
-                        if (nonExemptIndex !== -1) {
-                            [sortedGroup[0], sortedGroup[nonExemptIndex]] = [sortedGroup[nonExemptIndex], sortedGroup[0]];
-                        }
-                    }
-
-                    const gDiv = document.createElement('div');
-                    gDiv.className = "group";
-                    let html = `<strong>Group ${i + 1}</strong><br>`;
-                    let saveGroup = [];
-
-                    sortedGroup.forEach((p, index) => {
-                        const isBooker = (index === 0);
-                        const tag = isBooker ? ' <span class="booker-label">(Booker)</span>' : 
-                                    (p.booking_exempt ? ' <span class="exempt-label">(Exempt)</span>' : '');
-                        
-                        html += `${p.name}${tag}<br>`;
-                        saveGroup.push({ golfer_id: p._id, name: p.name, booker: isBooker });
-                    });
-
-                    saveGroups.push(saveGroup);
-                    gDiv.innerHTML = html;
-                    div.appendChild(gDiv);
-                }
-
-                const saveRes = await fetch('/api/rollups', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ date: dateInput, groups: saveGroups })
-                });
-                
-                const result = await saveRes.json();
-                if (result.success) {
-                    for (const group of saveGroups) {
-                        const booker = group.find(p => p.booker === true);
-                        if (booker) fetch("/api/booker/" + booker.golfer_id, { method: "POST" });
-                    }
-                    alert("Rollup generated and saved successfully!");
-                }
-            } catch (err) {
-                console.error("Process Error:", err);
-                alert("An error occurred during generation.");
-            }
+            span.ondragstart = (e) => {
+                e.dataTransfer.setData("fromIdx", pIdx);
+                e.dataTransfer.setData("fromGroup", gIdx);
+            };
+            return span;
         }
 
+        // 4. DRAG AND DROP HANDLERS
+        function allowDrop(e) { e.preventDefault(); }
+
+        function handleDrop(e, toGIdx) {
+            e.preventDefault();
+            const fromGIdx = e.dataTransfer.getData("fromGroup");
+            const pIdx = parseInt(e.dataTransfer.getData("fromIdx"));
+
+            let player;
+            if (fromGIdx === "pool") {
+                player = pool.splice(pIdx, 1)[0];
+            } else {
+                player = groups[fromGIdx].splice(pIdx, 1)[0];
+            }
+
+            groups[toGIdx].push(player);
+            renderAll();
+        }
+
+        function dropToPool(e) {
+            e.preventDefault();
+            const fromGIdx = e.dataTransfer.getData("fromGroup");
+            const pIdx = parseInt(e.dataTransfer.getData("fromIdx"));
+
+            if (fromGIdx === "pool") return;
+
+            const player = groups[fromGIdx].splice(pIdx, 1)[0];
+            pool.push(player);
+            renderAll();
+        }
+
+        // 5. SAVE
+        async function saveRollup() {
+            const date = document.getElementById("rollupDate").value;
+            // Filter out empty groups
+            const cleanGroups = groups.filter(g => g.length > 0);
+
+            const res = await fetch("/api/rollups", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ date, groups: cleanGroups })
+            });
+
+            if (res.ok) alert("Rollup Saved Successfully!");
+        }
     </script>
 </body>
+
 </html>

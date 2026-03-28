@@ -58,14 +58,6 @@ const Rollup = mongoose.model('Rollup', new mongoose.Schema({
     groups: [[{ golfer_id: String, name: String, booker: Boolean }]]
 }));
 
-const extraAvailabilitySchema = new mongoose.Schema({
-    golfer_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Golfer', required: true },
-    date: { type: Date, required: true },
-    note: String
-});
-const ExtraAvailability = mongoose.model('ExtraAvailability', extraAvailabilitySchema);
-
-
 // 5. AUTHENTICATION ROUTES
 app.post('/login', async (req, res) => {
     try {
@@ -169,57 +161,21 @@ app.delete('/api/golfers/:id', protect, async (req,res)=>{
 // 8. AVAILABILITY & ABSENCE ROUTES
 app.get('/api/available', protect, async (req, res) => {
     try {
-        const queryDate = new Date(req.query.date);
-        const dayName = queryDate.toLocaleDateString('en-GB', { weekday: 'long' });
+        const dateStr = req.query.date;
+        const targetDate = new Date(dateStr);
+        targetDate.setHours(0,0,0,0);
+        const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+        const dayName = dayNames[targetDate.getDay()];
 
-        // 1. Get ALL golfers to start the filtering process
-        const allGolfers = await Golfer.find({});
-
-        // 2. Get all Unavailability records that cover this date
-        const unavailableRecords = await Unavailable.find({
-            $and: [
-                { date_from: { $lte: queryDate } },
-                {
-                    $or: [
-                        { date_to: { $gte: queryDate } },
-                        { indefinite: true }
-                    ]
-                }
-            ]
+        const golfers = await Golfer.find({ play_days: dayName }).lean();
+        const away = await Unavailable.find({
+            date_from: { $lte: targetDate },
+            $or: [{ date_to: { $gte: targetDate } }, { indefinite: true }]
         });
-        const unavailableIds = unavailableRecords.map(r => r.golfer_id.toString());
-
-        // 3. Get all Extra Availability records for exactly this date
-        // We set start/end of day to catch the date correctly regardless of timestamps
-        const startOfDay = new Date(queryDate).setHours(0,0,0,0);
-        const endOfDay = new Date(queryDate).setHours(23,59,59,999);
-        
-        const extraRecords = await ExtraAvailability.find({
-            date: { $gte: startOfDay, $lte: endOfDay }
-        });
-        const extraIds = extraRecords.map(r => r.golfer_id.toString());
-
-        // 4. THE MASTER FILTER
-        const availableGolfers = allGolfers.filter(golfer => {
-            const idStr = golfer._id.toString();
-
-            // RULE A: If they are explicitly marked as UNAVAILABLE today, they are out.
-            if (unavailableIds.includes(idStr)) return false;
-
-            // RULE B: If they have an EXTRA DAY record for today, they are in.
-            if (extraIds.includes(idStr)) return true;
-
-            // RULE C: If it's their NORMAL play day, they are in.
-            if (golfer.play_days && golfer.play_days.includes(dayName)) return true;
-
-            // Otherwise, they aren't playing today.
-            return false;
-        });
-
-        res.json(availableGolfers);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+        const awayIds = away.map(a => a.golfer_id.toString());
+        const available = golfers.filter(g => !awayIds.includes(g._id.toString()));
+        res.json(available);
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post('/api/unavailable', protect, async (req, res) => {
@@ -270,27 +226,6 @@ app.delete('/api/unavailable/:id', protect, async (req, res) => {
         await Unavailable.findByIdAndDelete(req.params.id);
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: "Delete failed" }); }
-});
-
-// API to save extra availability
-app.post('/api/extra-availability', protect, async (req, res) => {
-    try {
-        const record = new ExtraAvailability(req.body);
-        await record.save();
-        res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: "Save failed" }); }
-});
-
-// API to get extra availability for a golfer
-app.get('/api/extra-availability/golfer/:id', protect, async (req, res) => {
-    const records = await ExtraAvailability.find({ golfer_id: req.params.id }).sort({ date: 1 });
-    res.json(records);
-});
-
-// API to delete
-app.delete('/api/extra-availability/:id', protect, async (req, res) => {
-    await ExtraAvailability.findByIdAndDelete(req.params.id);
-    res.json({ success: true });
 });
 
 // 9. ROLLUP & PARTICIPATION REPORT ROUTES

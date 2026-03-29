@@ -1,108 +1,111 @@
 <!DOCTYPE html>
-<! This page displays a history of all past rollups, sorted by date. Each entry shows the date of the rollup and includes a link to view the booking sheet for that rollup.
-Admins can use this page to review past groupings and access the details of each rollup as needed.> 
-<html>
-<div id="nav-placeholder"></div>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Rollup History</title>
+<! This page displays a history of all past rollups, sorted by date. Each entry shows the date of the rollup and
+  includes a link to view the booking sheet for that rollup. Admins can use this page to review past groupings and
+  access the details of each rollup as needed.>
+  <html>
+  <div id="nav-placeholder"></div>
 
-<style>
-body{
-  font-family:Arial;
-  background:#f2f2f2;
-  padding:30px;
-}
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Rollup History</title>
 
-.nav{
-  background:#2e7d32;
-  color:white;
-  padding:10px;
-  margin-bottom:20px;
-}
+    <style>
+      body {
+        font-family: Arial;
+        background: #f2f2f2;
+        padding: 30px;
+      }
 
-.nav a{
-  color:white;
-  margin-right:15px;
-  text-decoration:none;
-}
+      .nav {
+        background: #2e7d32;
+        color: white;
+        padding: 10px;
+        margin-bottom: 20px;
+      }
 
-.container{
-  max-width:600px;
-  margin:auto;
-  background:white;
-  padding:25px;
-  border-radius:8px;
-  box-shadow:0 4px 10px rgba(0,0,0,0.1);
-}
+      .nav a {
+        color: white;
+        margin-right: 15px;
+        text-decoration: none;
+      }
 
-.rollup{
-  padding:10px;
-  border-bottom:1px solid #ddd;
-}
+      .container {
+        max-width: 600px;
+        margin: auto;
+        background: white;
+        padding: 25px;
+        border-radius: 8px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      }
 
-.rollup a{
-  text-decoration:none;
-  color:#2e7d32;
-  font-weight:bold;
-}
+      .rollup {
+        padding: 10px;
+        border-bottom: 1px solid #ddd;
+      }
 
-.message{
-  padding:10px;
-  font-style:italic;
-  color:#555;
-}
-</style>
-</head>
+      .rollup a {
+        text-decoration: none;
+        color: #2e7d32;
+        font-weight: bold;
+      }
 
-<body>
+      .message {
+        padding: 10px;
+        font-style: italic;
+        color: #555;
+      }
+    </style>
+  </head>
+
+  <body>
 
 
-<div class="container">
-  <h2>Rollup History</h2>
-  <div id="history"></div>
-</div>
+    <div class="container">
+      <h2>Rollup History</h2>
+      <div id="history"></div>
+    </div>
 
-<script src="js/shared.js"></script>
+    <script src="js/shared.js"></script>
 
-<script>
-async function loadHistory(){
-  const div = document.getElementById("history")
-  div.innerHTML = "<p class='message'>Loading rollups...</p>"
+    <script>
+      async function loadHistory() {
+        const div = document.getElementById("history")
+        div.innerHTML = "<p class='message'>Loading rollups...</p>"
 
-  try{
-    const response = await fetch('/api/rollups')
-    if(!response.ok){
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
+        try {
+          const response = await fetch('/api/rollups')
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+          }
 
-    const rollups = await response.json()
+          const rollups = await response.json()
 
-    div.innerHTML = "" // clear loading message
+          div.innerHTML = "" // clear loading message
 
-    if(rollups.length === 0){
-      div.innerHTML = "<p class='message'>No rollups found.</p>"
-      return
-    }
+          if (rollups.length === 0) {
+            div.innerHTML = "<p class='message'>No rollups found.</p>"
+            return
+          }
 
-    rollups.forEach(r=>{
-      const d = new Date(r.date)
-      const row = document.createElement("div")
-      row.className = "rollup"
-      row.innerHTML = `<a href="/bookingsheet.html?id=${r._id}">${d.toDateString()}</a>`
-      div.appendChild(row)
-    })
+          rollups.forEach(r => {
+            const d = new Date(r.date)
+            const row = document.createElement("div")
+            row.className = "rollup"
+            row.innerHTML = `<a href="/bookingsheet.html?id=${r._id}">${d.toDateString()}</a>`
+            div.appendChild(row)
+          })
 
-  } catch(err){
-    console.error("Failed to load rollup history:", err)
-    div.innerHTML = "<p class='message'>Error loading rollups.</p>"
-  }
-}
+        } catch (err) {
+          console.error("Failed to load rollup history:", err)
+          div.innerHTML = "<p class='message'>Error loading rollups.</p>"
+        }
+      }
 
-// load history when page opens
-loadHistory()
+      // load history when page opens
+      loadHistory()
 
-</script>
+    </script>
 
-</body>
-</html>
+  </body>
+
+  </html>

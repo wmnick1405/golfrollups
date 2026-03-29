@@ -1,14 +1,35 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>Booking Sheet</title>
     <style>
-        body { font-family: Arial; padding: 30px; }
-        .group { margin-top: 20px; padding: 10px; background: #f8f8f8; border-radius: 5px; border: 1px solid #ddd; }
-        .group b { color: #2e7d32; }
-        .comp-header { font-size: 1.2em; font-weight: bold; margin-bottom: 10px; color: #333; }
+        body {
+            font-family: Arial;
+            padding: 30px;
+        }
+
+        .group {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f8f8f8;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        .group b {
+            color: #2e7d32;
+        }
+
+        .comp-header {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
     </style>
 </head>
+
 <body>
 
     <div id="nav-placeholder"></div>
@@ -33,7 +54,7 @@
                 const rollup = await response.json();
 
                 const div = document.getElementById("sheet");
-                
+
                 // --- NEW HEADER LOGIC ---
                 // We use the 'competition' field from the database, defaulting to 'Social'
                 const compName = rollup.competition || "Social";
@@ -68,4 +89,5 @@
     </script>
 
 </body>
+
 </html>

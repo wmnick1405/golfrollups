@@ -1,7 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
-const User = require('./user'); 
+const User = require('./user');
 const path = require('path');
 const session = require('express-session');
 const fs = require('fs');
@@ -9,14 +9,14 @@ const fs = require('fs');
 const app = express();
 
 // 1. MIDDLEWARE SETUP
-app.use(express.json()); 
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(session({
-  secret: 'a-very-secret-key-for-golfchurchill&blakedown', 
-  resave: false,
-  saveUninitialized: false,
-  cookie: { secure: false, maxAge: 1000 * 60 * 60 * 24 }
+    secret: 'a-very-secret-key-for-golfchurchill&blakedown',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { secure: false, maxAge: 1000 * 60 * 60 * 24 }
 }));
 
 /**
@@ -32,8 +32,8 @@ const protect = (req, res, next) => {
 
 // 3. DATABASE CONNECTION
 mongoose.connect('mongodb://localhost:27017/rollupsdb')
-.then(()=>console.log("Connected to MongoDB"))
-.catch(err=>console.error("MongoDB connection error:",err));
+    .then(() => console.log("Connected to MongoDB"))
+    .catch(err => console.error("MongoDB connection error:", err));
 
 // 4. DATA SCHEMAS (The shape of your data)
 const Golfer = mongoose.model('Golfer', new mongoose.Schema({
@@ -73,7 +73,7 @@ app.post('/login', async (req, res) => {
         const { username, password } = req.body;
         const user = await User.findOne({ username });
         if (user && await bcrypt.compare(password, user.password)) {
-            req.session.userId = user._id; 
+            req.session.userId = user._id;
             res.json({ success: true, message: "Logged in" });
         } else {
             res.status(401).json({ error: "Invalid username or password" });
@@ -124,7 +124,7 @@ app.get('/api/golfers', protect, async (req, res) => {
 app.post('/api/golfers', protect, async (req, res) => {
     try {
         const { name } = req.body;
-        
+
         // 1. Basic Validation: Ensure name isn't just empty spaces
         if (!name || name.trim().length === 0) {
             return res.status(400).json({ error: "Golfer name is required." });
@@ -134,8 +134,8 @@ app.post('/api/golfers', protect, async (req, res) => {
 
         // 2. Duplicate Check: Search for this name (Case-Insensitive)
         // The 'i' flag makes it ignore capital vs lowercase
-        const existing = await Golfer.findOne({ 
-            name: { $regex: new RegExp(`^${cleanName}$`, 'i') } 
+        const existing = await Golfer.findOne({
+            name: { $regex: new RegExp(`^${cleanName}$`, 'i') }
         });
 
         if (existing) {
@@ -148,9 +148,9 @@ app.post('/api/golfers', protect, async (req, res) => {
         await golfer.save();
         res.json({ success: true });
 
-    } catch (err) { 
+    } catch (err) {
         console.error("Add Golfer Error:", err);
-        res.status(500).json({ error: "Server error while adding golfer." }); 
+        res.status(500).json({ error: "Server error while adding golfer." });
     }
 });
 
@@ -161,11 +161,11 @@ app.put('/api/golfers/:id', protect, async (req, res) => {
     } catch (err) { res.status(500).json({ error: "Update failed" }); }
 });
 
-app.delete('/api/golfers/:id', protect, async (req,res)=>{
+app.delete('/api/golfers/:id', protect, async (req, res) => {
     try {
         await Golfer.findByIdAndDelete(req.params.id);
-        res.json({success:true});
-    } catch(err) { res.status(500).json({error:"Delete failed"}); }
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: "Delete failed" }); }
 });
 
 // 8. AVAILABILITY & ABSENCE ROUTES
@@ -193,9 +193,9 @@ app.get('/api/available', protect, async (req, res) => {
 
         // 3. Get all Extra Availability records for exactly this date
         // We set start/end of day to catch the date correctly regardless of timestamps
-        const startOfDay = new Date(queryDate).setHours(0,0,0,0);
-        const endOfDay = new Date(queryDate).setHours(23,59,59,999);
-        
+        const startOfDay = new Date(queryDate).setHours(0, 0, 0, 0);
+        const endOfDay = new Date(queryDate).setHours(23, 59, 59, 999);
+
         const extraRecords = await ExtraAvailability.find({
             date: { $gte: startOfDay, $lte: endOfDay }
         });
@@ -230,12 +230,12 @@ app.post('/api/unavailable', protect, async (req, res) => {
 
         // 1. Logic Check
         const start = new Date(date_from);
-        
+
         if (!indefinite) {
             const end = new Date(date_to);
             if (end < start) {
-                return res.status(400).json({ 
-                    error: "Return date cannot be earlier than departure date." 
+                return res.status(400).json({
+                    error: "Return date cannot be earlier than departure date."
                 });
             }
         }
@@ -245,8 +245,8 @@ app.post('/api/unavailable', protect, async (req, res) => {
         await record.save();
         res.json({ success: true });
 
-    } catch (err) { 
-        res.status(500).json({ error: "Failed to save record" }); 
+    } catch (err) {
+        res.status(500).json({ error: "Failed to save record" });
     }
 });
 
@@ -306,8 +306,8 @@ app.post('/api/rollups', protect, async (req, res) => {
 
 app.get('/api/rollups/find', protect, async (req, res) => {
     const queryDate = new Date(req.query.date);
-    const start = new Date(queryDate).setHours(0,0,0,0);
-    const end = new Date(queryDate).setHours(23,59,59,999);
+    const start = new Date(queryDate).setHours(0, 0, 0, 0);
+    const end = new Date(queryDate).setHours(23, 59, 59, 999);
     const rollup = await Rollup.findOne({ date: { $gte: start, $lte: end } });
     if (!rollup) return res.status(404).json({ message: "Not found" });
     res.json(rollup);
@@ -329,7 +329,7 @@ app.get('/api/reports/participation', protect, async (req, res) => {
     try {
         const { from, to } = req.query;
         let query = {};
-        
+
         if (from || to) {
             query.date = {};
             if (from) query.date.$gte = new Date(from);
@@ -365,14 +365,14 @@ app.get('/api/reports/player-history', protect, async (req, res) => {
         const nameRegex = new RegExp(`^${searchName}$`, 'i');
 
         // NEW SEARCH STRATEGY: Look into the nested arrays
-        let query = { 
-            groups: { 
-                $elemMatch: { 
-                    $elemMatch: { name: nameRegex } 
-                } 
-            } 
+        let query = {
+            groups: {
+                $elemMatch: {
+                    $elemMatch: { name: nameRegex }
+                }
+            }
         };
-        
+
         if (from || to) {
             query.date = {};
             if (from) query.date.$gte = new Date(from);
@@ -386,10 +386,10 @@ app.get('/api/reports/player-history', protect, async (req, res) => {
             let isBooker = false;
             // Flatten the groups to find the player easily
             const allPlayersInThisRollup = r.groups.flat();
-            const me = allPlayersInThisRollup.find(p => 
+            const me = allPlayersInThisRollup.find(p =>
                 p.name.trim().toLowerCase() === searchName.toLowerCase()
             );
-            
+
             if (me && me.booker) isBooker = true;
 
             return {

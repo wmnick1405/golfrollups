@@ -1,103 +1,130 @@
 <!DOCTYPE html>
-<! This is the main landing page for the Golf Rollup Manager. It serves as a central hub for admins to access all the different features of the system.
-From here, admins can navigate to pages for managing golfers, 
-updating availability, generating rollups, viewing history, and generating reports.
-The page also includes a login overlay that requires authentication before accessing the main content.
-Once logged in, admins can also see the last database backup date and create new user
->
-<html>
-<head>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Golf Rollup Manager</title>
-    
-    <style>
-        body { font-family: Arial; background: #f2f2f2; padding: 30px; }
-        .container {
-            max-width: 700px; margin: auto; background: white; padding: 30px;
-            border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center;
-        }
-        /* Style for the big green navigation buttons */
-        .navbutton {
-            display: block; margin: 10px 0; padding: 15px; background: #221e6e;
-            color: white; text-decoration: none; border-radius: 6px; font-size: 18px;
-        }
-        .navbutton:hover { background: #1b5e20; }
-    </style>
-</head>
+<! This is the main landing page for the Golf Rollup Manager. It serves as a central hub for admins to access all the
+    different features of the system. From here, admins can navigate to pages for managing golfers, updating
+    availability, generating rollups, viewing history, and generating reports. The page also includes a login overlay
+    that requires authentication before accessing the main content. Once logged in, admins can also see the last
+    database backup date and create new user>
+    <html>
 
-<body>
-    <div id="login-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:9999; display:flex; justify-content:center; align-items:center;">
-        <form id="login-form" style="border:1px solid #ccc; padding:20px; border-radius:8px; text-align: center;">
-            <img src="https://clubv1.blob.core.windows.net/clubcrests/06c7bacd-8e49-48a4-8ee4-e369f10e5a30_crest.png" alt="Club Logo" style="max-height: 80px; display: block; margin: 0 auto 20px auto;">
-            <h2>Golf Rollup Login</h2>
-            <input type="text" id="username" placeholder="Username" required style="display:block; margin: 0 auto 10px auto; padding: 8px;">
-            <input type="password" id="password" placeholder="Password" required style="display:block; margin: 0 auto 10px auto; padding: 8px;">
-            <button type="submit" style="padding: 10px 20px; cursor: pointer;">Login</button>
-        </form>
-    </div>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Golf Rollup Manager</title>
 
-    <div class="container">
-        <img src="https://clubv1.blob.core.windows.net/clubcrests/06c7bacd-8e49-48a4-8ee4-e369f10e5a30_crest.png" alt="Club Logo" style="max-height: 80px; margin-bottom: 20px;">
-        <h1>Golf Rollup Manager</h1>
-
-        <a class="navbutton" href="/golfers.html">Add/Delete a golfer or change golfer details</a>
-        <a class="navbutton" href="/golfer-status.html">Update golfer unavailability</a>
-        <a class="navbutton" href="/rollup.html">Generate rollup group</a>
-        <a class="navbutton" href="/history.html">View Previous Rollup Groupings by Date</a>
-        <a class="navbutton" href="/email-generator.html">Generate Email Table for Upcoming Rollup</a>
-        <a class="navbutton" href="/absence-report.html">Generate Absence & Unavailability Report</a>
-        <a class="navbutton" href="/participation-report.html">View Participation vs Booking Report</a>
-
-        <button onclick="handleLogout()" style="background:#d32f2f; color:white; border:none; padding:8px 15px; border-radius:4px; cursor:pointer;">Logout</button>
-
-        <div id="admin-panel" style="border-top: 2px solid #eee; margin-top: 20px; padding: 10px;">
-            <h3>System Administration</h3>
-            <p><strong>Last Database Backup:</strong> <span id="backup-date">Checking...</span></p>
-            <input type="text" id="new-user" placeholder="New Username">
-            <input type="password" id="new-pass" placeholder="New Password">
-            <button onclick="createNewUser()">Create User</button>
-        </div>
-    </div>
-
-    <script>
-        // When the page opens, check if we are already logged in
-        window.onload = async () => {
-            const overlay = document.getElementById('login-overlay');
-            try {
-                // We "knock on the door" of a protected route in server.js
-                const response = await fetch('/api/golfers'); 
-                if (response.ok) {
-                    overlay.style.display = 'none'; // If server says OK, hide login screen
-                    checkBackupStatus(); 
-                }
-            } catch (err) { overlay.style.display = 'flex'; }
-        };
-
-        // Sending login data to the server
-        document.getElementById('login-form').onsubmit = async (e) => {
-            e.preventDefault();
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-
-            // This triggers the app.post('/login') route in server.js
-            const response = await fetch('/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            });
-
-            if (response.ok) {
-                document.getElementById('login-overlay').style.display = 'none';
-            } else {
-                alert("Login Failed");
+        <style>
+            body {
+                font-family: Arial;
+                background: #f2f2f2;
+                padding: 30px;
             }
-        };
 
-        // This triggers the app.post('/api/logout') route in server.js
-        async function handleLogout() {
-            const response = await fetch('/api/logout', { method: 'POST' });
-            if (response.ok) window.location.reload(); 
-        }
-    </script>
-</body>
-</html>
+            .container {
+                max-width: 700px;
+                margin: auto;
+                background: white;
+                padding: 30px;
+                border-radius: 8px;
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+                text-align: center;
+            }
+
+            /* Style for the big green navigation buttons */
+            .navbutton {
+                display: block;
+                margin: 10px 0;
+                padding: 15px;
+                background: #221e6e;
+                color: white;
+                text-decoration: none;
+                border-radius: 6px;
+                font-size: 18px;
+            }
+
+            .navbutton:hover {
+                background: #1b5e20;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div id="login-overlay"
+            style="position:fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:9999; display:flex; justify-content:center; align-items:center;">
+            <form id="login-form" style="border:1px solid #ccc; padding:20px; border-radius:8px; text-align: center;">
+                <img src="https://clubv1.blob.core.windows.net/clubcrests/06c7bacd-8e49-48a4-8ee4-e369f10e5a30_crest.png"
+                    alt="Club Logo" style="max-height: 80px; display: block; margin: 0 auto 20px auto;">
+                <h2>Golf Rollup Login</h2>
+                <input type="text" id="username" placeholder="Username" required
+                    style="display:block; margin: 0 auto 10px auto; padding: 8px;">
+                <input type="password" id="password" placeholder="Password" required
+                    style="display:block; margin: 0 auto 10px auto; padding: 8px;">
+                <button type="submit" style="padding: 10px 20px; cursor: pointer;">Login</button>
+            </form>
+        </div>
+
+        <div class="container">
+            <img src="https://clubv1.blob.core.windows.net/clubcrests/06c7bacd-8e49-48a4-8ee4-e369f10e5a30_crest.png"
+                alt="Club Logo" style="max-height: 80px; margin-bottom: 20px;">
+            <h1>Golf Rollup Manager</h1>
+
+            <a class="navbutton" href="/golfers.html">Add/Delete a golfer or change golfer details</a>
+            <a class="navbutton" href="/golfer-status.html">Update golfer unavailability</a>
+            <a class="navbutton" href="/rollup.html">Generate rollup group</a>
+            <a class="navbutton" href="/history.html">View Previous Rollup Groupings by Date</a>
+            <a class="navbutton" href="/email-generator.html">Generate Email Table for Upcoming Rollup</a>
+            <a class="navbutton" href="/absence-report.html">Generate Absence & Unavailability Report</a>
+            <a class="navbutton" href="/participation-report.html">View Participation vs Booking Report</a>
+
+            <button onclick="handleLogout()"
+                style="background:#d32f2f; color:white; border:none; padding:8px 15px; border-radius:4px; cursor:pointer;">Logout</button>
+
+            <div id="admin-panel" style="border-top: 2px solid #eee; margin-top: 20px; padding: 10px;">
+                <h3>System Administration</h3>
+                <p><strong>Last Database Backup:</strong> <span id="backup-date">Checking...</span></p>
+                <input type="text" id="new-user" placeholder="New Username">
+                <input type="password" id="new-pass" placeholder="New Password">
+                <button onclick="createNewUser()">Create User</button>
+            </div>
+        </div>
+
+        <script>
+            // When the page opens, check if we are already logged in
+            window.onload = async () => {
+                const overlay = document.getElementById('login-overlay');
+                try {
+                    // We "knock on the door" of a protected route in server.js
+                    const response = await fetch('/api/golfers');
+                    if (response.ok) {
+                        overlay.style.display = 'none'; // If server says OK, hide login screen
+                        checkBackupStatus();
+                    }
+                } catch (err) { overlay.style.display = 'flex'; }
+            };
+
+            // Sending login data to the server
+            document.getElementById('login-form').onsubmit = async (e) => {
+                e.preventDefault();
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+
+                // This triggers the app.post('/login') route in server.js
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                if (response.ok) {
+                    document.getElementById('login-overlay').style.display = 'none';
+                } else {
+                    alert("Login Failed");
+                }
+            };
+
+            // This triggers the app.post('/api/logout') route in server.js
+            async function handleLogout() {
+                const response = await fetch('/api/logout', { method: 'POST' });
+                if (response.ok) window.location.reload();
+            }
+        </script>
+    </body>
+
+    </html>

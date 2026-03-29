@@ -1,34 +1,102 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>Golfer Availability & Management</title>
     <style>
-        body { font-family: Arial; margin: 40px; }
-        .controls, .quick-add { margin-bottom: 20px; padding: 20px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 8px; }
-        
-        /* The Split Pane Layout */
-        .status-container { display: flex; gap: 20px; align-items: flex-start; }
-        .column { flex: 1; min-width: 0; }
-        
-        /* Original Styles */
-        .quick-add { background: #eef9f0; border-color: #c3e6cb; }
-        .quick-add.extra-pane { background: #e3f2fd; border-color: #bbdefb; }
-        
-        table { border-collapse: collapse; width: 100%; margin-top: 10px; background: white; }
-        th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
-        
-        .indefinite-notice { 
-            padding: 20px; background-color: #fff3cd; border: 1px solid #ffeeba; 
-            color: #856404; border-radius: 4px; font-weight: bold; margin-bottom: 10px;
+        body {
+            font-family: Arial;
+            margin: 40px;
         }
-        
-        select, input { padding: 8px; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px; }
-        button { padding: 8px 15px; cursor: pointer; background: #2196F3; color: white; border: none; border-radius: 4px; }
-        button:hover { background: #0b7dda; }
-        .hidden { display: none; }
-        .form-group { margin-bottom: 10px; display: inline-block; }
+
+        .controls,
+        .quick-add {
+            margin-bottom: 20px;
+            padding: 20px;
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        /* The Split Pane Layout */
+        .status-container {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+
+        .column {
+            flex: 1;
+            min-width: 0;
+        }
+
+        /* Original Styles */
+        .quick-add {
+            background: #eef9f0;
+            border-color: #c3e6cb;
+        }
+
+        .quick-add.extra-pane {
+            background: #e3f2fd;
+            border-color: #bbdefb;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 10px;
+            background: white;
+        }
+
+        th,
+        td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: left;
+        }
+
+        .indefinite-notice {
+            padding: 20px;
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            color: #856404;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        select,
+        input {
+            padding: 8px;
+            margin-right: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 8px 15px;
+            cursor: pointer;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+
+        button:hover {
+            background: #0b7dda;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .form-group {
+            margin-bottom: 10px;
+            display: inline-block;
+        }
     </style>
 </head>
+
 <body>
     <div id="nav-placeholder"></div>
 
@@ -43,7 +111,7 @@
     </div>
 
     <div id="mainDashboard" class="status-container hidden">
-        
+
         <div class="column">
             <div class="quick-add">
                 <h3>Add New Unavailability</h3>
@@ -69,7 +137,11 @@
                 <h3>Scheduled Absence Dates</h3>
                 <table id="datesTable">
                     <thead>
-                        <tr><th>From</th><th>To</th><th>Action</th></tr>
+                        <tr>
+                            <th>From</th>
+                            <th>To</th>
+                            <th>Action</th>
+                        </tr>
                     </thead>
                     <tbody></tbody>
                 </table>
@@ -95,7 +167,11 @@
                 <h3>Extra Play Days</h3>
                 <table id="extraTable">
                     <thead>
-                        <tr><th>Date</th><th>Note</th><th>Action</th></tr>
+                        <tr>
+                            <th>Date</th>
+                            <th>Note</th>
+                            <th>Action</th>
+                        </tr>
                     </thead>
                     <tbody></tbody>
                 </table>
@@ -176,7 +252,7 @@
             const noMsg = document.getElementById('noAbsenceMessage');
             tbody.innerHTML = "";
             notice.classList.add('hidden');
-            
+
             if (records.length === 0) noMsg.classList.remove('hidden');
             else noMsg.classList.add('hidden');
 
@@ -214,7 +290,7 @@
 
             if (!date_from) return alert("Please select a starting date");
             if (!indefinite && !date_to) return alert("Please select an end date");
-            
+
             // Re-adding your original conflict check
             const newStart = new Date(date_from).getTime();
             const newEnd = indefinite ? Infinity : new Date(date_to).getTime();
@@ -256,7 +332,7 @@
         }
 
         async function deleteRecord(id, type) {
-            if(!confirm("Remove this record?")) return;
+            if (!confirm("Remove this record?")) return;
             const url = type === 'un' ? `/api/unavailable/${id}` : `/api/extra-availability/${id}`;
             await fetch(url, { method: 'DELETE' });
             fetchGolferStatus();
@@ -265,4 +341,5 @@
         loadGolfers();
     </script>
 </body>
+
 </html>

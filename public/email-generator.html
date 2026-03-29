@@ -172,23 +172,23 @@
                 html += `<tr valign="top">`;
                 rollupData.forEach(rd => {
                     html += `<td style="width: 33.33%; padding: 10px; border: 1px solid #ccc; background-color: #ffffff; font-size: 0.85em;">`;
-                    
+
                     const activeGroups = (rd.groups || []).filter(g => g.length > 0);
 
                     if (activeGroups.length > 0) {
                         activeGroups.forEach((group, gIdx) => {
                             html += `<div style="margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 5px;">`;
                             html += `<b style="color: #2e7d32; font-size: 0.9em;">Group ${gIdx + 1}</b><br>`;
-                            
+
                             // Iterate through players and check for booker status
                             const names = group.map((p, pIdx) => {
                                 // Logic: Emphasize if p.booker is true 
                                 // OR (as a safety fallback) if they are the first player in the group
                                 const isLead = (p.booker === true || p.booker === "true" || pIdx === 0);
-                                
+
                                 return isLead ? `<strong>${p.name}</strong>` : p.name;
                             }).join("<br>");
-                            
+
                             html += `<span style="line-height: 1.4;">${names}</span>`;
                             html += `</div>`;
                         });
@@ -197,7 +197,7 @@
                     }
                     html += `</td>`;
                 });
-                
+
                 html += `</tr></table></div>`;
 
                 document.getElementById('previewArea').innerHTML = html;

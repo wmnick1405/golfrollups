@@ -1,34 +1,41 @@
 <!DOCTYPE html>
-<! This file contains the navigation bar that is included on all pages of the Golf Rollup Manager. It provides links to the main sections of the application, including the home page, golfer management,
-availability management, rollup generation, history, and reports.
-The navigation bar also includes a logout button for admins to securely exit the application. 
-By centralizing the navigation in this file, we ensure a consistent user experience across all pages and make it easy to update
- the navigation structure in one place if needed.>   
+<! This file contains the navigation bar that is included on all pages of the Golf Rollup Manager. It provides links to
+    the main sections of the application, including the home page, golfer management, availability management, rollup
+    generation, history, and reports. The navigation bar also includes a logout button for admins to securely exit the
+    application. By centralizing the navigation in this file, we ensure a consistent user experience across all pages
+    and make it easy to update the navigation structure in one place if needed.>
 
-<div style="background:#2e7d32; color:white; padding:10px; margin-bottom:20px; display: flex; justify-content: space-between; align-items: center;">
-    <div>
-        <a href="index.html" style="color:white; margin-right:15px; text-decoration: none; font-weight: bold;">Home</a>
-        <a href="golfers.html" style="color:white; margin-right:15px; text-decoration: none;">Add/Update Golfer</a>
-        <a href="golfer-status.html" style="color:white; margin-right:15px; text-decoration: none;">Availability</a>
-        <a href="indefinite_unavailable_golfers.html" style="color:white; margin-right:15px; text-decoration: none;">Indefinite List</a>
-        <a href="rollup.html" style="color:white; margin-right:15px; text-decoration: none;">Generate Rollup</a>
-        <a href="history.html" style="color:white; margin-right:15px; text-decoration: none;">History</a>
-        <a href="absence-report.html" style="color:white; margin-right:15px; text-decoration: none;">Absence Reports</a>
-        <a href="participation-report.html" style="color:white; margin-right:15px; text-decoration: none;">Participation Reports</a>
-        <a href="email-generator.html" style="color:white; margin-right:15px; text-decoration: none;">Generate Email Table for Upcoming Rollup</a>
+    <div
+        style="background:#2e7d32; color:white; padding:10px; margin-bottom:20px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <a href="index.html"
+                style="color:white; margin-right:15px; text-decoration: none; font-weight: bold;">Home</a>
+            <a href="golfers.html" style="color:white; margin-right:15px; text-decoration: none;">Add/Update Golfer</a>
+            <a href="golfer-status.html" style="color:white; margin-right:15px; text-decoration: none;">Availability</a>
+            <a href="indefinite_unavailable_golfers.html"
+                style="color:white; margin-right:15px; text-decoration: none;">Indefinite List</a>
+            <a href="rollup.html" style="color:white; margin-right:15px; text-decoration: none;">Generate Rollup</a>
+            <a href="history.html" style="color:white; margin-right:15px; text-decoration: none;">History</a>
+            <a href="absence-report.html" style="color:white; margin-right:15px; text-decoration: none;">Absence
+                Reports</a>
+            <a href="participation-report.html"
+                style="color:white; margin-right:15px; text-decoration: none;">Participation Reports</a>
+            <a href="email-generator.html" style="color:white; margin-right:15px; text-decoration: none;">Generate Email
+                Table for Upcoming Rollup</a>
+        </div>
+
+        <button onclick="handleLogout()"
+            style="background: #d32f2f; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
+            Logout
+        </button>
     </div>
-    
-    <button onclick="handleLogout()" style="background: #d32f2f; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
-        Logout
-    </button>
-</div>
 
-<script>
-async function handleLogout() {
-    if (!confirm("Are you sure you want to logout?")) return;
-    const res = await fetch('/api/logout', { method: 'POST' });
-    if (res.ok) {
-        window.location.href = "/";
-    }
-}
-</script>
+    <script>
+        async function handleLogout() {
+            if (!confirm("Are you sure you want to logout?")) return;
+            const res = await fetch('/api/logout', { method: 'POST' });
+            if (res.ok) {
+                window.location.href = "/";
+            }
+        }
+    </script>

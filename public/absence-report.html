@@ -1,220 +1,300 @@
 <!DOCTYPE html>
-<!
-     This page generates a report of golfer absences and unavailability. Admins can select specific players to include in the report, or select all players. 
-     There is also an option to exclude players who are indefinitely unavailable. The report can be sorted by player name or start date, and can be printed or saved as a PDF for sharing.
->
-<html>
-<head>
-    <title>Absence Report</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 30px; background-color: #f4f4f4; }
-        .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        
-        /* Controls Section */
-        .controls { background: #eef2f7; padding: 15px; border-radius: 5px; margin-bottom: 20px; border: 1px solid #d1d9e6; }
-        select, button { padding: 8px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer; }
-        button.print-btn { background: #2e7d32; color: white; border: none; font-weight: bold; margin-left: 10px; }
+<! This page generates a report of golfer absences and unavailability. Admins can select specific players to include in
+    the report, or select all players. There is also an option to exclude players who are indefinitely unavailable. The
+    report can be sorted by player name or start date, and can be printed or saved as a PDF for sharing.>
+    <html>
 
-        /* Table Styling */
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-        th { background-color: #2e7d32; color: white; }
-        tr:nth-child(even) { background-color: #f9f9f9; }
+    <head>
+        <title>Absence Report</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                margin: 30px;
+                background-color: #f4f4f4;
+            }
 
-        /* PRINT SETTINGS - Hides UI when printing to PDF */
-        @media print {
-            .controls, #nav-placeholder, .print-btn { display: none !important; }
-            body { background: white; margin: 0; padding: 0; }
-            .container { box-shadow: none; max-width: 100%; border: none; }
-            table { border: 1px solid #000; }
-            th { background-color: #eee !important; color: black !important; border: 1px solid #000; }
-        }
-    </style>
-</head>
-<body>
-    <div id="nav-placeholder"></div>
+            .container {
+                max-width: 900px;
+                margin: auto;
+                background: white;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            }
 
-    <div class="container">
-        <h2>Absence & Unavailability Report</h2>
-        
-<div class="controls">
-    <div style="display: flex; gap: 20px; align-items: flex-start;">
-        <div style="flex: 1;">
-            <label><strong>Select Players:</strong></label>
-            <div id="checkboxContainer" style="border: 1px solid #ccc; background: white; max-height: 150px; overflow-y: auto; padding: 10px; border-radius: 4px; margin-top: 5px;">
-    <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 5px;">
-        <label style="font-weight: bold; cursor: pointer;">
-            <input type="checkbox" id="selectAll" onchange="toggleAllPlayers(this)"> -- Select All --
-        </label>
-        <label style="font-weight: bold; color: #d32f2f; cursor: pointer;">
-            <input type="checkbox" id="excludeIndefinite" onchange="generateReport()"> Exclude Indefinite
-        </label>
-    </div>
-    <div id="playerCheckboxList"></div>
-</div>
-        </div>
-        <div style="padding-top: 25px;">
-            <button class="print-btn" onclick="window.print()">Save as PDF / Print</button>
-        </div>
-    </div>
-    <p style="font-size: 0.8em; color: #666; margin-top: 10px;">
-        Tip: Check multiple players to combine them into one report. Exclude players who are indefinitley unavailable by checking the "Exclude Indefinite" box.
-        Click on column headers to sort by player name or start date.
-    </p>
-</div>
+            /* Controls Section */
+            .controls {
+                background: #eef2f7;
+                padding: 15px;
+                border-radius: 5px;
+                margin-bottom: 20px;
+                border: 1px solid #d1d9e6;
+            }
 
-        <div id="reportContent">
-            <table id="reportTable">
-<thead>
-    <tr>
-        <th onclick="sortTable('name')" style="cursor:pointer;">Player Name ↕</th>
-        <th onclick="sortTable('date')" style="cursor:pointer;">From ↕</th>
-        <th>To</th>
-        <th>Status</th>
-    </tr>
-</thead>
-                <tbody>
+            select,
+            button {
+                padding: 8px;
+                border-radius: 4px;
+                border: 1px solid #ccc;
+                cursor: pointer;
+            }
+
+            button.print-btn {
+                background: #2e7d32;
+                color: white;
+                border: none;
+                font-weight: bold;
+                margin-left: 10px;
+            }
+
+            /* Table Styling */
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 10px;
+                background: white;
+            }
+
+            th,
+            td {
+                border: 1px solid #ddd;
+                padding: 12px;
+                text-align: left;
+            }
+
+            th {
+                background-color: #2e7d32;
+                color: white;
+            }
+
+            tr:nth-child(even) {
+                background-color: #f9f9f9;
+            }
+
+            /* PRINT SETTINGS - Hides UI when printing to PDF */
+            @media print {
+
+                .controls,
+                #nav-placeholder,
+                .print-btn {
+                    display: none !important;
+                }
+
+                body {
+                    background: white;
+                    margin: 0;
+                    padding: 0;
+                }
+
+                .container {
+                    box-shadow: none;
+                    max-width: 100%;
+                    border: none;
+                }
+
+                table {
+                    border: 1px solid #000;
+                }
+
+                th {
+                    background-color: #eee !important;
+                    color: black !important;
+                    border: 1px solid #000;
+                }
+            }
+        </style>
+    </head>
+
+    <body>
+        <div id="nav-placeholder"></div>
+
+        <div class="container">
+            <h2>Absence & Unavailability Report</h2>
+
+            <div class="controls">
+                <div style="display: flex; gap: 20px; align-items: flex-start;">
+                    <div style="flex: 1;">
+                        <label><strong>Select Players:</strong></label>
+                        <div id="checkboxContainer"
+                            style="border: 1px solid #ccc; background: white; max-height: 150px; overflow-y: auto; padding: 10px; border-radius: 4px; margin-top: 5px;">
+                            <div
+                                style="display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 5px;">
+                                <label style="font-weight: bold; cursor: pointer;">
+                                    <input type="checkbox" id="selectAll" onchange="toggleAllPlayers(this)"> -- Select
+                                    All --
+                                </label>
+                                <label style="font-weight: bold; color: #d32f2f; cursor: pointer;">
+                                    <input type="checkbox" id="excludeIndefinite" onchange="generateReport()"> Exclude
+                                    Indefinite
+                                </label>
+                            </div>
+                            <div id="playerCheckboxList"></div>
+                        </div>
+                    </div>
+                    <div style="padding-top: 25px;">
+                        <button class="print-btn" onclick="window.print()">Save as PDF / Print</button>
+                    </div>
+                </div>
+                <p style="font-size: 0.8em; color: #666; margin-top: 10px;">
+                    Tip: Check multiple players to combine them into one report. Exclude players who are indefinitley
+                    unavailable by checking the "Exclude Indefinite" box.
+                    Click on column headers to sort by player name or start date.
+                </p>
+            </div>
+
+            <div id="reportContent">
+                <table id="reportTable">
+                    <thead>
+                        <tr>
+                            <th onclick="sortTable('name')" style="cursor:pointer;">Player Name ↕</th>
+                            <th onclick="sortTable('date')" style="cursor:pointer;">From ↕</th>
+                            <th>To</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
                     </tbody>
-            </table>
+                </table>
+            </div>
         </div>
-    </div>
 
-<script src="js/shared.js"></script>
+        <script src="js/shared.js"></script>
 
-<script>
-    let allAbsences = [];
+        <script>
+            let allAbsences = [];
 
-async function init() {
-        console.log("Report initializing...");
-        
-        // 1. Load players FIRST so the UI always appears
-        try {
-            await loadPlayers();
-            console.log("Players loaded");
-        } catch (e) {
-            console.error("Failed to load players:", e);
-        }
+            async function init() {
+                console.log("Report initializing...");
 
-        // 2. Load the data
-        try {
-            await fetchAllAbsences();
-            console.log("Absences fetched");
-        } catch (e) {
-            console.error("Failed to fetch absences:", e);
-        }
+                // 1. Load players FIRST so the UI always appears
+                try {
+                    await loadPlayers();
+                    console.log("Players loaded");
+                } catch (e) {
+                    console.error("Failed to load players:", e);
+                }
 
-        generateReport();
-    }
+                // 2. Load the data
+                try {
+                    await fetchAllAbsences();
+                    console.log("Absences fetched");
+                } catch (e) {
+                    console.error("Failed to fetch absences:", e);
+                }
 
-    async function loadPlayers() {
-        const res = await fetch('/api/golfers');
-        const golfers = await res.json();
-        const list = document.getElementById('playerCheckboxList');
-        list.innerHTML = "";
+                generateReport();
+            }
 
-        golfers.forEach(g => {
-            const label = document.createElement('label');
-            label.style.display = "block";
-            label.innerHTML = `<input type="checkbox" class="player-check" value="${g._id}" onchange="generateReport()"> ${g.name}`;
-            list.appendChild(label);
-        });
-    }
+            async function loadPlayers() {
+                const res = await fetch('/api/golfers');
+                const golfers = await res.json();
+                const list = document.getElementById('playerCheckboxList');
+                list.innerHTML = "";
 
-    function toggleAllPlayers(master) {
-        const checkboxes = document.querySelectorAll('.player-check');
-        checkboxes.forEach(cb => cb.checked = master.checked);
-        generateReport();
-    }
+                golfers.forEach(g => {
+                    const label = document.createElement('label');
+                    label.style.display = "block";
+                    label.innerHTML = `<input type="checkbox" class="player-check" value="${g._id}" onchange="generateReport()"> ${g.name}`;
+                    list.appendChild(label);
+                });
+            }
 
-    async function fetchAllAbsences() {
-        try {
-            // Updated to the 'all' endpoint for full reporting
-            const res = await fetch('/api/unavailable/all'); 
-            allAbsences = await res.json();
-        } catch (err) {
-            console.error("Failed to fetch report data", err);
-        }
-    }
+            function toggleAllPlayers(master) {
+                const checkboxes = document.querySelectorAll('.player-check');
+                checkboxes.forEach(cb => cb.checked = master.checked);
+                generateReport();
+            }
 
-    let sortDirection = 1; // 1 for Ascending, -1 for Descending
-let currentSortCol = '';
+            async function fetchAllAbsences() {
+                try {
+                    // Updated to the 'all' endpoint for full reporting
+                    const res = await fetch('/api/unavailable/all');
+                    allAbsences = await res.json();
+                } catch (err) {
+                    console.error("Failed to fetch report data", err);
+                }
+            }
 
-function sortTable(column) {
-    // If clicking the same column, flip the direction. Otherwise, start Ascending.
-    if (currentSortCol === column) {
-        sortDirection *= -1;
-    } else {
-        sortDirection = 1;
-        currentSortCol = column;
-    }
+            let sortDirection = 1; // 1 for Ascending, -1 for Descending
+            let currentSortCol = '';
 
-    allAbsences.sort((a, b) => {
-        let valA, valB;
+            function sortTable(column) {
+                // If clicking the same column, flip the direction. Otherwise, start Ascending.
+                if (currentSortCol === column) {
+                    sortDirection *= -1;
+                } else {
+                    sortDirection = 1;
+                    currentSortCol = column;
+                }
 
-        if (column === 'name') {
-            valA = (a.golfer_id ? a.golfer_id.name : "").toLowerCase();
-            valB = (b.golfer_id ? b.golfer_id.name : "").toLowerCase();
-        } else if (column === 'date') {
-            valA = new Date(a.date_from).getTime();
-            valB = new Date(b.date_from).getTime();
-        }
+                allAbsences.sort((a, b) => {
+                    let valA, valB;
 
-        if (valA < valB) return -1 * sortDirection;
-        if (valA > valB) return 1 * sortDirection;
-        return 0;
-    });
+                    if (column === 'name') {
+                        valA = (a.golfer_id ? a.golfer_id.name : "").toLowerCase();
+                        valB = (b.golfer_id ? b.golfer_id.name : "").toLowerCase();
+                    } else if (column === 'date') {
+                        valA = new Date(a.date_from).getTime();
+                        valB = new Date(b.date_from).getTime();
+                    }
 
-    // Re-draw the table with the new order
-    generateReport();
-}
+                    if (valA < valB) return -1 * sortDirection;
+                    if (valA > valB) return 1 * sortDirection;
+                    return 0;
+                });
 
-    function generateReport() {
-    const tbody = document.querySelector("#reportTable tbody");
-    const selectAll = document.getElementById('selectAll').checked;
-    const excludeIndefinite = document.getElementById('excludeIndefinite').checked; // Get checkbox state
-    
-    const checkedBoxes = document.querySelectorAll('.player-check:checked');
-    const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
+                // Re-draw the table with the new order
+                generateReport();
+            }
 
-    tbody.innerHTML = "";
+            function generateReport() {
+                const tbody = document.querySelector("#reportTable tbody");
+                const selectAll = document.getElementById('selectAll').checked;
+                const excludeIndefinite = document.getElementById('excludeIndefinite').checked; // Get checkbox state
 
-    if (selectedIds.length === 0 && !selectAll) {
-        tbody.innerHTML = "<tr><td colspan='4' style='text-align:center;'>Select at least one player to view records.</td></tr>";
-        return;
-    }
+                const checkedBoxes = document.querySelectorAll('.player-check:checked');
+                const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
 
-    // Updated Filtering Logic
-    const filtered = allAbsences.filter(rec => {
-        if (!rec.golfer_id) return false;
+                tbody.innerHTML = "";
 
-        // 1. Check if the player is selected
-        const isPlayerSelected = selectedIds.includes(rec.golfer_id._id);
-        
-        // 2. Check if we should exclude this record because it's indefinite
-        if (excludeIndefinite && rec.indefinite) return false;
+                if (selectedIds.length === 0 && !selectAll) {
+                    tbody.innerHTML = "<tr><td colspan='4' style='text-align:center;'>Select at least one player to view records.</td></tr>";
+                    return;
+                }
 
-        return isPlayerSelected;
-    });
+                // Updated Filtering Logic
+                const filtered = allAbsences.filter(rec => {
+                    if (!rec.golfer_id) return false;
 
-    if (filtered.length === 0) {
-        tbody.innerHTML = "<tr><td colspan='4' style='text-align:center;'>No matching records found.</td></tr>";
-        return;
-    }
+                    // 1. Check if the player is selected
+                    const isPlayerSelected = selectedIds.includes(rec.golfer_id._id);
 
-    // Draw the filtered records
-    filtered.forEach(rec => {
-        const row = document.createElement("tr");
-        const name = rec.golfer_id ? rec.golfer_id.name : "Unknown";
-        const from = new Date(rec.date_from).toLocaleDateString('en-GB');
-        const to = rec.indefinite ? "Indefinite" : new Date(rec.date_to).toLocaleDateString('en-GB');
-        const status = rec.indefinite ? "Indefinite" : "Away";
+                    // 2. Check if we should exclude this record because it's indefinite
+                    if (excludeIndefinite && rec.indefinite) return false;
 
-        row.innerHTML = `<td>${name}</td><td>${from}</td><td>${to}</td><td>${status}</td>`;
-        tbody.appendChild(row);
-    });
-}
+                    return isPlayerSelected;
+                });
 
-    init();
-</script>
-</body>
-</html>
+                if (filtered.length === 0) {
+                    tbody.innerHTML = "<tr><td colspan='4' style='text-align:center;'>No matching records found.</td></tr>";
+                    return;
+                }
+
+                // Draw the filtered records
+                filtered.forEach(rec => {
+                    const row = document.createElement("tr");
+                    const name = rec.golfer_id ? rec.golfer_id.name : "Unknown";
+                    const from = new Date(rec.date_from).toLocaleDateString('en-GB');
+                    const to = rec.indefinite ? "Indefinite" : new Date(rec.date_to).toLocaleDateString('en-GB');
+                    const status = rec.indefinite ? "Indefinite" : "Away";
+
+                    row.innerHTML = `<td>${name}</td><td>${from}</td><td>${to}</td><td>${status}</td>`;
+                    tbody.appendChild(row);
+                });
+            }
+
+            init();
+        </script>
+    </body>
+
+    </html>

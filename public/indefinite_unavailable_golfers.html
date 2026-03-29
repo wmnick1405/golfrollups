@@ -1,73 +1,106 @@
 <!DOCTYPE html>
-<!
-     This page displays golfers who are currently marked as unavailable indefinitely. 
-     It shows the golfer's name, the date they were marked as unavailable, and provides an option to set them as available again.
-     This allows admins to easily manage and update the status of golfers who may have been temporarily unavailable but are now returning.
->
-<html>
-<div id="nav-placeholder"></div>
+<! This page displays golfers who are currently marked as unavailable indefinitely. It shows the golfer's name, the date
+    they were marked as unavailable, and provides an option to set them as available again. This allows admins to easily
+    manage and update the status of golfers who may have been temporarily unavailable but are now returning.>
+    <html>
+    <div id="nav-placeholder"></div>
 
-<head>
-    <link href="../css/style.css" rel="stylesheet" />
-    <title>Unavailable Golfers</title>
-    <style>
-        body { font-family: Arial; margin: 40px; line-height: 1.6; }
-        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-        th, td { border: 1px solid #ccc; padding: 12px; text-align: left; }
-        th { background-color: #f4f4f4; }
-        .status-badge { background: #ffcccc; color: #990000; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; }
-        button { padding: 5px 10px; cursor: pointer; }
-        .btn-restore { background-color: #e7f3fe; border: 1px solid #2196F3; color: #0b7dda; }
-    </style>
-</head>
+    <head>
+        <link href="../css/style.css" rel="stylesheet" />
+        <title>Unavailable Golfers</title>
+        <style>
+            body {
+                font-family: Arial;
+                margin: 40px;
+                line-height: 1.6;
+            }
 
-<body>
+            table {
+                border-collapse: collapse;
+                width: 100%;
+                margin-top: 20px;
+            }
 
-    <h2>Indefinitely Unavailable Golfers</h2>
-    <p>The following golfers are currently marked as unavailable with no set return date.</p>
+            th,
+            td {
+                border: 1px solid #ccc;
+                padding: 12px;
+                text-align: left;
+            }
 
-    <table id="unavailableTable">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Unavailable Since</th>
-                <th>Status</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
+            th {
+                background-color: #f4f4f4;
+            }
+
+            .status-badge {
+                background: #ffcccc;
+                color: #990000;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 0.8em;
+                font-weight: bold;
+            }
+
+            button {
+                padding: 5px 10px;
+                cursor: pointer;
+            }
+
+            .btn-restore {
+                background-color: #e7f3fe;
+                border: 1px solid #2196F3;
+                color: #0b7dda;
+            }
+        </style>
+    </head>
+
+    <body>
+
+        <h2>Indefinitely Unavailable Golfers</h2>
+        <p>The following golfers are currently marked as unavailable with no set return date.</p>
+
+        <table id="unavailableTable">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Unavailable Since</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
             </tbody>
-    </table>
+        </table>
 
 
-    <script src="js/shared.js"></script>
+        <script src="js/shared.js"></script>
 
-    <script>
-        async function loadUnavailable() {
-    try {
-        // MATCHED TO SERVER.JS: /api/unavailable/indefinite
-        const res = await fetch('/api/unavailable/indefinite');
-        
-        if (!res.ok) {
-            throw new Error(`Server responded with ${res.status}`);
-        }
+        <script>
+            async function loadUnavailable() {
+                try {
+                    // MATCHED TO SERVER.JS: /api/unavailable/indefinite
+                    const res = await fetch('/api/unavailable/indefinite');
 
-        const records = await res.json();
-        const tbody = document.querySelector("#unavailableTable tbody");
-        tbody.innerHTML = "";
+                    if (!res.ok) {
+                        throw new Error(`Server responded with ${res.status}`);
+                    }
 
-        if (records.length === 0) {
-            tbody.innerHTML = "<tr><td colspan='4'>No golfers are currently unavailable indefinitely.</td></tr>";
-            return;
-        }
+                    const records = await res.json();
+                    const tbody = document.querySelector("#unavailableTable tbody");
+                    tbody.innerHTML = "";
 
-        records.forEach(rec => {
-            // Safe access: rec.golfer_id is now an object because of .populate()
-            const golferName = rec.golfer_id ? rec.golfer_id.name : "Unknown Golfer";
-            const startDate = rec.date_from ? new Date(rec.date_from).toLocaleDateString() : "N/A";
+                    if (records.length === 0) {
+                        tbody.innerHTML = "<tr><td colspan='4'>No golfers are currently unavailable indefinitely.</td></tr>";
+                        return;
+                    }
 
-            const row = document.createElement("tr");
-            row.innerHTML = `
+                    records.forEach(rec => {
+                        // Safe access: rec.golfer_id is now an object because of .populate()
+                        const golferName = rec.golfer_id ? rec.golfer_id.name : "Unknown Golfer";
+                        const startDate = rec.date_from ? new Date(rec.date_from).toLocaleDateString() : "N/A";
+
+                        const row = document.createElement("tr");
+                        row.innerHTML = `
                 <td>${golferName}</td>
                 <td>${startDate}</td>
                 <td><span class="status-badge">INDEFINITE</span></td>
@@ -75,35 +108,36 @@
                     <button class="btn-restore" onclick="makeAvailable('${rec._id}')">Set as Available</button>
                 </td>
             `;
-            tbody.appendChild(row);
-        });
-    } catch (err) {
-        console.error("Error loading data:", err);
-        document.querySelector("#unavailableTable tbody").innerHTML = 
-            `<tr><td colspan='4' style='color:red'>Error loading data: ${err.message}</td></tr>`;
-    }
-}
+                        tbody.appendChild(row);
+                    });
+                } catch (err) {
+                    console.error("Error loading data:", err);
+                    document.querySelector("#unavailableTable tbody").innerHTML =
+                        `<tr><td colspan='4' style='color:red'>Error loading data: ${err.message}</td></tr>`;
+                }
+            }
 
-async function makeAvailable(unavailabilityId) {
-    if (!confirm("Remove indefinite unavailability for this golfer?")) return;
+            async function makeAvailable(unavailabilityId) {
+                if (!confirm("Remove indefinite unavailability for this golfer?")) return;
 
-    // MATCHED TO SERVER.JS: /api/unavailable/:id
-    const res = await fetch("/api/unavailable/" + unavailabilityId, {
-        method: "DELETE"
-    });
+                // MATCHED TO SERVER.JS: /api/unavailable/:id
+                const res = await fetch("/api/unavailable/" + unavailabilityId, {
+                    method: "DELETE"
+                });
 
-    if (res.ok) {
-        alert("Golfer status updated.");
-        loadUnavailable();
-    } else {
-        alert("Failed to update status.");
-    }
-}
+                if (res.ok) {
+                    alert("Golfer status updated.");
+                    loadUnavailable();
+                } else {
+                    alert("Failed to update status.");
+                }
+            }
 
-// Initialize
-    loadUnavailable();
+            // Initialize
+            loadUnavailable();
 
-    </script>
+        </script>
 
-</body>
-</html>
+    </body>
+
+    </html>

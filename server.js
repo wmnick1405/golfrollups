@@ -103,6 +103,7 @@ app.get('/api/admin/backup-status', protect, async (req, res) => {
     }
 });
 
+// Admin route to create new users (for testing/demo purposes)
 app.post('/api/admin/create-user', protect, async (req, res) => {
     try {
         const newUser = new User(req.body);

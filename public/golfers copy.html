@@ -46,28 +46,6 @@
             border: 1px solid #d1d9e6;
             margin-bottom: 30px;
         }
-
-        .checkbox-label {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.95em;
-            font-weight: 600;
-            padding: 6px 10px;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: background 0.2s ease;
-        }
-
-        .checkbox-label:hover {
-            background: #f5f5f5;
-        }
-
-        .checkbox-label input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
-            cursor: pointer;
-        }
     </style>
 </head>
 
@@ -93,9 +71,8 @@
 
                 </div>
 
-                <label class="checkbox-label">
-                    <input type="checkbox" id="newExempt">
-                    <span>Booking Exempt</span>
+                <label style="font-size: 0.9em; display: flex; align-items: center; gap: 5px;">
+                    <input type="checkbox" id="newExempt"> Booking Exempt
                 </label>
 
                 <button onclick="addGolfer()"

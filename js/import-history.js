@@ -3,7 +3,7 @@ const fs = require('fs');
 const csv = require('csv-parser');
 
 const filePath = '/mnt/historical_data.csv';
-mongoose.connect('mongodb://localhost:27017/rollupsdb'); // UPDATE DB NAME
+mongoose.connect('mongodb://localhost:27017/rollupsdb'); 
 
 const Golfer = mongoose.model('Golfer', new mongoose.Schema({ name: String }), 'golfers');
 const Rollup = mongoose.model('Rollup', new mongoose.Schema({
@@ -54,7 +54,7 @@ async function importData() {
                     const parts = row.Date.split('/');
                     if (parts.length !== 3) return;
                     const dateObj = new Date(parts[2], parts[1] - 1, parts[0]);
-                    const isoDate = dateObj.toISOString();
+                    const isoDate = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
 
                     if (!rollupsByDate[isoDate]) rollupsByDate[isoDate] = {};
                     if (!rollupsByDate[isoDate][row.Group]) rollupsByDate[isoDate][row.Group] = [];

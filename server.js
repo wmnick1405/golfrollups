@@ -55,6 +55,7 @@ const Unavailable = mongoose.model('Unavailable', new mongoose.Schema({
 
 const Rollup = mongoose.model('Rollup', new mongoose.Schema({
     date: { type: Date, required: true },
+    competition: { type: String, default: "Social" },
     groups: [[{ golfer_id: String, name: String, booker: Boolean }]]
 }));
 

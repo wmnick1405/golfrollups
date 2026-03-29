@@ -113,9 +113,16 @@
 
         <div class="main-content">
             <h2>Generate Rollup</h2>
-            <p>To use: select required date, click the "Get Available" button, then click the "Auto-Group" button. Drag players between groups as needed. When complete, click the "Save Rollup" button.</p>
+            <p>To use: select required date, type in the name of the competion if it's not a social round,click the "Get
+                Available" button, then click the "Auto-Group" button. Drag
+                players between groups as needed. When complete, click the "Save Rollup" button.</p>
             <div class="controls">
                 <input type="date" id="rollupDate">
+
+                <label style="margin-left: 10px;">Comp:</label>
+                <input type="text" id="compName" value="Social" placeholder="Competition Name"
+                    style="padding: 8px; width: 180px; border: 1px solid #ccc; border-radius: 4px;">
+
                 <button onclick="fetchAvailable()">1. Get Available</button>
                 <button class="secondary" onclick="autoDistribute()">2. Auto-Group (4s & 3s)</button>
                 <button onclick="resetPool()" style="background:#d32f2f;">Reset All</button>
@@ -212,35 +219,35 @@
         }
 
         function renderGroups() {
-    const container = document.getElementById("groupsContainer");
-    container.innerHTML = "";
+            const container = document.getElementById("groupsContainer");
+            container.innerHTML = "";
 
-    groups.forEach((group, gIdx) => {
-        // We create the element and call it 'groupDiv'
-        const groupDiv = document.createElement("div");
-        groupDiv.className = "group-box";
-        
-        // NOW use 'groupDiv' here:
-        groupDiv.innerHTML = `<strong>Group ${gIdx + 1} <span style="color:#666; font-size:0.8em;">(${group.length} players)</span></strong><hr>`;
-        
-        // Set up Drop Zone
-        groupDiv.ondragover = allowDrop;
-        groupDiv.ondragenter = () => groupDiv.classList.add('drag-over');
-        groupDiv.ondragleave = () => groupDiv.classList.remove('drag-over');
-        groupDiv.ondrop = (e) => handleDrop(e, gIdx);
+            groups.forEach((group, gIdx) => {
+                // We create the element and call it 'groupDiv'
+                const groupDiv = document.createElement("div");
+                groupDiv.className = "group-box";
 
-        group.forEach((player, pIdx) => {
-            const tag = createPlayerTag(player, gIdx, pIdx);
-            tag.onclick = () => {
-                player.booker = !player.booker;
-                renderAll();
-            };
-            groupDiv.appendChild(tag); // Add player to groupDiv
-        });
-        
-        container.appendChild(groupDiv); // Add groupDiv to the page
-    });
-}
+                // NOW use 'groupDiv' here:
+                groupDiv.innerHTML = `<strong>Group ${gIdx + 1} <span style="color:#666; font-size:0.8em;">(${group.length} players)</span></strong><hr>`;
+
+                // Set up Drop Zone
+                groupDiv.ondragover = allowDrop;
+                groupDiv.ondragenter = () => groupDiv.classList.add('drag-over');
+                groupDiv.ondragleave = () => groupDiv.classList.remove('drag-over');
+                groupDiv.ondrop = (e) => handleDrop(e, gIdx);
+
+                group.forEach((player, pIdx) => {
+                    const tag = createPlayerTag(player, gIdx, pIdx);
+                    tag.onclick = () => {
+                        player.booker = !player.booker;
+                        renderAll();
+                    };
+                    groupDiv.appendChild(tag); // Add player to groupDiv
+                });
+
+                container.appendChild(groupDiv); // Add groupDiv to the page
+            });
+        }
 
         function createPlayerTag(player, gIdx, pIdx) {
             const span = document.createElement("span");
@@ -289,16 +296,31 @@
         // 5. SAVE
         async function saveRollup() {
             const date = document.getElementById("rollupDate").value;
+            // Grab the competition name, defaulting to "Social" if left blank
+            const competition = document.getElementById("compName").value || "Social";
+
+            if (!date) return alert("Select a date first");
+
             // Filter out empty groups
             const cleanGroups = groups.filter(g => g.length > 0);
+
+            if (cleanGroups.length === 0) return alert("No groups to save!");
 
             const res = await fetch("/api/rollups", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ date, groups: cleanGroups })
+                body: JSON.stringify({
+                    date,
+                    competition, // This matches the rd.competition field in your email generator
+                    groups: cleanGroups
+                })
             });
 
-            if (res.ok) alert("Rollup Saved Successfully!");
+            if (res.ok) {
+                alert(`Rollup for "${competition}" Saved Successfully!`);
+            } else {
+                alert("Error saving rollup. Please check connection.");
+            }
         }
     </script>
 </body>

@@ -1,65 +1,71 @@
 <!DOCTYPE html>
-<!This page displays the booking sheet for a specific rollup. It is designed to be printed or saved as a PDF and shared with players.
-The page is accessed by clicking the "View Booking Sheet" button on the history page, 
-which passes the rollup ID in the URL query string. 
-The page then fetches the rollup details from the server and renders the groups and players in a simple format optimized for printing.
->
 <html>
-    <div id="nav-placeholder"></div>
 <head>
-<title>Booking Sheet</title>
-<style>
-body { font-family:Arial; padding:30px; }
-.group { margin-top:20px; padding:10px; background:#f8f8f8; border-radius:5px; }
-.group b { color:#2e7d32; }
-</style>
+    <title>Booking Sheet</title>
+    <style>
+        body { font-family: Arial; padding: 30px; }
+        .group { margin-top: 20px; padding: 10px; background: #f8f8f8; border-radius: 5px; border: 1px solid #ddd; }
+        .group b { color: #2e7d32; }
+        .comp-header { font-size: 1.2em; font-weight: bold; margin-bottom: 10px; color: #333; }
+    </style>
 </head>
 <body>
 
+    <div id="nav-placeholder"></div>
 
-<h2>Booking Sheet</h2>
-<div id="sheet"></div>
+    <h2>Booking Sheet</h2>
+    <div id="sheet"></div>
 
-<script src="js/shared.js"></script>
+    <script src="js/shared.js"></script>
 
-<script>
-async function loadBookingSheet(){
-    const params = new URLSearchParams(window.location.search)
-    const rollupId = params.get("id")
-    if(!rollupId){
-        document.getElementById("sheet").innerHTML = "<p>No rollup selected</p>"
-        return
-    }
+    <script>
+        async function loadBookingSheet() {
+            const params = new URLSearchParams(window.location.search);
+            const rollupId = params.get("id");
+            if (!rollupId) {
+                document.getElementById("sheet").innerHTML = "<p>No rollup selected</p>";
+                return;
+            }
 
-    try {
-        const response = await fetch(`/api/rollups/${rollupId}`)
-        if(!response.ok) throw new Error("Rollup not found")
-        const rollup = await response.json()
+            try {
+                const response = await fetch(`/api/rollups/${rollupId}`);
+                if (!response.ok) throw new Error("Rollup not found");
+                const rollup = await response.json();
 
-        const div = document.getElementById("sheet")
-        div.innerHTML = `<h3>${new Date(rollup.date).toDateString()}</h3>`
+                const div = document.getElementById("sheet");
+                
+                // --- NEW HEADER LOGIC ---
+                // We use the 'competition' field from the database, defaulting to 'Social'
+                const compName = rollup.competition || "Social";
+                const dateStr = new Date(rollup.date).toDateString();
 
-        rollup.groups.forEach((group, i)=>{
-            const gdiv = document.createElement("div")
-            gdiv.className = "group"
+                div.innerHTML = `
+                    <h3>${dateStr}</h3>
+                    <div class="comp-header">Competition: ${compName}</div>
+                    <hr>
+                `;
 
-            let html = `<b>Group ${i+1}</b><br>`
-            group.forEach(p=>{
-                html += p.booker ? `<b>${p.name} (Booker)</b><br>` : `${p.name}<br>`
-            })
+                rollup.groups.forEach((group, i) => {
+                    const gdiv = document.createElement("div");
+                    gdiv.className = "group";
 
-            gdiv.innerHTML = html
-            div.appendChild(gdiv)
-        })
-    } catch(err){
-        console.error(err)
-        document.getElementById("sheet").innerHTML = "<p>Error loading rollup</p>"
-    }
-}
+                    let html = `<b>Group ${i + 1}</b><br>`;
+                    group.forEach(p => {
+                        // Bold the name and add label if they are the booker
+                        html += p.booker ? `<b>${p.name} (Booker)</b><br>` : `${p.name}<br>`;
+                    });
 
-loadBookingSheet()
+                    gdiv.innerHTML = html;
+                    div.appendChild(gdiv);
+                });
+            } catch (err) {
+                console.error(err);
+                document.getElementById("sheet").innerHTML = "<p>Error loading rollup</p>";
+            }
+        }
 
-</script>
+        loadBookingSheet();
+    </script>
 
 </body>
 </html>

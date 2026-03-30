@@ -78,11 +78,7 @@ app.post('/login', async (req, res) => {
         const user = await User.findOne({ username });
         if (user && await bcrypt.compare(password, user.password)) {
             req.session.userId = user._id;
-            // Force the session to save before sending the response
-            req.session.save((err) => {
-                if (err) return res.status(500).json({ error: "Session save failed" });
-                res.json({ success: true, message: "Logged in" });
-            });
+            res.json({ success: true, message: "Logged in" });
         } else {
             res.status(401).json({ error: "Invalid username or password" });
         }
@@ -434,21 +430,6 @@ app.post('/api/booker/:id', protect, async (req, res) => {
         await Golfer.findByIdAndUpdate(req.params.id, { $inc: { booking_count: 1 }, last_booked: new Date() });
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: "Update failed" }); }
-});
-
-/**
- * HOME ROUTE
- * This ensures that when you click 'Home', the server checks your session
- * and sends you to index.html if you are logged in.
- */
-app.get('/', (req, res) => {
-    if (req.session && req.session.userId) {
-        // If logged in, send the actual dashboard/home page
-        res.sendFile(path.join(__dirname, 'public', 'index.html'));
-    } else {
-        // If NOT logged in, send them to the login page
-        res.redirect('/login.html');
-    }
 });
 
 app.use(express.static(path.join(__dirname, 'public')));

@@ -5,8 +5,12 @@ const User = require('./user');
 const path = require('path');
 const session = require('express-session');
 const fs = require('fs');
+const morgan= require('morgan');
 
 const app = express();
+
+// LOGGING MIDDLEWARE (Logs every request to the console in a simple format)
+app.use(morgan('tiny')); 
 
 // 1. MIDDLEWARE SETUP
 app.use(express.json());
@@ -296,6 +300,7 @@ app.delete('/api/extra-availability/:id', protect, async (req, res) => {
 });
 
 // 9. ROLLUP & PARTICIPATION REPORT ROUTES
+// POST a new rollup (from the dashboard after the game)  
 app.post('/api/rollups', protect, async (req, res) => {
     try {
         const rollup = new Rollup(req.body);
@@ -304,6 +309,7 @@ app.post('/api/rollups', protect, async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// GET today's rollup (for main dashboard)
 app.get('/api/rollups/find', protect, async (req, res) => {
     const queryDate = new Date(req.query.date);
     const start = new Date(queryDate).setHours(0, 0, 0, 0);
@@ -313,16 +319,28 @@ app.get('/api/rollups/find', protect, async (req, res) => {
     res.json(rollup);
 });
 
+// GET all rollups (for admin/history view)
 app.get('/api/rollups', protect, async (req, res) => {
     const rollups = await Rollup.find().sort({ date: -1 });
     res.json(rollups);
 });
 
+// GET a specific rollup by ID
 app.get('/api/rollups/:id', protect, async (req, res) => {
     try {
         const rollup = await Rollup.findById(req.params.id);
         res.json(rollup);
     } catch (err) { res.status(404).json({ error: "Not found" }); }
+});
+
+// DELETE a specific rollup by ID
+app.delete('/api/rollups/:id', async (req, res) => {
+    try {
+        await Rollup.findByIdAndDelete(req.params.id);
+        res.json({ success: true, message: "Rollup deleted successfully" });
+    } catch (err) {
+        res.status(500).json({ error: "Could not delete rollup" });
+    }
 });
 
 app.get('/api/reports/participation', protect, async (req, res) => {

@@ -1,111 +1,113 @@
 <!DOCTYPE html>
-<! This page displays a history of all past rollups, sorted by date. Each entry shows the date of the rollup and
-  includes a link to view the booking sheet for that rollup. Admins can use this page to review past groupings and
-  access the details of each rollup as needed.>
-  <html>
-  <div id="nav-placeholder"></div>
-
-  <head>
+<html>
+<head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Rollup History</title>
-
     <style>
-      body {
-        font-family: Arial;
-        background: #f2f2f2;
-        padding: 30px;
-      }
-
-      .nav {
-        background: #2e7d32;
-        color: white;
-        padding: 10px;
-        margin-bottom: 20px;
-      }
-
-      .nav a {
-        color: white;
-        margin-right: 15px;
-        text-decoration: none;
-      }
-
-      .container {
-        max-width: 600px;
-        margin: auto;
-        background: white;
-        padding: 25px;
-        border-radius: 8px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-      }
-
-      .rollup {
-        padding: 10px;
-        border-bottom: 1px solid #ddd;
-      }
-
-      .rollup a {
-        text-decoration: none;
-        color: #2e7d32;
-        font-weight: bold;
-      }
-
-      .message {
-        padding: 10px;
-        font-style: italic;
-        color: #555;
-      }
+        body { font-family: Arial; background: #f2f2f2; padding: 30px; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); }
+        
+        .rollup { 
+            padding: 15px; 
+            border-bottom: 1px solid #ddd; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        .rollup-info { flex-grow: 1; }
+        .rollup a { text-decoration: none; color: #2e7d32; font-weight: bold; font-size: 1.1em; }
+        .comp-name { display: block; font-size: 0.85em; color: #666; margin-top: 4px; }
+        
+        .btn-delete { 
+            background: #d32f2f; 
+            color: white; 
+            border: none; 
+            padding: 6px 12px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-size: 0.8em;
+            transition: background 0.2s;
+        }
+        .btn-delete:hover { background: #b71c1c; }
+        .message { padding: 10px; font-style: italic; color: #555; }
     </style>
-  </head>
+</head>
+<body>
 
-  <body>
-
+    <div id="nav-placeholder"></div>
 
     <div class="container">
-      <h2>Rollup History</h2>
-      <div id="history"></div>
+        <h2>Rollup History</h2>
+        <p>Click on a date to view the rollup details. You can also delete old rollups if needed.</p>
+        <div id="history"></div>
     </div>
 
     <script src="js/shared.js"></script>
 
     <script>
-      async function loadHistory() {
-        const div = document.getElementById("history")
-        div.innerHTML = "<p class='message'>Loading rollups...</p>"
+        async function loadHistory() {
+            const div = document.getElementById("history");
+            div.innerHTML = "<p class='message'>Loading rollups...</p>";
 
-        try {
-          const response = await fetch('/api/rollups')
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`)
-          }
+            try {
+                const response = await fetch('/api/rollups');
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
-          const rollups = await response.json()
+                const rollups = await response.json();
+                div.innerHTML = ""; 
 
-          div.innerHTML = "" // clear loading message
+                if (rollups.length === 0) {
+                    div.innerHTML = "<p class='message'>No rollups found.</p>";
+                    return;
+                }
 
-          if (rollups.length === 0) {
-            div.innerHTML = "<p class='message'>No rollups found.</p>"
-            return
-          }
+                rollups.forEach(r => {
+                    const d = new Date(r.date);
+                    const compLabel = r.competition ? `Competition: ${r.competition}` : "Competition: Social";
+                    
+                    const row = document.createElement("div");
+                    row.className = "rollup";
+                    row.innerHTML = `
+                        <div class="rollup-info">
+                            <a href="/bookingsheet.html?id=${r._id}">${d.toDateString()}</a>
+                            <span class="comp-name">${compLabel}</span>
+                        </div>
+                        <button class="btn-delete" onclick="deleteRollup('${r._id}', '${d.toDateString()}')">Delete</button>
+                    `;
+                    div.appendChild(row);
+                });
 
-          rollups.forEach(r => {
-            const d = new Date(r.date)
-            const row = document.createElement("div")
-            row.className = "rollup"
-            row.innerHTML = `<a href="/bookingsheet.html?id=${r._id}">${d.toDateString()}</a>`
-            div.appendChild(row)
-          })
-
-        } catch (err) {
-          console.error("Failed to load rollup history:", err)
-          div.innerHTML = "<p class='message'>Error loading rollups.</p>"
+            } catch (err) {
+                console.error("Failed to load rollup history:", err);
+                div.innerHTML = "<p class='message'>Error loading rollups.</p>";
+            }
         }
-      }
 
-      // load history when page opens
-      loadHistory()
+        async function deleteRollup(id, dateLabel) {
+            // Confirmation Step
+            if (!confirm(`Are you sure you want to delete the rollup for ${dateLabel}? This cannot be undone.`)) {
+                return;
+            }
 
+            try {
+                const response = await fetch(`/api/rollups/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    alert("Rollup deleted successfully.");
+                    loadHistory(); // Refresh the list
+                } else {
+                    alert("Failed to delete the rollup.");
+                }
+            } catch (err) {
+                console.error("Delete error:", err);
+                alert("An error occurred while trying to delete.");
+            }
+        }
+
+        // load history when page opens
+        loadHistory();
     </script>
-
-  </body>
-
-  </html>
+</body>
+</html>

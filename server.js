@@ -447,7 +447,7 @@ app.get('/', (req, res) => {
         res.sendFile(path.join(__dirname, 'public', 'index.html'));
     } else {
         // If NOT logged in, send them to the login page
-        res.redirect('/login.html');
+        res.redirect('/index.html');
     }
 });
 

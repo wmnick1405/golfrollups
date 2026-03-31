@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Golfers Admin</title>
+    <style>
+        body {
+            font-family: Arial;
+            margin: 40px;
+            background-color: #f4f4f4;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            background: white;
+        }
+
+        th,
+        td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #2e7d32;
+            color: white;
+        }
+
+        button {
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+
+        .exempt-cell {
+            text-align: center;
+            width: 80px;
+        }
+
+        /* Style for the Add Golfer box */
+        .add-box {
+            background: #f0f4f8;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #d1d9e6;
+            margin-bottom: 30px;
+        }
+
+        .checkbox-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95em;
+            font-weight: 600;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .checkbox-label:hover {
+            background: #f5f5f5;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="nav-placeholder"></div>
+
+    <div style="max-width: 1000px; margin: auto;">
+        <h2>Golfers Admin</h2>
+
+        <div class="add-box">
+            <h3>Add New Golfer</h3>
+            <div id="msg" style="margin-bottom: 10px; font-weight: bold;"></div>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                <input type="text" id="newName" placeholder="Name (Required)" style="padding: 8px; flex: 1;">
+                <input type="text" id="newPhone" placeholder="Phone" style="padding: 8px; flex: 1;">
+                <input type="email" id="newEmail" placeholder="Email" style="padding: 8px; flex: 1;">
+                <label><strong>Default Play Days:</strong></label>
+                <div id="daysPicker"
+                    style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; background: white; padding: 10px; border: 1px solid #ccc; border-radius: 4px; margin-top: 5px;">
+                    <label><input type="checkbox" class="day-opt" value="Monday"> Mon</label>
+                    <label><input type="checkbox" class="day-opt" value="Wednesday"> Wed</label>
+                    <label><input type="checkbox" class="day-opt" value="Friday"> Fri</label>
+
+                </div>
+
+                <label class="checkbox-label">
+                    <input type="checkbox" id="newExempt">
+                    <span>Booking Exempt</span>
+                </label>
+
+                <button onclick="addGolfer()"
+                    style="background: #2e7d32; color: white; border: none; padding: 10px 20px; border-radius: 4px;">Add
+                    Golfer</button>
+            </div>
+        </div>
+
+        <table id="golfersTable">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Phone</th>
+                    <th>Email</th>
+                    <th>Playing Days</th>
+                    <th class="exempt-cell">Booking Exempt</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script src="js/shared.js"></script>
+    <script>
+        // Message helper for feedback
+        function showMsg(text, isError = false) {
+            const msg = document.getElementById("msg");
+            msg.textContent = text;
+            msg.style.color = isError ? "#d32f2f" : "#2e7d32";
+            setTimeout(() => { msg.textContent = ""; }, 5000);
+        }
+
+        // Add Golfer function
+        async function addGolfer() {
+            const name = document.getElementById("newName").value.trim();
+            const tel = document.getElementById("newPhone").value.trim();
+            const email = document.getElementById("newEmail").value.trim();
+            const booking_exempt = document.getElementById("newExempt").checked;
+
+            // NEW: Get play days from checkboxes
+            const play_days = Array.from(document.querySelectorAll(".day-opt:checked"))
+                .map(cb => cb.value);
+
+            if (!name) return showMsg("Error: Name is required", true);
+
+            try {
+                const res = await fetch("/api/golfers", {
+                    method: "POST",
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, tel, email, play_days, booking_exempt })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    showMsg(`Success: ${name} added!`);
+                    // Clear the form
+                    document.getElementById("newName").value = "";
+                    document.getElementById("newPhone").value = "";
+                    document.getElementById("newEmail").value = "";
+                    document.getElementById("newExempt").checked = false;
+
+                    // NEW: Uncheck all day boxes
+                    document.querySelectorAll(".day-opt").forEach(cb => cb.checked = false);
+
+                    loadGolfers();
+                } else {
+                    showMsg("Error: " + (data.error || "Could not add golfer"), true);
+                }
+            } catch (err) {
+                showMsg("Server connection failed", true);
+            }
+        }
+        // Load Golfers function
+        async function loadGolfers() {
+            try {
+                const res = await fetch('/api/golfers');
+                const golfers = await res.json();
+                const tbody = document.querySelector("#golfersTable tbody");
+                tbody.innerHTML = "";
+
+                const weekDays = ["Monday", "Wednesday", "Friday"];
+
+                golfers.forEach(g => {
+                    const row = document.createElement("tr");
+
+                    // Create the HTML for the checkboxes for this specific golfer
+                    let daysHtml = `<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; font-size: 0.8em;">`;
+                    weekDays.forEach(day => {
+                        const checked = (g.play_days || []).includes(day) ? 'checked' : '';
+                        daysHtml += `
+                    <label style="display:block;">
+                        <input type="checkbox" class="edit-day-${g._id}" value="${day}" ${checked}> ${day.substring(0, 3)}
+                    </label>`;
+                    });
+                    daysHtml += `</div>`;
+
+                    row.innerHTML = `
+                <td><input type="text" value="${g.name}" id="name_${g._id}" style="width:120px;"></td>
+                <td><input type="text" value="${g.tel || ''}" id="tel_${g._id}" style="width:100px;"></td>
+                <td><input type="email" value="${g.email || ''}" id="email_${g._id}" style="width:150px;"></td>
+                <td>${daysHtml}</td>
+                <td class="exempt-cell">
+                    <input type="checkbox" id="exempt_${g._id}" ${g.booking_exempt ? 'checked' : ''}>
+                </td>
+                <td>
+                    <button onclick="saveGolfer('${g._id}')">Save</button>
+                    <button onclick="deleteGolfer('${g._id}')" style="background:#ffcccc; color:#900; border:1px solid #900;">Delete</button>
+                </td>
+            `;
+                    tbody.appendChild(row);
+                });
+            } catch (err) { console.error("Load failed", err); }
+        }
+
+        // Save (Update) function
+        async function saveGolfer(id) {
+            const name = document.getElementById("name_" + id).value.trim();
+            const tel = document.getElementById("tel_" + id).value.trim();
+            const email = document.getElementById("email_" + id).value.trim();
+            const booking_exempt = document.getElementById("exempt_" + id).checked;
+
+            // NEW: Collect checkboxes for THIS specific row
+            const play_days = Array.from(document.querySelectorAll(`.edit-day-${id}:checked`))
+                .map(cb => cb.value);
+
+            if (!name) return alert("Name cannot be empty");
+
+            try {
+                const res = await fetch("/api/golfers/" + id, {
+                    method: "PUT",
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, tel, email, play_days, booking_exempt })
+                });
+
+                if (res.ok) {
+                    showMsg("Success: Golfer updated!");
+                    loadGolfers();
+                } else {
+                    const data = await res.json();
+                    alert("Error: " + (data.error || "Update failed"));
+                }
+            } catch (err) {
+                alert("Server error");
+            }
+        }
+        // Delete function
+        async function deleteGolfer(id) {
+            if (!confirm("Delete this golfer?")) return;
+            await fetch("/api/golfers/" + id, { method: "DELETE" });
+            loadGolfers();
+        }
+
+        // Initial load
+        loadGolfers();
+    </script>
+</body>
+
+</html>

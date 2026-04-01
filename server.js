@@ -78,6 +78,12 @@ const ClubCalendar = mongoose.model('ClubCalendar', new mongoose.Schema({
     location: String
 }, { collection: 'club-calendar' }));
 
+// Add this to your Section 4: DATA SCHEMAS
+// Section 4: DATA SCHEMAS
+const CompetitionName = mongoose.model('CompetitionName', new mongoose.Schema({
+    'comp-name': { type: String, required: true } // Must match your DB key exactly
+}), 'competition-names');
+
 
 const ExtraAvailability = mongoose.model('ExtraAvailability', extraAvailabilitySchema);
 
@@ -186,6 +192,19 @@ app.delete('/api/golfers/:id', protect, async (req, res) => {
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: "Delete failed" }); }
 });
+
+
+// Get list of all competition names for the dropdown in rollup creation
+app.get('/api/competition-names', protect, async (req, res) => {
+    try {
+        const comps = await CompetitionName.find().sort({ 'comp-name': 1 });
+        // This will now correctly return [{ 'comp-name': 'Winter League' }, ...]
+        res.json(comps);
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch competition names" });
+    }
+});
+
 
 // 8. AVAILABILITY & ABSENCE ROUTES
 app.get('/api/available', protect, async (req, res) => {
@@ -318,27 +337,44 @@ app.delete('/api/extra-availability/:id', protect, async (req, res) => {
 
 // Check if a rollup exists for a specific date
 app.get('/api/rollups/check', async (req, res) => {
-    const { date } = req.query;
     try {
-        // Assuming your Rollup model is named 'Rollup'
-        const existing = await Rollup.findOne({ date: date });
+        const { date } = req.query; // e.g. "2025-02-24"
         
-        if (existing) {
-            return res.json({ exists: true });
-        }
-        res.json({ exists: false });
+        // Create a range for that specific day
+        const startOfDay = new Date(date);
+        const endOfDay = new Date(date);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        // Search for any rollup that falls within that 24-hour window
+        const existing = await Rollup.findOne({
+            date: {
+                $gte: startOfDay,
+                $lte: endOfDay
+            }
+        });
+        
+        res.json({ exists: !!existing });
     } catch (err) {
-        res.status(500).json({ error: "Server error checking date" });
+        res.status(500).json({ error: "Database check failed" });
     }
 });
 
 // POST a new rollup (from the dashboard after the game)  
-app.post('/api/rollups', protect, async (req, res) => {
+app.post('/api/rollups', async (req, res) => {
     try {
-        const rollup = new Rollup(req.body);
-        await rollup.save();
+        const { date, competition, groups } = req.body;
+        
+        const newRollup = new Rollup({
+            date: new Date(date), // Converts "2025-02-24" to a full Date Object
+            competition,
+            groups
+        });
+        
+        await newRollup.save();
         res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) {
+        res.status(500).json({ error: "Save failed" });
+    }
 });
 
 // GET today's rollup (for main dashboard)

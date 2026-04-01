@@ -6,6 +6,7 @@ const path = require('path');
 const session = require('express-session');
 const fs = require('fs');
 const morgan= require('morgan');
+const ical = require('node-ical');
 
 const app = express();
 
@@ -68,6 +69,16 @@ const extraAvailabilitySchema = new mongoose.Schema({
     date: { type: Date, required: true },
     note: String
 });
+
+const ClubCalendar = mongoose.model('ClubCalendar', new mongoose.Schema({
+    uid: { type: String, unique: true },
+    title: String,
+    start: Date,
+    end: Date,
+    location: String
+}, { collection: 'club-calendar' }));
+
+
 const ExtraAvailability = mongoose.model('ExtraAvailability', extraAvailabilitySchema);
 
 
@@ -434,6 +445,52 @@ app.post('/api/booker/:id', protect, async (req, res) => {
         await Golfer.findByIdAndUpdate(req.params.id, { $inc: { booking_count: 1 }, last_booked: new Date() });
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: "Update failed" }); }
+});
+
+// 11. CLUB CALENDAR SYNC ROUTES
+app.get('/api/club-calendar', async (req, res) => {
+    try {
+        // Fetch future events only (optional, but cleaner)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const events = await ClubCalendar.find({ start: { $gte: today } }).sort({ start: 1 });
+        res.json(events);
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch events" });
+    }
+});
+
+app.post('/api/club-calendar/sync', async (req, res) => {
+    const ICS_URL = 'https://clubv1.blob.core.windows.net/diary-events/822/bc1d725c-ddfb-4a2d-b3bc-f1dbc6eb0021.ics';
+    
+    try {
+        const events = await ical.async.fromURL(ICS_URL);
+        const syncResults = [];
+
+        for (let k in events) {
+            if (events.hasOwnProperty(k)) {
+                const ev = events[k];
+                if (ev.type === 'VEVENT') {
+                    // upsert: update if UID exists, otherwise insert
+                    await ClubCalendar.findOneAndUpdate(
+                        { uid: ev.uid },
+                        {
+                            title: ev.summary,
+                            start: ev.start,
+                            end: ev.end,
+                            location: ev.location || ''
+                        },
+                        { upsert: true }
+                    );
+                }
+            }
+        }
+        res.json({ success: true, message: "Calendar synced successfully" });
+    } catch (err) {
+        console.error("ICS Sync Error:", err);
+        res.status(500).json({ error: "Failed to fetch or parse ICS file" });
+    }
 });
 
 /**

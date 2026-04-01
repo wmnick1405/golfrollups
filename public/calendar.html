@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Club Calendar</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        /* Search Bar Styling */
+
+        .search-row {
+            display: flex !important;
+            /* Force horizontal layout */
+            flex-direction: row;
+            /* Ensure they stay side-by-side */
+            align-items: stretch;
+            /* Make them the same height */
+            gap: 10px;
+            /* The space between them */
+            margin-bottom: 25px;
+            width: 100%;
+        }
+
+        .search-input {
+            flex: 1;
+            /* This makes the input grow to fill the space */
+            min-width: 0;
+            /* Prevents the input from pushing the button off-screen */
+            padding: 12px 20px;
+            border-radius: 50px;
+            border: 1px solid #ddd;
+            font-size: 16px;
+            outline: none;
+        }
+
+        .search-input:focus {
+            border-color: #2e7d32;
+            box-shadow: 0 0 8px rgba(46, 125, 50, 0.1);
+        }
+
+
+
+
+        /* Pill Buttons */
+        button {
+            border-radius: 50px;
+            padding: 10px 24px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background-color: #2e7d32;
+            color: white;
+        }
+
+        .btn-secondary {
+            background-color: #2e7d32;
+            color: white;
+            padding: 0 25px;
+            /* Horizontal padding */
+            border-radius: 50px;
+            /* Pill shape */
+            border: 1px solid #ccc;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            /* Stops the word 'Reset' from splitting */
+            height: 46px;
+            /* Matches the height of the input */
+        }
+
+        .btn-secondary:hover {
+            background-color: #215d25;
+            transform: translateY(-1px);
+        }
+
+        button:hover {
+            background-color: #215d25;
+            transform: translateY(-1px);
+        }
+
+        .event-card {
+            background: #fff;
+            border: 1px solid #eee;
+            border-left: 6px solid #2e7d32;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: transform 0.1s;
+        }
+
+        .event-card.hidden {
+            display: none;
+        }
+
+        .event-info h4 {
+            margin: 0 0 5px 0;
+            color: #2c3e50;
+        }
+
+        .event-date {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        #sync-status {
+            font-size: 14px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="nav-placeholder"></div>
+
+    <div class="container">
+        <div class="calendar-header">
+            <h2>Club Diary</h2>
+            <div>
+                <span id="sync-status"></span>
+                <button onclick="syncCalendar()">Sync with V1 Now</button>
+            </div>
+        </div>
+
+        <div class="search-row">
+            <input type="text" id="searchInput" class="search-input" placeholder="Search events..."
+                onkeyup="fuzzySearch()">
+            <button type="button" class="btn-secondary" onclick="resetSearch()">Reset</button>
+        </div>
+
+        <div id="calendar-list">
+            <p>Loading diary...</p>
+        </div>
+    </div>
+
+    <script>
+        let allEvents = []; // Global store for searching
+
+        async function loadCalendar() {
+            try {
+                const res = await fetch('/api/club-calendar');
+                allEvents = await res.json();
+                renderEvents(allEvents);
+            } catch (err) {
+                console.error("Load error:", err);
+            }
+        }
+
+        function renderEvents(events) {
+            const listDiv = document.getElementById('calendar-list');
+            listDiv.innerHTML = "";
+
+            if (events.length === 0) {
+                listDiv.innerHTML = "<p>No matches found.</p>";
+                return;
+            }
+
+            events.forEach(event => {
+                const startDate = new Date(event.start).toLocaleDateString('en-GB', {
+                    weekday: 'short', day: 'numeric', month: 'short'
+                });
+
+                const card = document.createElement('div');
+                card.className = 'event-card';
+                // Store title and location in data attributes for searching
+                card.dataset.title = event.title.toLowerCase();
+                card.dataset.location = (event.location || "").toLowerCase();
+
+                card.innerHTML = `
+                    <div class="event-info">
+                        <h4>${event.title}</h4>
+                        <div class="event-date">${startDate} ${event.location ? ' • ' + event.location : ''}</div>
+                    </div>
+                `;
+                listDiv.appendChild(card);
+            });
+        }
+
+        // Fuzzy Search Logic
+        function fuzzySearch() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const cards = document.querySelectorAll('.event-card');
+
+            cards.forEach(card => {
+                // We look at the data-title and data-location we set during the initial render
+                const title = card.dataset.title || "";
+                const loc = card.dataset.location || "";
+
+                if (title.includes(query) || loc.includes(query)) {
+                    card.style.display = "flex"; // Show matching cards
+                } else {
+                    card.style.display = "none"; // Hide non-matching cards
+                }
+            });
+        }
+
+        function resetSearch() {
+            const input = document.getElementById('searchInput');
+            input.value = ""; // Clear the text
+            fuzzySearch();    // Run the search logic to show all cards again
+            input.focus();    // Put the typing cursor back in the box
+        }
+
+        function resetSearch() {
+            const input = document.getElementById('searchInput');
+            input.value = "";
+            fuzzySearch(); // This will hide the X and show all cards
+            input.focus();
+        }
+
+        async function syncCalendar() {
+            const status = document.getElementById('sync-status');
+            status.textContent = "Syncing...";
+            try {
+                const res = await fetch('/api/club-calendar/sync', { method: 'POST' });
+                if (res.ok) {
+                    status.textContent = "Success!";
+                    loadCalendar();
+                }
+            } catch (err) { status.textContent = "Error."; }
+            setTimeout(() => status.textContent = "", 3000);
+        }
+
+        loadCalendar();
+
+        fetch('nav.html')
+            .then(res => res.text())
+            .then(data => document.getElementById('nav-placeholder').innerHTML = data);
+    </script>
+</body>
+
+</html>

@@ -139,16 +139,49 @@
         let pool = [];   // Players not in a group
         let groups = []; // Array of Arrays [[p1, p2], [p3, p4]]
 
-        // 1. FETCH DATA
-        async function fetchAvailable() {
-            const date = document.getElementById("rollupDate").value;
-            if (!date) return alert("Select a date first");
+        // 1. FETCH DATA (Duplicate Date Check)
+async function fetchAvailable() {
+    const dateInput = document.getElementById("rollupDate");
+    const date = dateInput.value;
+    
+    if (!date) return alert("Please select a date first.");
 
-            const data = await apiFetch(`/api/available?date=${date}`);
-            pool = data.map(p => ({ golfer_id: p._id, name: p.name, booker: false }));
-            groups = []; // Clear existing groups
+    try {
+        // 1. Check for existing rollup
+        const checkRes = await fetch(`/api/rollups/check?date=${date}`);
+        const checkData = await checkRes.json();
+
+        if (checkData.exists) {
+            alert(`STOP: A rollup already exists for ${date}. 
+            
+You cannot create a duplicate. Please check the History page or select a different date.`);
+            
+            // Reset the UI to prevent further steps
+            dateInput.value = ""; 
+            pool = [];
+            groups = [];
             renderAll();
+            return; 
         }
+
+        // 2. If clear, proceed to get available players
+        const res = await fetch(`/api/available?date=${date}`);
+        const data = await res.json();
+        
+        if (data.length === 0) {
+            alert("No players have marked themselves as available for this date.");
+            return;
+        }
+
+        pool = data.map(p => ({ golfer_id: p._id, name: p.name, booker: false }));
+        groups = []; 
+        renderAll();
+        
+    } catch (err) {
+        console.error("Fetch Error:", err);
+        alert("Server Error: Could not verify date availability.");
+    }
+}
 
         // 2. AUTOMATIC DISTRIBUTION (Optional starting point)
         function autoDistribute() {

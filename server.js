@@ -315,6 +315,23 @@ app.delete('/api/extra-availability/:id', protect, async (req, res) => {
 });
 
 // 9. ROLLUP & PARTICIPATION REPORT ROUTES
+
+// Check if a rollup exists for a specific date
+app.get('/api/rollups/check', async (req, res) => {
+    const { date } = req.query;
+    try {
+        // Assuming your Rollup model is named 'Rollup'
+        const existing = await Rollup.findOne({ date: date });
+        
+        if (existing) {
+            return res.json({ exists: true });
+        }
+        res.json({ exists: false });
+    } catch (err) {
+        res.status(500).json({ error: "Server error checking date" });
+    }
+});
+
 // POST a new rollup (from the dashboard after the game)  
 app.post('/api/rollups', protect, async (req, res) => {
     try {

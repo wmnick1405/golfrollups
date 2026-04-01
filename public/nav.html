@@ -1,43 +1,149 @@
-<!DOCTYPE html>
-<! This file contains the navigation bar that is included on all pages of the Golf Rollup Manager. It provides links to
-    the main sections of the application, including the home page, golfer management, availability management, rollup
-    generation, history, and reports. The navigation bar also includes a logout button for admins to securely exit the
-    application. By centralizing the navigation in this file, we ensure a consistent user experience across all pages
-    and make it easy to update the navigation structure in one place if needed.>
+<style>
+    .navbar {
+        background: #2e7d32;
+        color: white;
+        padding: 0 20px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        height: 60px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
 
-    <div
-        style="background:#2e7d32; color:white; padding:10px; margin-bottom:20px; display: flex; justify-content: space-between; align-items: center;">
-        <div>
-            <a href="index.html"
-                style="color:white; margin-right:15px; text-decoration: none; font-weight: bold;">Home</a>
-            <a href="golfers.html" style="color:white; margin-right:15px; text-decoration: none;">Add/Update Golfer</a>
-            <a href="golfer-status.html" style="color:white; margin-right:15px; text-decoration: none;">Availability</a>
-            <a href="indefinite_unavailable_golfers.html"
-                style="color:white; margin-right:15px; text-decoration: none;">Indefinite List</a>
-            <a href="rollup.html" style="color:white; margin-right:15px; text-decoration: none;">Generate Rollup</a>
-            <a href="history.html" style="color:white; margin-right:15px; text-decoration: none;">History</a>
-            <a href="absence-report.html" style="color:white; margin-right:15px; text-decoration: none;">Absence
-                Reports</a>
-            <a href="participation-report.html"
-                style="color:white; margin-right:15px; text-decoration: none;">Participation Reports</a>
-            <a href="email-generator.html" style="color:white; margin-right:15px; text-decoration: none;">Generate Email
-                Table for Upcoming Rollup</a>
-            <a href="/calendar.html" style="color:white; margin-right:15px; text-decoration: none;">View Club Diary
-                Events</a>
+    .nav-group {
+        display: flex;
+        align-items: center;
+    }
+
+    .nav-link,
+    .dropbtn {
+        color: white;
+        text-decoration: none;
+        margin-right: 10px;
+        /* Increased from 5px */
+        padding: 12px 18px;
+        /* Increased padding */
+        border-radius: 6px;
+        transition: all 0.2s ease;
+        font-size: 15px;
+        cursor: pointer;
+    }
+
+    .nav-link:hover,
+    .dropdown:hover .dropbtn {
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    /* --- DROPDOWN LOGIC --- */
+    .dropdown {
+        position: relative;
+        display: inline-block;
+    }
+
+    .dropdown-content {
+        display: none;
+        position: absolute;
+        background-color: #ffffff;
+        min-width: 220px;
+        box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        border-radius: 8px;
+        top: 100%;
+        /* Starts at the bottom of the nav bar */
+        margin-top: 8px;
+        /* Adds a 8px visual gap */
+        /* SAFETY: This invisible "bridge" prevents the menu from 
+       closing when the mouse moves over the gap */
+        padding-top: 0;
+        border-top: 8px solid transparent;
+        background-clip: padding-box;
+
+        overflow: hidden;
+    }
+
+    .dropdown-content a {
+        color: #333;
+        padding: 12px 16px;
+        text-decoration: none;
+        display: block;
+        font-size: 14px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .dropdown-content a:last-child {
+        border-bottom: none;
+    }
+
+    .dropdown-content a:hover {
+        background-color: #f1f1f1;
+        color: #2e7d32;
+    }
+
+    .dropdown:hover .dropdown-content {
+        display: block;
+    }
+
+    /* PILL STYLE LOGOUT */
+    .btn-logout {
+        background: #d32f2f;
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 50px;
+        /* Pill Shape */
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.1s;
+    }
+
+    .btn-logout:hover {
+        background: #b71c1c;
+        transform: scale(1.03);
+    }
+</style>
+
+<div class="navbar">
+    <div class="nav-group">
+        <a href="index.html" class="nav-link" style="font-weight: bold;">Home</a>
+
+        <div class="dropdown">
+            <span class="dropbtn">Players &#9662;</span>
+            <div class="dropdown-content">
+                <a href="golfers.html">Add/Update Golfer details</a>
+                <a href="golfer-status.html">Record Availability</a>
+                <a href="indefinite_unavailable_golfers.html">Golfers Away Indefinitely</a>
+            </div>
         </div>
 
-        <button onclick="handleLogout()"
-            style="background: #d32f2f; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
-            Logout
-        </button>
+        <div class="dropdown">
+            <span class="dropbtn">Operations &#9662;</span>
+            <div class="dropdown-content">
+                <a href="rollup.html">Generate Rollup</a>
+                <a href="email-generator.html">Generate Email Table</a>
+                <a href="/calendar.html">View Club Diary</a>
+            </div>
+        </div>
+
+        <div class="dropdown">
+            <span class="dropbtn">Results & Reports &#9662;</span>
+            <div class="dropdown-content">
+                <a href="history.html">RollupHistory</a>
+                <a href="absence-report.html">Absence Reports</a>
+                <a href="participation-report.html">Participation Reports</a>
+            </div>
+        </div>
     </div>
 
-    <script>
-        async function handleLogout() {
-            if (!confirm("Are you sure you want to logout?")) return;
-            const res = await fetch('/api/logout', { method: 'POST' });
-            if (res.ok) {
-                window.location.href = "/";
-            }
+    <button onclick="handleLogout()" class="btn-logout">Logout</button>
+</div>
+
+<script>
+    async function handleLogout() {
+        if (!confirm("Are you sure you want to logout?")) return;
+        const res = await fetch('/api/logout', { method: 'POST' });
+        if (res.ok) {
+            window.location.href = "/";
         }
-    </script>
+    }
+</script>

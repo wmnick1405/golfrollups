@@ -38,20 +38,13 @@
         .player-tag {
             background: #e1f5fe;
             border: 1px solid #01579b;
-            padding: 10px 15px;
-            border-radius: 50px;
-            /* Subtle rounded corners */
+            padding: 8px 12px;
+            margin: 5px;
+            border-radius: 20px;
             cursor: grab;
-            /* Shows the "Hand" icon */
-            display: block;
-            /* Makes it a full-width bar */
-            width: 100%;
-            /* Fills the group box */
-            box-sizing: border-box;
+            display: inline-block;
             font-size: 0.9em;
             user-select: none;
-            text-align: left;
-            /* Easier to read in a list */
         }
 
         .player-tag:active {
@@ -59,9 +52,8 @@
         }
 
         .player-tag.is-booker {
-            border: 2px solid #d32f2f !important;
-            background: #ffebee !important;
-            color: #b71c1c;
+            border: 2px solid #d32f2f;
+            background: #ffebee;
             font-weight: bold;
         }
 
@@ -75,13 +67,8 @@
             border: 2px dashed #ccc;
             padding: 15px;
             border-radius: 8px;
-            min-height: 120px;
-            background: white;
-            display: flex;
-            flex-direction: column;
-            /* Stack players vertically */
-            gap: 8px;
-            /* Space between player bars */
+            min-height: 100px;
+            transition: all 0.2s;
         }
 
         /* Visual feedback when hovering over a group */
@@ -109,30 +96,6 @@
 
         button.secondary {
             background: #666;
-        }
-
-        /* The suggested booker (top of the list) */
-        .is-top-slot {
-            background: #e8f5e9 !important;
-            /* Light Green */
-            border: 2px solid #2e7d32 !important;
-            font-weight: bold;
-        }
-
-        /* The exempt players (shouldn't be at the top) */
-        .is-exempt {
-            background: #ffebee !important;
-            /* Light Red/Pink */
-            border: 1px dashed #d32f2f !important;
-            color: #c62828;
-        }
-
-        /* Small label for exempt players */
-        .exempt-label {
-            font-size: 0.7em;
-            text-transform: uppercase;
-            float: right;
-            margin-top: 2px;
         }
     </style>
 </head>
@@ -211,13 +174,7 @@ You cannot create a duplicate. Please check the History page or select a differe
                     return;
                 }
 
-                // Ensure booking_exempt is passed into the app logic
-                pool = data.map(p => ({
-                    golfer_id: p._id,
-                    name: p.name,
-                    booker: false,
-                    booking_exempt: p.booking_exempt // <--- Add this
-                }));
+                pool = data.map(p => ({ golfer_id: p._id, name: p.name, booker: false }));
                 groups = [];
                 renderAll();
 
@@ -318,15 +275,7 @@ You cannot create a duplicate. Please check the History page or select a differe
             const container = document.getElementById("playerPool");
             container.innerHTML = "";
             pool.forEach((player, idx) => {
-                const tag = createPlayerTag(player, true); // true means "isPool"
-
-                // Standard drag logic
-                tag.ondragstart = (e) => {
-                    e.dataTransfer.setData("fromIdx", idx);
-                    e.dataTransfer.setData("fromGroup", "pool");
-                };
-
-                container.appendChild(tag);
+                container.appendChild(createPlayerTag(player, "pool", idx));
             });
         }
 
@@ -335,56 +284,42 @@ You cannot create a duplicate. Please check the History page or select a differe
             container.innerHTML = "";
 
             groups.forEach((group, gIdx) => {
+                // We create the element and call it 'groupDiv'
                 const groupDiv = document.createElement("div");
                 groupDiv.className = "group-box";
 
-                // Add your Header/Tee Time logic here if you have it
-                groupDiv.innerHTML = `<strong>Group ${gIdx + 1}</strong><hr>`;
+                // NOW use 'groupDiv' here:
+                groupDiv.innerHTML = `<strong>Group ${gIdx + 1} <span style="color:#666; font-size:0.8em;">(${group.length} players)</span></strong><hr>`;
 
-                // Set up the Group as a Drop Zone
+                // Set up Drop Zone
                 groupDiv.ondragover = allowDrop;
+                groupDiv.ondragenter = () => groupDiv.classList.add('drag-over');
+                groupDiv.ondragleave = () => groupDiv.classList.remove('drag-over');
                 groupDiv.ondrop = (e) => handleDrop(e, gIdx);
 
                 group.forEach((player, pIdx) => {
-                    // Highlight as Green ONLY if pIdx is 0
-                    const isTop = (pIdx === 0);
-                    const tag = createPlayerTag(player, false, isTop);
-
-                    // Update the data object so the Save function knows who is booking
-                    player.booker = isTop;
-
-                    // Re-attach the drag-start listener
-                    tag.ondragstart = (e) => {
-                        e.dataTransfer.setData("fromIdx", pIdx);
-                        e.dataTransfer.setData("fromGroup", gIdx);
+                    const tag = createPlayerTag(player, gIdx, pIdx);
+                    tag.onclick = () => {
+                        player.booker = !player.booker;
+                        renderAll();
                     };
-
-                    groupDiv.appendChild(tag);
+                    groupDiv.appendChild(tag); // Add player to groupDiv
                 });
-                container.appendChild(groupDiv);
+
+                container.appendChild(groupDiv); // Add groupDiv to the page
             });
         }
 
-        function createPlayerTag(player, isPool = false, isTop = false) {
+        function createPlayerTag(player, gIdx, pIdx) {
             const span = document.createElement("span");
-            span.classList.add("player-tag");
-
-            // 1. Apply visual highlights
-            if (player.booking_exempt) {
-                span.classList.add("is-exempt");
-            }
-
-            // Only show Green if they are at the top of a group (not in the pool)
-            if (isTop && !isPool) {
-                span.classList.add("is-top-slot");
-            }
-
-            // 2. Set the text
-            span.textContent = player.name + (player.booking_exempt ? " (E)" : "");
-
-            // 3. CRITICAL: Re-enable the draggable attribute
+            span.className = `player-tag ${player.booker ? 'is-booker' : ''}`;
             span.draggable = true;
+            span.textContent = player.name + (player.booker ? " ⭐" : "");
 
+            span.ondragstart = (e) => {
+                e.dataTransfer.setData("fromIdx", pIdx);
+                e.dataTransfer.setData("fromGroup", gIdx);
+            };
             return span;
         }
 

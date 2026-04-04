@@ -117,6 +117,7 @@ const ClubCalendar = mongoose.model('ClubCalendar', new mongoose.Schema({
 }, { collection: 'club-calendar' }));
 
 
+
 // 5. AUTHENTICATION ROUTES
 app.post('/login', async (req, res) => {
     try {
@@ -162,6 +163,7 @@ app.get('/api/tee-times', protect, async (req, res) => {
         res.json(times);
     } catch (err) { res.status(500).json({ error: "Tee times fetch failed" }); }
 });
+
 
 // 7. GOLFER ROUTES
 app.get('/api/golfers', protect, async (req, res) => {

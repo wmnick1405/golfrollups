@@ -422,22 +422,29 @@ You cannot create a duplicate. Please check the History page or select a differe
         // 5. SAVE
         async function saveRollup() {
             const date = document.getElementById("rollupDate").value;
-            // Grab the competition name, defaulting to "Social" if left blank
             const competition = document.getElementById("compName").value || "Social";
 
             if (!date) return alert("Select a date first");
 
-            // Filter out empty groups
-            const cleanGroups = groups.filter(g => g.length > 0);
+            // 1. PRE-SAVE CHECK: Check if a rollup already exists for this date
+            const checkRes = await fetch(`/api/rollups/check?date=${date}`);
+            const { exists } = await checkRes.json();
 
+            if (exists) {
+                return alert(`A rollup for ${date} already exists! Please delete the old one in History if you wish to overwrite it.`);
+            }
+
+            // 2. Filter out empty groups
+            const cleanGroups = groups.filter(g => g.length > 0);
             if (cleanGroups.length === 0) return alert("No groups to save!");
 
+            // 3. Proceed with saving
             const res = await fetch("/api/rollups", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     date,
-                    competition, // This matches the rd.competition field in your email generator
+                    competition,
                     groups: cleanGroups
                 })
             });

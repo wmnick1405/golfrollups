@@ -324,6 +324,30 @@ app.delete('/api/extra-availability/:id', protect, async (req, res) => {
 });
 
 // 9. ROLLUP & PARTICIPATION REPORT ROUTES
+// Check if a rollup already exists for a given date (to prevent duplicates)
+app.get('/api/rollups/check', async (req, res) => {
+    try {
+        const { date } = req.query; // e.g. "2025-02-24"
+        
+        // Create a range for that specific day
+        const startOfDay = new Date(date);
+        const endOfDay = new Date(date);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        // Search for any rollup that falls within that 24-hour window
+        const existing = await Rollup.findOne({
+            date: {
+                $gte: startOfDay,
+                $lte: endOfDay
+            }
+        });
+        
+        res.json({ exists: !!existing });
+    } catch (err) {
+        res.status(500).json({ error: "Database check failed" });
+    }
+});
+
 app.post('/api/rollups', protect, async (req, res) => {
     try {
         const rollup = new Rollup(req.body);

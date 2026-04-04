@@ -92,7 +92,7 @@ const Rollup = mongoose.model('Rollup', new mongoose.Schema({
     }]
 }));
 
-// (Remaining models: Unavailable, ExtraAvailability, ClubCalendar, CompetitionName stay as you had them)
+// Absence records for golfers
 const Unavailable = mongoose.model('Unavailable', new mongoose.Schema({
     golfer_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Golfer' },
     date_from: Date,
@@ -104,6 +104,7 @@ const CompetitionName = mongoose.model('CompetitionName', new mongoose.Schema({
     'comp-name': { type: String, required: true } 
 }), 'competition-names');
 
+// Extra Availability for golfers (e.g. if they can play on a day they normally don't)
 const ExtraAvailability = mongoose.model('ExtraAvailability', new mongoose.Schema({
     golfer_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Golfer', required: true },
     date: { type: Date, required: true },
@@ -288,6 +289,27 @@ app.delete('/api/unavailable/:id', protect, async (req, res) => {
         await Unavailable.findByIdAndDelete(req.params.id);
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: "Delete failed" }); }
+});
+
+// API to save extra availability
+app.post('/api/extra-availability', protect, async (req, res) => {
+    try {
+        const record = new ExtraAvailability(req.body);
+        await record.save();
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: "Save failed" }); }
+});
+
+// API to get extra availability for a golfer
+app.get('/api/extra-availability/golfer/:id', protect, async (req, res) => {
+    const records = await ExtraAvailability.find({ golfer_id: req.params.id }).sort({ date: 1 });
+    res.json(records);
+});
+
+// API to delete
+app.delete('/api/extra-availability/:id', protect, async (req, res) => {
+    await ExtraAvailability.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
 });
 
 // 9. ROLLUP & PARTICIPATION REPORT ROUTES

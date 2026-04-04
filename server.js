@@ -221,6 +221,17 @@ app.delete('/api/golfers/:id', protect, async (req,res)=>{
     } catch(err) { res.status(500).json({error:"Delete failed"}); }
 });
 
+// Get list of all competition names for the dropdown in rollup creation
+app.get('/api/competition-names', protect, async (req, res) => {
+    try {
+        const comps = await CompetitionName.find().sort({ 'comp-name': 1 });
+        // This will now correctly return [{ 'comp-name': 'Winter League' }, ...]
+        res.json(comps);
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch competition names" });
+    }
+});
+
 // 8. AVAILABILITY & ABSENCE ROUTES
 app.get('/api/available', protect, async (req, res) => {
     try {

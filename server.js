@@ -353,6 +353,16 @@ app.get('/api/rollups/:id', protect, async (req, res) => {
     } catch (err) { res.status(404).json({ error: "Not found" }); }
 });
 
+// DELETE a specific rollup by ID
+app.delete('/api/rollups/:id', async (req, res) => {
+    try {
+        await Rollup.findByIdAndDelete(req.params.id);
+        res.json({ success: true, message: "Rollup deleted successfully" });
+    } catch (err) {
+        res.status(500).json({ error: "Could not delete rollup" });
+    }
+});
+
 app.get('/api/reports/participation', protect, async (req, res) => {
     try {
         const { from, to } = req.query;

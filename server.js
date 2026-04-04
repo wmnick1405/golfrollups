@@ -85,11 +85,8 @@ const TeeTime = mongoose.model('TeeTime', new mongoose.Schema({
 const Rollup = mongoose.model('Rollup', new mongoose.Schema({
     date: { type: Date, required: true },
     competition: { type: String, default: "Social" },
-    // Updated structure to hold times per group
-    groups: [{
-        time: String,
-        players: [{ golfer_id: String, name: String, booker: Boolean }]
-    }]
+    // Back to a simple array of player objects per group
+    groups: [[{ golfer_id: String, name: String, booker: Boolean }]]
 }));
 
 // Absence records for golfers

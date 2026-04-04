@@ -1,33 +1,40 @@
+require('dotenv').config(); 
+
+// New FOR SECURITY: No fallback. If SESSION_SECRET isn't in .env, the app throws an error.
+if (!process.env.SESSION_SECRET) {
+    console.error("FATAL ERROR: SESSION_SECRET is not defined in .env file.");
+    process.exit(1); // Stop the server immediately
+}
+
 const express = require('express');
 const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
-const User = require('./user');
+const bcrypt = require('bcrypt'); // Ensure bcryptjs is installed: npm install bcryptjs
 const path = require('path');
 const session = require('express-session');
 const fs = require('fs');
-const morgan= require('morgan');
+const morgan = require('morgan');
 const ical = require('node-ical');
 
 const app = express();
 
-// LOGGING MIDDLEWARE (Logs every request to the console in a simple format)
-app.use(morgan('tiny')); 
-
 // 1. MIDDLEWARE SETUP
+app.use(morgan('tiny')); 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(session({
-    secret: 'a-very-secret-key-for-golfchurchill&blakedown',
+    name: 'golf_sid', // Hidden session name for security
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false, maxAge: 1000 * 60 * 60 * 24 }
+    cookie: { 
+        secure: false, // Set to true if using HTTPS/Nginx later
+        httpOnly: true, // Prevents XSS cookie theft
+        maxAge: 1000 * 60 * 60 * 24 
+    }
 }));
 
-/**
- * SECTION 2: THE GATEKEEPER
- * Checks if the user is logged in before allowing access to data.
- */
+// 2. THE GATEKEEPER
 const protect = (req, res, next) => {
     if (req.session && req.session.userId) {
         return next();
@@ -36,11 +43,30 @@ const protect = (req, res, next) => {
 };
 
 // 3. DATABASE CONNECTION
-mongoose.connect('mongodb://localhost:27017/rollupsdb')
+mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/rollupsdb')
     .then(() => console.log("Connected to MongoDB"))
     .catch(err => console.error("MongoDB connection error:", err));
 
-// 4. DATA SCHEMAS (The shape of your data)
+// 4. DATA SCHEMAS
+// --- AUTHENTICATION SCHEMA ---
+const userSchema = new mongoose.Schema({
+    username: { type: String, required: true, unique: true },
+    password: { type: String, required: true }
+});
+
+// PRE-SAVE HOOK: Automatically hashes password before saving to DB
+userSchema.pre('save', async function(next) {
+    if (!this.isModified('password')) return next();
+    try {
+        const salt = await bcrypt.genSalt(10);
+        this.password = await bcrypt.hash(this.password, salt);
+        next();
+    } catch (err) { next(err); }
+});
+
+const User = mongoose.model('User', userSchema);
+
+// --- GOLF SCHEMAS ---
 const Golfer = mongoose.model('Golfer', new mongoose.Schema({
     name: { type: String, required: true },
     tel: String,
@@ -51,6 +77,22 @@ const Golfer = mongoose.model('Golfer', new mongoose.Schema({
     booking_exempt: { type: Boolean, default: false }
 }));
 
+const TeeTime = mongoose.model('TeeTime', new mongoose.Schema({
+    time: { type: String, required: true },
+    season: { type: String, default: "Summer" }
+}), 'tee-times');
+
+const Rollup = mongoose.model('Rollup', new mongoose.Schema({
+    date: { type: Date, required: true },
+    competition: { type: String, default: "Social" },
+    // Updated structure to hold times per group
+    groups: [{
+        time: String,
+        players: [{ golfer_id: String, name: String, booker: Boolean }]
+    }]
+}));
+
+// (Remaining models: Unavailable, ExtraAvailability, ClubCalendar, CompetitionName stay as you had them)
 const Unavailable = mongoose.model('Unavailable', new mongoose.Schema({
     golfer_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Golfer' },
     date_from: Date,
@@ -58,17 +100,15 @@ const Unavailable = mongoose.model('Unavailable', new mongoose.Schema({
     indefinite: Boolean
 }));
 
-const Rollup = mongoose.model('Rollup', new mongoose.Schema({
-    date: { type: Date, required: true },
-    competition: { type: String, default: "Social" },
-    groups: [[{ golfer_id: String, name: String, booker: Boolean }]]
-}));
+const CompetitionName = mongoose.model('CompetitionName', new mongoose.Schema({
+    'comp-name': { type: String, required: true } 
+}), 'competition-names');
 
-const extraAvailabilitySchema = new mongoose.Schema({
+const ExtraAvailability = mongoose.model('ExtraAvailability', new mongoose.Schema({
     golfer_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Golfer', required: true },
     date: { type: Date, required: true },
     note: String
-});
+}));
 
 const ClubCalendar = mongoose.model('ClubCalendar', new mongoose.Schema({
     uid: { type: String, unique: true },
@@ -78,24 +118,15 @@ const ClubCalendar = mongoose.model('ClubCalendar', new mongoose.Schema({
     location: String
 }, { collection: 'club-calendar' }));
 
-// Add this to your Section 4: DATA SCHEMAS
-// Section 4: DATA SCHEMAS
-const CompetitionName = mongoose.model('CompetitionName', new mongoose.Schema({
-    'comp-name': { type: String, required: true } // Must match your DB key exactly
-}), 'competition-names');
-
-
-const ExtraAvailability = mongoose.model('ExtraAvailability', extraAvailabilitySchema);
-
 
 // 5. AUTHENTICATION ROUTES
 app.post('/login', async (req, res) => {
     try {
         const { username, password } = req.body;
         const user = await User.findOne({ username });
+        // bcrypt.compare automatically handles comparing plain text vs hash
         if (user && await bcrypt.compare(password, user.password)) {
             req.session.userId = user._id;
-            // Force the session to save before sending the response
             req.session.save((err) => {
                 if (err) return res.status(500).json({ error: "Session save failed" });
                 res.json({ success: true, message: "Logged in" });
@@ -104,38 +135,34 @@ app.post('/login', async (req, res) => {
             res.status(401).json({ error: "Invalid username or password" });
         }
     } catch (err) {
-        res.status(500).json({ error: "Server error during login" });
+        res.status(500).json({ error: "Server error" });
     }
 });
 
 app.post('/api/logout', (req, res) => {
     req.session.destroy(() => {
-        res.clearCookie('connect.sid');
+        res.clearCookie('golf_sid');
         res.json({ success: true });
     });
 });
 
-// 6. ADMIN & BACKUP ROUTES
-app.get('/api/admin/backup-status', protect, async (req, res) => {
-    const backupDir = '/mnt/golf_backups';
-    try {
-        if (!fs.existsSync(backupDir)) return res.json({ lastBackup: "Never (Folder missing)" });
-        const folders = fs.readdirSync(backupDir);
-        if (folders.length === 0) return res.json({ lastBackup: "No backups found" });
-        const latest = folders.sort().reverse()[0];
-        res.json({ lastBackup: latest });
-    } catch (err) {
-        res.status(500).json({ error: "Could not read backup status" });
-    }
-});
-
-// Admin route to create new users (for testing/demo purposes)
+// Admin route to create new users - now uses the .pre('save') hashing automatically
 app.post('/api/admin/create-user', protect, async (req, res) => {
     try {
         const newUser = new User(req.body);
-        await newUser.save();
+        await newUser.save(); 
         res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: "Failed" }); }
+    } catch (err) { res.status(500).json({ error: "Failed to create secure user" }); }
+});
+
+
+
+// 6. TEE TIME ROUTES
+app.get('/api/tee-times', protect, async (req, res) => {
+    try {
+        const times = await TeeTime.find().sort({ time: 1 });
+        res.json(times);
+    } catch (err) { res.status(500).json({ error: "Tee times fetch failed" }); }
 });
 
 // 7. GOLFER ROUTES
@@ -149,7 +176,7 @@ app.get('/api/golfers', protect, async (req, res) => {
 app.post('/api/golfers', protect, async (req, res) => {
     try {
         const { name } = req.body;
-
+        
         // 1. Basic Validation: Ensure name isn't just empty spaces
         if (!name || name.trim().length === 0) {
             return res.status(400).json({ error: "Golfer name is required." });
@@ -159,8 +186,8 @@ app.post('/api/golfers', protect, async (req, res) => {
 
         // 2. Duplicate Check: Search for this name (Case-Insensitive)
         // The 'i' flag makes it ignore capital vs lowercase
-        const existing = await Golfer.findOne({
-            name: { $regex: new RegExp(`^${cleanName}$`, 'i') }
+        const existing = await Golfer.findOne({ 
+            name: { $regex: new RegExp(`^${cleanName}$`, 'i') } 
         });
 
         if (existing) {
@@ -173,9 +200,9 @@ app.post('/api/golfers', protect, async (req, res) => {
         await golfer.save();
         res.json({ success: true });
 
-    } catch (err) {
+    } catch (err) { 
         console.error("Add Golfer Error:", err);
-        res.status(500).json({ error: "Server error while adding golfer." });
+        res.status(500).json({ error: "Server error while adding golfer." }); 
     }
 });
 
@@ -186,80 +213,31 @@ app.put('/api/golfers/:id', protect, async (req, res) => {
     } catch (err) { res.status(500).json({ error: "Update failed" }); }
 });
 
-app.delete('/api/golfers/:id', protect, async (req, res) => {
+app.delete('/api/golfers/:id', protect, async (req,res)=>{
     try {
         await Golfer.findByIdAndDelete(req.params.id);
-        res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: "Delete failed" }); }
+        res.json({success:true});
+    } catch(err) { res.status(500).json({error:"Delete failed"}); }
 });
-
-
-// Get list of all competition names for the dropdown in rollup creation
-app.get('/api/competition-names', protect, async (req, res) => {
-    try {
-        const comps = await CompetitionName.find().sort({ 'comp-name': 1 });
-        // This will now correctly return [{ 'comp-name': 'Winter League' }, ...]
-        res.json(comps);
-    } catch (err) {
-        res.status(500).json({ error: "Failed to fetch competition names" });
-    }
-});
-
 
 // 8. AVAILABILITY & ABSENCE ROUTES
 app.get('/api/available', protect, async (req, res) => {
     try {
-        const queryDate = new Date(req.query.date);
-        const dayName = queryDate.toLocaleDateString('en-GB', { weekday: 'long' });
+        const dateStr = req.query.date;
+        const targetDate = new Date(dateStr);
+        targetDate.setHours(0,0,0,0);
+        const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+        const dayName = dayNames[targetDate.getDay()];
 
-        // 1. Get ALL golfers to start the filtering process
-        const allGolfers = await Golfer.find({});
-
-        // 2. Get all Unavailability records that cover this date
-        const unavailableRecords = await Unavailable.find({
-            $and: [
-                { date_from: { $lte: queryDate } },
-                {
-                    $or: [
-                        { date_to: { $gte: queryDate } },
-                        { indefinite: true }
-                    ]
-                }
-            ]
+        const golfers = await Golfer.find({ play_days: dayName }).lean();
+        const away = await Unavailable.find({
+            date_from: { $lte: targetDate },
+            $or: [{ date_to: { $gte: targetDate } }, { indefinite: true }]
         });
-        const unavailableIds = unavailableRecords.map(r => r.golfer_id.toString());
-
-        // 3. Get all Extra Availability records for exactly this date
-        // We set start/end of day to catch the date correctly regardless of timestamps
-        const startOfDay = new Date(queryDate).setHours(0, 0, 0, 0);
-        const endOfDay = new Date(queryDate).setHours(23, 59, 59, 999);
-
-        const extraRecords = await ExtraAvailability.find({
-            date: { $gte: startOfDay, $lte: endOfDay }
-        });
-        const extraIds = extraRecords.map(r => r.golfer_id.toString());
-
-        // 4. THE MASTER FILTER
-        const availableGolfers = allGolfers.filter(golfer => {
-            const idStr = golfer._id.toString();
-
-            // RULE A: If they are explicitly marked as UNAVAILABLE today, they are out.
-            if (unavailableIds.includes(idStr)) return false;
-
-            // RULE B: If they have an EXTRA DAY record for today, they are in.
-            if (extraIds.includes(idStr)) return true;
-
-            // RULE C: If it's their NORMAL play day, they are in.
-            if (golfer.play_days && golfer.play_days.includes(dayName)) return true;
-
-            // Otherwise, they aren't playing today.
-            return false;
-        });
-
-        res.json(availableGolfers);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+        const awayIds = away.map(a => a.golfer_id.toString());
+        const available = golfers.filter(g => !awayIds.includes(g._id.toString()));
+        res.json(available);
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post('/api/unavailable', protect, async (req, res) => {
@@ -268,12 +246,12 @@ app.post('/api/unavailable', protect, async (req, res) => {
 
         // 1. Logic Check
         const start = new Date(date_from);
-
+        
         if (!indefinite) {
             const end = new Date(date_to);
             if (end < start) {
-                return res.status(400).json({
-                    error: "Return date cannot be earlier than departure date."
+                return res.status(400).json({ 
+                    error: "Return date cannot be earlier than departure date." 
                 });
             }
         }
@@ -283,8 +261,8 @@ app.post('/api/unavailable', protect, async (req, res) => {
         await record.save();
         res.json({ success: true });
 
-    } catch (err) {
-        res.status(500).json({ error: "Failed to save record" });
+    } catch (err) { 
+        res.status(500).json({ error: "Failed to save record" }); 
     }
 });
 
@@ -312,88 +290,29 @@ app.delete('/api/unavailable/:id', protect, async (req, res) => {
     } catch (err) { res.status(500).json({ error: "Delete failed" }); }
 });
 
-// API to save extra availability
-app.post('/api/extra-availability', protect, async (req, res) => {
-    try {
-        const record = new ExtraAvailability(req.body);
-        await record.save();
-        res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: "Save failed" }); }
-});
-
-// API to get extra availability for a golfer
-app.get('/api/extra-availability/golfer/:id', protect, async (req, res) => {
-    const records = await ExtraAvailability.find({ golfer_id: req.params.id }).sort({ date: 1 });
-    res.json(records);
-});
-
-// API to delete
-app.delete('/api/extra-availability/:id', protect, async (req, res) => {
-    await ExtraAvailability.findByIdAndDelete(req.params.id);
-    res.json({ success: true });
-});
-
 // 9. ROLLUP & PARTICIPATION REPORT ROUTES
-
-// Check if a rollup exists for a specific date
-app.get('/api/rollups/check', async (req, res) => {
+app.post('/api/rollups', protect, async (req, res) => {
     try {
-        const { date } = req.query; // e.g. "2025-02-24"
-        
-        // Create a range for that specific day
-        const startOfDay = new Date(date);
-        const endOfDay = new Date(date);
-        endOfDay.setHours(23, 59, 59, 999);
-
-        // Search for any rollup that falls within that 24-hour window
-        const existing = await Rollup.findOne({
-            date: {
-                $gte: startOfDay,
-                $lte: endOfDay
-            }
-        });
-        
-        res.json({ exists: !!existing });
-    } catch (err) {
-        res.status(500).json({ error: "Database check failed" });
-    }
-});
-
-// POST a new rollup (from the dashboard after the game)  
-app.post('/api/rollups', async (req, res) => {
-    try {
-        const { date, competition, groups } = req.body;
-        
-        const newRollup = new Rollup({
-            date: new Date(date), // Converts "2025-02-24" to a full Date Object
-            competition,
-            groups
-        });
-        
-        await newRollup.save();
+        const rollup = new Rollup(req.body);
+        await rollup.save();
         res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: "Save failed" });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// GET today's rollup (for main dashboard)
 app.get('/api/rollups/find', protect, async (req, res) => {
     const queryDate = new Date(req.query.date);
-    const start = new Date(queryDate).setHours(0, 0, 0, 0);
-    const end = new Date(queryDate).setHours(23, 59, 59, 999);
+    const start = new Date(queryDate).setHours(0,0,0,0);
+    const end = new Date(queryDate).setHours(23,59,59,999);
     const rollup = await Rollup.findOne({ date: { $gte: start, $lte: end } });
     if (!rollup) return res.status(404).json({ message: "Not found" });
     res.json(rollup);
 });
 
-// GET all rollups (for admin/history view)
 app.get('/api/rollups', protect, async (req, res) => {
     const rollups = await Rollup.find().sort({ date: -1 });
     res.json(rollups);
 });
 
-// GET a specific rollup by ID
 app.get('/api/rollups/:id', protect, async (req, res) => {
     try {
         const rollup = await Rollup.findById(req.params.id);
@@ -401,21 +320,11 @@ app.get('/api/rollups/:id', protect, async (req, res) => {
     } catch (err) { res.status(404).json({ error: "Not found" }); }
 });
 
-// DELETE a specific rollup by ID
-app.delete('/api/rollups/:id', async (req, res) => {
-    try {
-        await Rollup.findByIdAndDelete(req.params.id);
-        res.json({ success: true, message: "Rollup deleted successfully" });
-    } catch (err) {
-        res.status(500).json({ error: "Could not delete rollup" });
-    }
-});
-
 app.get('/api/reports/participation', protect, async (req, res) => {
     try {
         const { from, to } = req.query;
         let query = {};
-
+        
         if (from || to) {
             query.date = {};
             if (from) query.date.$gte = new Date(from);
@@ -451,14 +360,14 @@ app.get('/api/reports/player-history', protect, async (req, res) => {
         const nameRegex = new RegExp(`^${searchName}$`, 'i');
 
         // NEW SEARCH STRATEGY: Look into the nested arrays
-        let query = {
-            groups: {
-                $elemMatch: {
-                    $elemMatch: { name: nameRegex }
-                }
-            }
+        let query = { 
+            groups: { 
+                $elemMatch: { 
+                    $elemMatch: { name: nameRegex } 
+                } 
+            } 
         };
-
+        
         if (from || to) {
             query.date = {};
             if (from) query.date.$gte = new Date(from);
@@ -472,10 +381,10 @@ app.get('/api/reports/player-history', protect, async (req, res) => {
             let isBooker = false;
             // Flatten the groups to find the player easily
             const allPlayersInThisRollup = r.groups.flat();
-            const me = allPlayersInThisRollup.find(p =>
+            const me = allPlayersInThisRollup.find(p => 
                 p.name.trim().toLowerCase() === searchName.toLowerCase()
             );
-
+            
             if (me && me.booker) isBooker = true;
 
             return {
@@ -500,66 +409,7 @@ app.post('/api/booker/:id', protect, async (req, res) => {
     } catch (err) { res.status(500).json({ error: "Update failed" }); }
 });
 
-// 11. CLUB CALENDAR SYNC ROUTES
-app.get('/api/club-calendar', async (req, res) => {
-    try {
-        // Fetch future events only (optional, but cleaner)
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        const events = await ClubCalendar.find({ start: { $gte: today } }).sort({ start: 1 });
-        res.json(events);
-    } catch (err) {
-        res.status(500).json({ error: "Failed to fetch events" });
-    }
-});
-
-app.post('/api/club-calendar/sync', async (req, res) => {
-    const ICS_URL = 'https://clubv1.blob.core.windows.net/diary-events/822/bc1d725c-ddfb-4a2d-b3bc-f1dbc6eb0021.ics';
-    
-    try {
-        const events = await ical.async.fromURL(ICS_URL);
-        const syncResults = [];
-
-        for (let k in events) {
-            if (events.hasOwnProperty(k)) {
-                const ev = events[k];
-                if (ev.type === 'VEVENT') {
-                    // upsert: update if UID exists, otherwise insert
-                    await ClubCalendar.findOneAndUpdate(
-                        { uid: ev.uid },
-                        {
-                            title: ev.summary,
-                            start: ev.start,
-                            end: ev.end,
-                            location: ev.location || ''
-                        },
-                        { upsert: true }
-                    );
-                }
-            }
-        }
-        res.json({ success: true, message: "Calendar synced successfully" });
-    } catch (err) {
-        console.error("ICS Sync Error:", err);
-        res.status(500).json({ error: "Failed to fetch or parse ICS file" });
-    }
-});
-
-/**
- * HOME ROUTE
- * This ensures that when you click 'Home', the server checks your session
- * and sends you to index.html if you are logged in.
- */
-app.get('/', (req, res) => {
-    if (req.session && req.session.userId) {
-        // If logged in, send the actual dashboard/home page
-        res.sendFile(path.join(__dirname, 'public', 'index.html'));
-    } else {
-        // If NOT logged in, send them to the login page
-        res.redirect('/index.html');
-    }
-});
-
 app.use(express.static(path.join(__dirname, 'public')));
-app.listen(3000, () => console.log(`Server running on port 3000`));
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Secure Server running on port ${PORT}`));

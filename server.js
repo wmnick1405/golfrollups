@@ -43,9 +43,16 @@ const protect = (req, res, next) => {
 };
 
 // 3. DATABASE CONNECTION
-mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/rollupsdb')
-    .then(() => console.log("Connected to MongoDB"))
-    .catch(err => console.error("MongoDB connection error:", err));
+mongoose.connect(process.env.MONGO_URI)
+    .then(() => {
+        const host = mongoose.connection.host;
+        console.log(`Connected to: ${host}`); // This will tell the truth!
+        if (host.includes('mongodb.net')) {
+            console.log("Cloud status: ONLINE (Atlas)");
+        } else {
+            console.log("Cloud status: OFFLINE (Local Pi)");
+        }
+    });
 
 // 4. DATA SCHEMAS
 // --- AUTHENTICATION SCHEMA ---
@@ -522,6 +529,52 @@ app.post('/api/booker/:id', protect, async (req, res) => {
         await Golfer.findByIdAndUpdate(req.params.id, { $inc: { booking_count: 1 }, last_booked: new Date() });
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: "Update failed" }); }
+});
+
+// 11. CLUB CALENDAR SYNC ROUTES
+app.get('/api/club-calendar', async (req, res) => {
+    try {
+        // Fetch future events only (optional, but cleaner)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const events = await ClubCalendar.find({ start: { $gte: today } }).sort({ start: 1 });
+        res.json(events);
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch events" });
+    }
+});
+
+app.post('/api/club-calendar/sync', async (req, res) => {
+    const ICS_URL = 'https://clubv1.blob.core.windows.net/diary-events/822/bc1d725c-ddfb-4a2d-b3bc-f1dbc6eb0021.ics';
+    
+    try {
+        const events = await ical.async.fromURL(ICS_URL);
+        const syncResults = [];
+
+        for (let k in events) {
+            if (events.hasOwnProperty(k)) {
+                const ev = events[k];
+                if (ev.type === 'VEVENT') {
+                    // upsert: update if UID exists, otherwise insert
+                    await ClubCalendar.findOneAndUpdate(
+                        { uid: ev.uid },
+                        {
+                            title: ev.summary,
+                            start: ev.start,
+                            end: ev.end,
+                            location: ev.location || ''
+                        },
+                        { upsert: true }
+                    );
+                }
+            }
+        }
+        res.json({ success: true, message: "Calendar synced successfully" });
+    } catch (err) {
+        console.error("ICS Sync Error:", err);
+        res.status(500).json({ error: "Failed to fetch or parse ICS file" });
+    }
 });
 
 app.use(express.static(path.join(__dirname, 'public')));

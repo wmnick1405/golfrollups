@@ -418,6 +418,55 @@ app.get('/api/reports/participation', protect, async (req, res) => {
     } catch (err) { res.status(500).json([]); }
 });
 
+app.get('/api/reports/booking-stress/:name', protect, async (req, res) => {
+    try {
+        const playerName = req.params.name;
+        
+        // 1. FIND ONLY THE GAMES THEY ATTENDED
+        // This skips weeks they stayed home and finds their personal 'Last 10'
+        const recentGames = await Rollup.find({
+            groups: { 
+                $elemMatch: { 
+                    $elemMatch: { name: playerName } 
+                } 
+            }
+        })
+        .sort({ date: -1 }) // Get most recent first
+        .limit(10)          // Stop after we find 10 matches
+        .lean();
+
+        let timesBooked = 0;
+        const history = [];
+
+        recentGames.forEach(rollup => {
+            // Flatten the groups to find the player's specific status in this rollup
+            const playerEntry = rollup.groups.flat().find(p => p.name === playerName);
+            
+            if (playerEntry) {
+                if (playerEntry.booker) timesBooked++;
+                
+                // Keep track of the dates for the report
+                history.push({
+                    date: rollup.date.toDateString(),
+                    wasBooker: playerEntry.booker,
+                    comp: rollup.competition
+                });
+            }
+        });
+
+        res.json({
+            name: playerName,
+            gamesAnalyzed: history.length,
+            timesBooked: timesBooked,
+            percentage: history.length > 0 ? ((timesBooked / history.length) * 100).toFixed(1) + '%' : '0%',
+            history: history // Send the dates back so we can show them the evidence
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to calculate stress levels" });
+    }
+});
+
 // NEW: PLAYER HISTORY REPORT
 app.get('/api/reports/player-history', protect, async (req, res) => {
     try {

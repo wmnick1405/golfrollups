@@ -4,19 +4,19 @@
 <head>
     <title>Participation Report</title>
     <style>
-         body {
-                font-family: Arial;
-                /* background: #f2f2f2;> */
-                background-image: url('./images/IMG_0376a.jpg');
-                background-size: 100%;
-                background-position: center;
-                background-attachment: fixed;
-                background-repeat: no-repeat;
+        body {
+            font-family: Arial;
+            /* background: #f2f2f2;> */
+            background-image: url('./images/IMG_0376a.jpg');
+            background-size: 100%;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
 
-                padding: 30px;
-                margin: 0;
-                padding: 30px;
-            }
+            padding: 30px;
+            margin: 0;
+            padding: 30px;
+        }
 
         .container {
             max-width: 900px;
@@ -110,6 +110,41 @@
                 border: none;
             }
         }
+
+        /* The Modal (background) */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        /* Modal Content */
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 500px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .stress-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .booker-tag {
+            color: #d32f2f;
+            font-weight: bold;
+        }
     </style>
 </head>
 
@@ -118,6 +153,11 @@
 
     <div class="container">
         <h2>Participation and Booking Report</h2>
+        <p>A comprehensive report on player participation and booking history.
+            The Booking column on the right shows the booking percentage for that player over all the times they have
+            played in the rollup.
+            Click on any player's name to view their detailed booking
+            statistics for the last 10 appearances they have made</p>
 
         <div class="controls">
             <div class="date-filter">
@@ -269,17 +309,19 @@
                 if (!ignore) histUrl += `&from=${from}&to=${to}`;
 
                 row.innerHTML = `
-                    <td>
-                        ${item.name} 
-                        <a href="${histUrl}" class="view-link" style="font-size:0.8em; margin-left:10px; color:#0066cc;">(View Dates)</a>
-                    </td>
-                    <td>${item.played}</td>
-                    <td>${item.booked}</td>
-                    <td style="font-weight:bold; ${color}">${item.percentage}</td>
-                `;
+    <td>
+        ${item.name} 
+        <a href="javascript:void(0)" onclick="openStressTest('${item.name}')" class="view-link">(Check last 10 appearances)</a>
+    </td>
+    <td>${item.played}</td>
+    <td>${item.booked}</td>
+    <td style="font-weight:bold; ${color}">${item.percentage}</td>
+`;
                 tbody.appendChild(row);
             });
         }
+
+
 
         function toggleAllPlayers(master) {
             const checkboxes = document.querySelectorAll('.player-check');
@@ -287,8 +329,61 @@
             generateReport();
         }
 
+        async function openStressTest(playerName) {
+            const modal = document.getElementById('stressModal');
+            const body = document.getElementById('modalBody');
+            const title = document.getElementById('modalTitle');
+
+            modal.style.display = "block";
+            title.innerText = `Last 10 Games for ${playerName}`;
+            body.innerHTML = "Gathering data...";
+
+            try {
+                const response = await fetch(`/api/reports/booking-stress/${encodeURIComponent(playerName)}`);
+                const data = await response.json();
+
+                if (!data.history || data.history.length === 0) {
+                    body.innerHTML = "No game history found for this player.";
+                    return;
+                }
+
+                let html = `<p><strong>Booking Rate: ${data.percentage}</strong> (${data.timesBooked} out of ${data.gamesAnalyzed})</p>`;
+
+                data.history.forEach(game => {
+                    const status = game.wasBooker ? '<span class="booker-tag">BOOKER</span>' : '<span>-</span>';
+                    html += `
+                <div class="stress-row">
+                    <span>${game.date} (${game.comp})</span>
+                    ${status}
+                </div>`;
+                });
+
+                body.innerHTML = html;
+            } catch (err) {
+                body.innerHTML = "Error loading recent booking data.";
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('stressModal').style.display = "none";
+        }
+
+        // Close modal if clicking outside the box
+        window.onclick = function (event) {
+            const modal = document.getElementById('stressModal');
+            if (event.target == modal) modal.style.display = "none";
+        }
+
         init();
     </script>
+
+    <div id="stressModal" class="modal">
+        <div class="modal-content">
+            <h3 id="modalTitle">Recent Booking History</h3>
+            <div id="modalBody">Loading...</div>
+            <button onclick="closeModal()" style="margin-top:20px; padding:10px 20px; cursor:pointer;">Close</button>
+        </div>
+    </div>
 </body>
 
 </html>

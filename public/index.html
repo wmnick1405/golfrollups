@@ -14,17 +14,26 @@
             body {
                 font-family: Arial;
                 /* background: #f2f2f2;> */
-                background-image: url('./images/IMG_376.jpg');
+                background-image: url('./images/IMG_0376a.jpg');
+                background-size: 100%;
+                background-position: center;
+                background-attachment: fixed;
+                background-repeat: no-repeat;
+
+                padding: 30px;
+                margin: 0;
                 padding: 30px;
             }
 
             .container {
                 max-width: 700px;
                 margin: auto;
-                background: white;
+                /* I've added a bit of transparency (0.9) so you can see the photo 
+           behind the box slightly, which looks very professional */
+                background: rgba(255, 255, 255, 0.9);
                 padding: 30px;
                 border-radius: 8px;
-                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
                 text-align: center;
             }
 
@@ -43,7 +52,6 @@
             .navbutton:hover {
                 background: #1b5e20;
             }
-
         </style>
     </head>
 
@@ -74,7 +82,8 @@
             <a class="navbutton" href="/email-generator.html">Generate Email Table for Upcoming Rollup</a>
             <a class="navbutton" href="/absence-report.html">Generate Absence & Unavailability Report</a>
             <a class="navbutton" href="/participation-report.html">View Participation vs Booking Report</a>
-            <a class="navbutton" href="/indefinite_unavailable_golfers.html">View & Edit Indefinitely Unavailable Golfers</a>
+            <a class="navbutton" href="/indefinite_unavailable_golfers.html">View & Edit Indefinitely Unavailable
+                Golfers</a>
             <a class="navbutton" href="/calendar.html">View Club Diary Events</a>
 
             <button onclick="handleLogout()"

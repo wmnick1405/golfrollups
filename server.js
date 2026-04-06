@@ -34,6 +34,9 @@ app.use(session({
     }
 }));
 
+//
+app.use(express.static(path.join(__dirname, 'public')));
+
 // 2. THE GATEKEEPER
 const protect = (req, res, next) => {
     if (req.session && req.session.userId) {
@@ -142,6 +145,17 @@ app.post('/login', async (req, res) => {
         }
     } catch (err) {
         res.status(500).json({ error: "Server error" });
+    }
+});
+
+// This route allows the frontend to check if the user is currently logged in (e.g. on page refresh)
+app.get('/api/check-auth', (req, res) => {
+    if (req.session && req.session.userId) {
+        // If the session exists and has a userId, they are logged in
+        res.json({ loggedIn: true });
+    } else {
+        // Otherwise, they are a guest
+        res.status(401).json({ loggedIn: false });
     }
 });
 
@@ -577,7 +591,7 @@ app.post('/api/club-calendar/sync', async (req, res) => {
     }
 });
 
-app.use(express.static(path.join(__dirname, 'public')));
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Secure Server running on port ${PORT}`));

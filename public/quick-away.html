@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Quick Absence</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; margin: 0; padding: 15px; }
+        .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h2 { margin: 0 0 15px 0; color: #1b5e20; text-align: center; font-size: 22px; }
+        
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #444; font-size: 14px; }
+        select, input { 
+            width: 100%; padding: 14px; margin-bottom: 15px; 
+            border: 1px solid #ccc; border-radius: 10px; font-size: 17px;
+            box-sizing: border-box; -webkit-appearance: none;
+        }
+
+        .toggle-row { 
+            display: flex; align-items: center; background: #f8f9fa; 
+            padding: 12px; border-radius: 10px; margin-bottom: 15px; border: 1px dashed #ccc;
+        }
+        .toggle-row input { width: auto; margin: 0 12px 0 0; transform: scale(1.4); }
+
+        .btn-confirm { 
+            width: 100%; padding: 18px; background: #2e7d32; color: white; 
+            border: none; border-radius: 10px; font-size: 19px; font-weight: bold;
+        }
+        
+        /* Recent Entries Styles */
+        .recent-section { background: #fff; padding: 15px; border-radius: 15px; border: 1px solid #eee; }
+        .recent-title { font-size: 14px; color: #666; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .entry-item { font-size: 13px; padding: 8px 0; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; }
+        .entry-item:last-child { border-bottom: none; }
+        .status-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #e8f5e9; color: #2e7d32; font-weight: bold; }
+
+        .home-link { display: block; text-align: center; margin-top: 20px; color: #0066cc; text-decoration: none; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Quick Absence</h2>
+    
+    <label>Select Golfer</label>
+    <select id="golferSelect"><option>Loading...</option></select>
+
+    <div class="toggle-row">
+        <input type="checkbox" id="isIndefinite" onchange="toggleEndDate()">
+        <label for="isIndefinite" style="margin:0;">Long-term / Injured</label>
+    </div>
+
+    <label>Starting From</label>
+    <input type="date" id="startDate">
+
+    <div id="endWrapper">
+        <label>Returning On</label>
+        <input type="date" id="endDate">
+    </div>
+
+    <button class="btn-confirm" onclick="saveAbsence()">Confirm Entry</button>
+</div>
+
+<div class="recent-section">
+    <div class="recent-title">RECENT ENTRIES (Session)</div>
+    <div id="recentList">
+        <div style="color:#999; font-style:italic; font-size:12px;">No entries yet this session.</div>
+    </div>
+</div>
+
+<a href="/" class="home-link">Main Menu</a>
+
+<script>
+    console.log("Script is starting...");
+    
+    // Toggle the end date visibility
+    function toggleEndDate() {
+        const isIndefinite = document.getElementById('isIndefinite').checked;
+        const wrapper = document.getElementById('endWrapper');
+        if (wrapper) wrapper.style.display = isIndefinite ? 'none' : 'block';
+    }
+
+    // This is the main function
+    window.onload = async () => {
+        console.log("Window loaded. Attempting fetch...");
+        const select = document.getElementById('golferSelect');
+        
+        try {
+            const res = await fetch('/api/golfers');
+            console.log("Response received. Status:", res.status);
+
+            if (!res.ok) {
+                const text = await res.text();
+                console.error("Server error text:", text);
+                select.innerHTML = `<option>Error: ${res.status}</option>`;
+                return;
+            }
+
+            const golfers = await res.json();
+            console.log("Golfers found:", golfers.length);
+
+            select.innerHTML = '<option value="">Select Player...</option>';
+            golfers.sort((a, b) => a.name.localeCompare(b.name));
+            golfers.forEach(g => {
+                const opt = document.createElement('option');
+                opt.value = g._id;
+                opt.innerText = g.name;
+                select.appendChild(opt);
+            });
+            
+            document.getElementById('startDate').valueAsDate = new Date();
+        } catch (err) {
+            console.error("Fetch failed entirely:", err);
+            select.innerHTML = '<option>Critical Error: Check Console</option>';
+        }
+    };
+
+    async function saveAbsence() {
+        // ... (Keep your save function as is)
+        alert("Save function triggered!");
+    }
+</script>

@@ -1,4 +1,4 @@
-require('dotenv').config(); 
+require('dotenv').config();
 
 // New FOR SECURITY: No fallback. If SESSION_SECRET isn't in .env, the app throws an error.
 if (!process.env.SESSION_SECRET) {
@@ -18,7 +18,7 @@ const ical = require('node-ical');
 const app = express();
 
 // 1. MIDDLEWARE SETUP
-app.use(morgan('tiny')); 
+app.use(morgan('tiny'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -27,10 +27,10 @@ app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    cookie: { 
+    cookie: {
         secure: false, // Set to true if using HTTPS/Nginx later
         httpOnly: true, // Prevents XSS cookie theft
-        maxAge: 1000 * 60 * 60 * 24 
+        maxAge: 1000 * 60 * 60 * 24
     }
 }));
 
@@ -65,7 +65,7 @@ const userSchema = new mongoose.Schema({
 });
 
 // PRE-SAVE HOOK: Automatically hashes password before saving to DB
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function (next) {
     if (!this.isModified('password')) return next();
     try {
         const salt = await bcrypt.genSalt(10);
@@ -108,7 +108,7 @@ const Unavailable = mongoose.model('Unavailable', new mongoose.Schema({
 }));
 
 const CompetitionName = mongoose.model('CompetitionName', new mongoose.Schema({
-    'comp-name': { type: String, required: true } 
+    'comp-name': { type: String, required: true }
 }), 'competition-names');
 
 // Extra Availability for golfers (e.g. if they can play on a day they normally don't)
@@ -170,7 +170,7 @@ app.post('/api/logout', (req, res) => {
 app.post('/api/admin/create-user', protect, async (req, res) => {
     try {
         const newUser = new User(req.body);
-        await newUser.save(); 
+        await newUser.save();
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: "Failed to create secure user" }); }
 });
@@ -197,7 +197,7 @@ app.get('/api/golfers', protect, async (req, res) => {
 app.post('/api/golfers', protect, async (req, res) => {
     try {
         const { name } = req.body;
-        
+
         // 1. Basic Validation: Ensure name isn't just empty spaces
         if (!name || name.trim().length === 0) {
             return res.status(400).json({ error: "Golfer name is required." });
@@ -207,8 +207,8 @@ app.post('/api/golfers', protect, async (req, res) => {
 
         // 2. Duplicate Check: Search for this name (Case-Insensitive)
         // The 'i' flag makes it ignore capital vs lowercase
-        const existing = await Golfer.findOne({ 
-            name: { $regex: new RegExp(`^${cleanName}$`, 'i') } 
+        const existing = await Golfer.findOne({
+            name: { $regex: new RegExp(`^${cleanName}$`, 'i') }
         });
 
         if (existing) {
@@ -221,9 +221,9 @@ app.post('/api/golfers', protect, async (req, res) => {
         await golfer.save();
         res.json({ success: true });
 
-    } catch (err) { 
+    } catch (err) {
         console.error("Add Golfer Error:", err);
-        res.status(500).json({ error: "Server error while adding golfer." }); 
+        res.status(500).json({ error: "Server error while adding golfer." });
     }
 });
 
@@ -234,11 +234,11 @@ app.put('/api/golfers/:id', protect, async (req, res) => {
     } catch (err) { res.status(500).json({ error: "Update failed" }); }
 });
 
-app.delete('/api/golfers/:id', protect, async (req,res)=>{
+app.delete('/api/golfers/:id', protect, async (req, res) => {
     try {
         await Golfer.findByIdAndDelete(req.params.id);
-        res.json({success:true});
-    } catch(err) { res.status(500).json({error:"Delete failed"}); }
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: "Delete failed" }); }
 });
 
 // Get list of all competition names for the dropdown in rollup creation
@@ -257,8 +257,8 @@ app.get('/api/available', protect, async (req, res) => {
     try {
         const dateStr = req.query.date;
         const targetDate = new Date(dateStr);
-        targetDate.setHours(0,0,0,0);
-        const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+        targetDate.setHours(0, 0, 0, 0);
+        const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
         const dayName = dayNames[targetDate.getDay()];
 
         const golfers = await Golfer.find({ play_days: dayName }).lean();
@@ -278,12 +278,12 @@ app.post('/api/unavailable', protect, async (req, res) => {
 
         // 1. Logic Check
         const start = new Date(date_from);
-        
+
         if (!indefinite) {
             const end = new Date(date_to);
             if (end < start) {
-                return res.status(400).json({ 
-                    error: "Return date cannot be earlier than departure date." 
+                return res.status(400).json({
+                    error: "Return date cannot be earlier than departure date."
                 });
             }
         }
@@ -293,8 +293,8 @@ app.post('/api/unavailable', protect, async (req, res) => {
         await record.save();
         res.json({ success: true });
 
-    } catch (err) { 
-        res.status(500).json({ error: "Failed to save record" }); 
+    } catch (err) {
+        res.status(500).json({ error: "Failed to save record" });
     }
 });
 
@@ -320,6 +320,45 @@ app.delete('/api/unavailable/:id', protect, async (req, res) => {
         await Unavailable.findByIdAndDelete(req.params.id);
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: "Delete failed" }); }
+});
+
+// Quick Away Route for Mobile
+a// Quick Away Route for Mobile - FIXED to use Unavailable Model
+app.post('/api/golfers/:id/away', protect, async (req, res) => {
+    try {
+        const { start, end, isIndefinite } = req.body;
+
+        // 1. Verify the golfer exists
+        const golfer = await Golfer.findById(req.params.id);
+        if (!golfer) return res.status(404).json({ error: "Golfer not found" });
+
+        // 2. Create a new record in the UNAVAILABLE collection
+        const absence = new Unavailable({
+            golfer_id: golfer._id,
+            date_from: new Date(start),
+            date_to: isIndefinite ? new Date("2099-12-31") : new Date(end),
+            indefinite: isIndefinite || false
+        });
+
+        await absence.save();
+
+        // 3. (Optional) If it's indefinite, we can also update a flag on the golfer
+        if (isIndefinite) {
+            await Golfer.findByIdAndUpdate(req.params.id, { booking_exempt: true });
+        }
+
+        res.json({ success: true, message: "Absence recorded in Unavailable collection" });
+    } catch (err) {
+        console.error("Mobile Away Error:", err);
+        res.status(500).json({ error: "Failed to save absence" });
+    }
+});
+
+await golfer.save();
+res.json({ success: true });
+    } catch (err) {
+    res.status(500).json({ error: "Failed to save" });
+}
 });
 
 // API to save extra availability
@@ -348,7 +387,7 @@ app.delete('/api/extra-availability/:id', protect, async (req, res) => {
 app.get('/api/rollups/check', async (req, res) => {
     try {
         const { date } = req.query; // e.g. "2025-02-24"
-        
+
         // Create a range for that specific day
         const startOfDay = new Date(date);
         const endOfDay = new Date(date);
@@ -361,7 +400,7 @@ app.get('/api/rollups/check', async (req, res) => {
                 $lte: endOfDay
             }
         });
-        
+
         res.json({ exists: !!existing });
     } catch (err) {
         res.status(500).json({ error: "Database check failed" });
@@ -378,8 +417,8 @@ app.post('/api/rollups', protect, async (req, res) => {
 
 app.get('/api/rollups/find', protect, async (req, res) => {
     const queryDate = new Date(req.query.date);
-    const start = new Date(queryDate).setHours(0,0,0,0);
-    const end = new Date(queryDate).setHours(23,59,59,999);
+    const start = new Date(queryDate).setHours(0, 0, 0, 0);
+    const end = new Date(queryDate).setHours(23, 59, 59, 999);
     const rollup = await Rollup.findOne({ date: { $gte: start, $lte: end } });
     if (!rollup) return res.status(404).json({ message: "Not found" });
     res.json(rollup);
@@ -411,7 +450,7 @@ app.get('/api/reports/participation', protect, async (req, res) => {
     try {
         const { from, to } = req.query;
         let query = {};
-        
+
         if (from || to) {
             query.date = {};
             if (from) query.date.$gte = new Date(from);
@@ -442,19 +481,19 @@ app.get('/api/reports/participation', protect, async (req, res) => {
 app.get('/api/reports/booking-stress/:name', protect, async (req, res) => {
     try {
         const playerName = req.params.name;
-        
+
         // 1. FIND ONLY THE GAMES THEY ATTENDED
         // This skips weeks they stayed home and finds their personal 'Last 10'
         const recentGames = await Rollup.find({
-            groups: { 
-                $elemMatch: { 
-                    $elemMatch: { name: playerName } 
-                } 
+            groups: {
+                $elemMatch: {
+                    $elemMatch: { name: playerName }
+                }
             }
         })
-        .sort({ date: -1 }) // Get most recent first
-        .limit(10)          // Stop after we find 10 matches
-        .lean();
+            .sort({ date: -1 }) // Get most recent first
+            .limit(10)          // Stop after we find 10 matches
+            .lean();
 
         let timesBooked = 0;
         const history = [];
@@ -462,10 +501,10 @@ app.get('/api/reports/booking-stress/:name', protect, async (req, res) => {
         recentGames.forEach(rollup => {
             // Flatten the groups to find the player's specific status in this rollup
             const playerEntry = rollup.groups.flat().find(p => p.name === playerName);
-            
+
             if (playerEntry) {
                 if (playerEntry.booker) timesBooked++;
-                
+
                 // Keep track of the dates for the report
                 history.push({
                     date: rollup.date.toDateString(),
@@ -496,14 +535,14 @@ app.get('/api/reports/player-history', protect, async (req, res) => {
         const nameRegex = new RegExp(`^${searchName}$`, 'i');
 
         // NEW SEARCH STRATEGY: Look into the nested arrays
-        let query = { 
-            groups: { 
-                $elemMatch: { 
-                    $elemMatch: { name: nameRegex } 
-                } 
-            } 
+        let query = {
+            groups: {
+                $elemMatch: {
+                    $elemMatch: { name: nameRegex }
+                }
+            }
         };
-        
+
         if (from || to) {
             query.date = {};
             if (from) query.date.$gte = new Date(from);
@@ -517,10 +556,10 @@ app.get('/api/reports/player-history', protect, async (req, res) => {
             let isBooker = false;
             // Flatten the groups to find the player easily
             const allPlayersInThisRollup = r.groups.flat();
-            const me = allPlayersInThisRollup.find(p => 
+            const me = allPlayersInThisRollup.find(p =>
                 p.name.trim().toLowerCase() === searchName.toLowerCase()
             );
-            
+
             if (me && me.booker) isBooker = true;
 
             return {
@@ -551,7 +590,7 @@ app.get('/api/club-calendar', async (req, res) => {
         // Fetch future events only (optional, but cleaner)
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        
+
         const events = await ClubCalendar.find({ start: { $gte: today } }).sort({ start: 1 });
         res.json(events);
     } catch (err) {
@@ -561,7 +600,7 @@ app.get('/api/club-calendar', async (req, res) => {
 
 app.post('/api/club-calendar/sync', async (req, res) => {
     const ICS_URL = 'https://clubv1.blob.core.windows.net/diary-events/822/bc1d725c-ddfb-4a2d-b3bc-f1dbc6eb0021.ics';
-    
+
     try {
         const events = await ical.async.fromURL(ICS_URL);
         const syncResults = [];

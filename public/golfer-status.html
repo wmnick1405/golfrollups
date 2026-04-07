@@ -292,33 +292,50 @@
         }
 
         async function saveUnavailability() {
-            const golfer_id = document.getElementById('golferSelect').value;
-            const date_from = document.getElementById('newDateFrom').value;
-            const date_to = document.getElementById('newDateTo').value;
-            const indefinite = document.getElementById('newIndefinite').checked;
+    const golfer_id = document.getElementById('golferSelect').value;
+    const date_from = document.getElementById('newDateFrom').value;
+    const date_to = document.getElementById('newDateTo').value;
+    const indefinite = document.getElementById('newIndefinite').checked;
 
-            if (!date_from) return alert("Please select a starting date");
-            if (!indefinite && !date_to) return alert("Please select an end date");
+    if (!date_from) return alert("Please select a starting date");
+    if (!indefinite && !date_to) return alert("Please select an end date");
 
-            // Re-adding your original conflict check
-            const newStart = new Date(date_from).getTime();
-            const newEnd = indefinite ? Infinity : new Date(date_to).getTime();
-            const conflict = window.currentRecords.find(rec => {
-                const existStart = new Date(rec.date_from).getTime();
-                const existEnd = rec.indefinite ? Infinity : new Date(rec.date_to).getTime();
-                return (newStart <= existEnd && newEnd >= existStart);
-            });
+    // 1. Conflict check logic (remains the same)
+    const newStart = new Date(date_from).getTime();
+    const newEnd = indefinite ? Infinity : new Date(date_to).getTime();
+    const conflict = window.currentRecords.find(rec => {
+        const existStart = new Date(rec.date_from).getTime();
+        const existEnd = rec.indefinite ? Infinity : new Date(rec.date_to).getTime();
+        return (newStart <= existEnd && newEnd >= existStart);
+    });
 
-            if (conflict && !confirm("Conflict detected. Save anyway?")) return;
+    if (conflict && !confirm("Conflict detected. Save anyway?")) return;
 
-            const res = await fetch('/api/unavailable', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ golfer_id, date_from, date_to, indefinite })
-            });
+    // 2. NEW: Ask about the email notification
+    const sendEmail = confirm("Would you like to send a confirmation email to the golfer? Cancel if you do not wish to send an email.");
 
-            if (res.ok) fetchGolferStatus();
-        }
+    // 3. Updated fetch with the 'sendEmail' flag included in the body
+    const res = await fetch('/api/unavailable', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+            golfer_id, 
+            date_from, 
+            date_to, 
+            indefinite,
+            sendEmail // This tells the server whether to trigger Nodemailer
+        })
+    });
+
+    if (res.ok) {
+        // Clear fields or refresh as normal
+        fetchGolferStatus();
+        // Optional: Provide feedback that it saved
+        console.log(sendEmail ? "Saved and email sent." : "Saved (No email sent).");
+    } else {
+        alert("Error saving record.");
+    }
+}
 
         async function saveExtraAvailability() {
             const golfer_id = document.getElementById('golferSelect').value;

@@ -14,6 +14,7 @@ const session = require('express-session');
 const fs = require('fs');
 const morgan = require('morgan');
 const ical = require('node-ical');
+const nodemailer = require('nodemailer');
 
 const app = express();
 
@@ -126,7 +127,14 @@ const ClubCalendar = mongoose.model('ClubCalendar', new mongoose.Schema({
     location: String
 }, { collection: 'club-calendar' }));
 
-
+// Create the transporter (The "Email Account" login)
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: 'wmnick1405@gmail.com', 
+        pass: process.env.GMAIL_APP_PASSWORD // We will add this to your .env file
+    }
+});
 
 // 5. AUTHENTICATION ROUTES
 app.post('/login', async (req, res) => {
@@ -318,33 +326,50 @@ app.get('/api/available', protect, async (req, res) => {
 
 app.post('/api/unavailable', protect, async (req, res) => {
     try {
-        const { date_from, date_to, indefinite, golfer_id } = req.body;
+        const { date_from, date_to, indefinite, golfer_id, sendEmail } = req.body;
 
-        // 1. STRIP THE TIME: Convert "2026-04-27T14:30..." to "2026-04-27"
-        // This ensures the database ONLY cares about the day.
-        const cleanFrom = new Date(new Date(date_from).toISOString().split('T')[0]);
+        // 1. STRIP THE TIME (Your existing logic)
+        const cleanFrom = new Date(new Date(date_from).toISOString().split('T')[0] + "T00:00:00.000Z");
         let cleanTo = null;
-        
         if (!indefinite) {
-            cleanTo = new Date(new Date(date_to).toISOString().split('T')[0]);
-            if (cleanTo < cleanFrom) {
-                return res.status(400).json({ error: "Return date cannot be earlier than departure." });
-            }
+            cleanTo = new Date(new Date(date_to).toISOString().split('T')[0] + "T00:00:00.000Z");
         }
 
-        // 2. Save the "Clean" record
+        // 2. Save the record
         const record = new Unavailable({
             golfer_id,
             date_from: cleanFrom,
             date_to: cleanTo,
             indefinite
         });
-
         await record.save();
+
+        // 3. CONDITIONAL EMAIL LOGIC
+        // Only run this if sendEmail is true AND the golfer has an email
+        if (sendEmail === true) {
+            const golfer = await Golfer.findById(golfer_id);
+            
+            if (golfer && golfer.email) {
+                const startStr = cleanFrom.toDateString();
+                let dateText = (indefinite) ? `from ${startStr} (Indefinite)` : 
+                               (startStr === cleanTo.toDateString()) ? `for ${startStr}` : 
+                               `from ${startStr} to ${cleanTo.toDateString()}`;
+
+                const mailOptions = {
+                    from: 'your-email@gmail.com',
+                    to: golfer.email,
+                    subject: 'Unavailability Confirmation',
+                    text: `Hello ${golfer.name},\n\nThis is to confirm that your rollup unavailability has been logged ${dateText}.\n\nRegards,\nGolf Rollup Admin`
+                };
+
+                transporter.sendMail(mailOptions).catch(err => console.error("Email skip/fail:", err));
+            }
+        }
+
         res.json({ success: true });
 
     } catch (err) { 
-        res.status(500).json({ error: "Failed to save clean record" }); 
+        res.status(500).json({ error: "Failed to save record." }); 
     }
 });
 

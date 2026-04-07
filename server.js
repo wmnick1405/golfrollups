@@ -254,18 +254,28 @@ app.get('/api/competition-names', protect, async (req, res) => {
 
 // 8. AVAILABILITY & ABSENCE ROUTES
 // 8. AVAILABILITY & ABSENCE ROUTES (Modified for Top-Box Monitor)
+// 8. AVAILABILITY & ABSENCE ROUTES
 app.get('/api/available', protect, async (req, res) => {
     try {
-        const targetDate = new Date(req.query.date);
-        targetDate.setHours(0, 0, 0, 0);
+        const dateStr = req.query.date; // Expects "YYYY-MM-DD" from the frontend
+        if (!dateStr) return res.status(400).json({ error: "Date is required" });
 
+        // 1. NORMALIZE THE TARGET DATE
+        // We create a date object and immediately strip the time to 00:00:00 UTC.
+        // This makes it a "Calendar Day" rather than a specific timestamp.
+        const targetDate = new Date(dateStr + "T00:00:00.000Z");
+        
+        // 2. DETERMINE THE DAY NAME (e.g., "Monday")
         const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-        const dayName = dayNames[targetDate.getDay()];
+        const dayName = dayNames[targetDate.getUTCDay()];
 
-        // 1. Get the squad for this day
+        // 3. FETCH THE RELEVANT GOLFERS
+        // Find everyone who normally plays on this day of the week
         const golfers = await Golfer.find({ play_days: dayName }).lean();
 
-        // 2. Cross-reference with your existing 'Unavailable' collection
+        // 4. FETCH UNAVAILABLE RECORDS
+        // We look for any overlap: Absence starts on/before target date 
+        // AND (ends on/after target date OR is indefinite)
         const awayRecords = await Unavailable.find({
             date_from: { $lte: targetDate },
             $or: [
@@ -274,44 +284,67 @@ app.get('/api/available', protect, async (req, res) => {
             ]
         });
 
-        const awayIds = awayRecords.map(a => a.golfer_id.toString());
+        // Create a simple array of String IDs for efficient matching
+        const awayIds = awayRecords.map(a => a.golfer_id ? a.golfer_id.toString() : "");
 
-        // 3. Tag them so the Rollup page can sort them into the Pool or the Blue Box
-        const report = golfers.map(g => ({
-            ...g,
-            isUnavailable: awayIds.includes(g._id.toString()),
-            indefinite: awayRecords.find(a => a.golfer_id.toString() === g._id.toString())?.indefinite || false
-        }));
+        // 5. ASSEMBLE THE REPORT
+        // We map through every golfer and "tag" them if they appear in the away list.
+        const report = golfers.map(g => {
+            const gId = g._id.toString();
+            const isAway = awayIds.includes(gId);
+            
+            // Find the specific record to check for the 'indefinite' flag
+            const personalRecord = awayRecords.find(a => a.golfer_id?.toString() === gId);
+
+            return {
+                ...g,
+                isUnavailable: isAway,
+                indefinite: personalRecord ? personalRecord.indefinite : false
+            };
+        });
+
+        // Debugging logs - helpful for your terminal
+        console.log(`--- Availability Check ---`);
+        console.log(`Target: ${dateStr} (${dayName})`);
+        console.log(`Found: ${golfers.length} total, ${awayRecords.length} away.`);
 
         res.json(report);
+
     } catch (err) {
-        res.status(500).json({ error: "Failed to sync availability" });
+        console.error("CRITICAL ERROR in /api/available:", err);
+        res.status(500).json({ error: "Internal Server Error during availability sync" });
     }
 });
 
 app.post('/api/unavailable', protect, async (req, res) => {
     try {
-        const { date_from, date_to, indefinite } = req.body;
+        const { date_from, date_to, indefinite, golfer_id } = req.body;
 
-        // 1. Logic Check
-        const start = new Date(date_from);
-
+        // 1. STRIP THE TIME: Convert "2026-04-27T14:30..." to "2026-04-27"
+        // This ensures the database ONLY cares about the day.
+        const cleanFrom = new Date(new Date(date_from).toISOString().split('T')[0]);
+        let cleanTo = null;
+        
         if (!indefinite) {
-            const end = new Date(date_to);
-            if (end < start) {
-                return res.status(400).json({
-                    error: "Return date cannot be earlier than departure date."
-                });
+            cleanTo = new Date(new Date(date_to).toISOString().split('T')[0]);
+            if (cleanTo < cleanFrom) {
+                return res.status(400).json({ error: "Return date cannot be earlier than departure." });
             }
         }
 
-        // 2. Proceed to save
-        const record = new Unavailable(req.body);
+        // 2. Save the "Clean" record
+        const record = new Unavailable({
+            golfer_id,
+            date_from: cleanFrom,
+            date_to: cleanTo,
+            indefinite
+        });
+
         await record.save();
         res.json({ success: true });
 
-    } catch (err) {
-        res.status(500).json({ error: "Failed to save record" });
+    } catch (err) { 
+        res.status(500).json({ error: "Failed to save clean record" }); 
     }
 });
 

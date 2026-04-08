@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>24-Session Absence Viewer</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background-color: #f8f9fa; }
+        .box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        
+        /* Flexbox to align everything horizontally */
+        .controls { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            margin-top: 15px;
+            margin-bottom: 20px;
+        }
+
+        button { 
+            padding: 10px 15px; 
+            cursor: pointer; 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            font-weight: bold; 
+        }
+
+        input[type="date"] { 
+            padding: 8px; 
+            border: 1px solid #ccc; 
+            border-radius: 4px; 
+            font-family: inherit;
+        }
+
+        #copyBtn { background: #28a745; display: none; }
+        #plannerOutput { margin-top: 25px; }
+        label { font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="nav-placeholder"></div>
+
+    <div class="box">
+        <h2>Golfer Availability (Next 24 Sessions)</h2>
+        <p>This planner gives a visual overview of which golfers will be unavailable in the next 24 sessions.</p>
+        
+        <div class="controls">
+            <label for="startDate">Start Calculation From:</label>
+            <input type="date" id="startDate">
+            <button onclick="generatePlanner()">Generate Planner</button>
+            <button id="copyBtn" onclick="copyTable()">Copy for Email</button>
+        </div>
+
+        <div id="plannerOutput"></div>
+    </div>
+
+    <script src="js/shared.js"></script>
+
+    <script>
+        // Set default date to today on page load
+        document.getElementById('startDate').valueAsDate = new Date();
+
+        async function generatePlanner() {
+            const output = document.getElementById('plannerOutput');
+            const startInput = document.getElementById('startDate').value;
+
+            if (!startInput) return alert("Please select a starting date.");
+
+            output.innerHTML = "Processing...";
+
+            try {
+                const [golfersRes, awayRes] = await Promise.all([
+                    fetch('/api/golfers'),
+                    fetch('/api/unavailable/all')
+                ]);
+                const golfers = await golfersRes.json();
+                const awayRecords = await awayRes.json();
+
+                // 1. Generate 24 sessions (M, W, F) starting from chosen date
+                const sessions = [];
+                let curr = new Date(startInput);
+                curr.setHours(0,0,0,0);
+
+                while (sessions.length < 24) {
+                    const day = curr.getDay(); // 1=Mon, 3=Wed, 5=Fri
+                    if (day === 1 || day === 3 || day === 5) {
+                        sessions.push(new Date(curr));
+                    }
+                    curr.setDate(curr.getDate() + 1);
+                }
+
+                // 2. Filter Golfers: Only keep those who have at least one absence in these 24 dates
+                const golfersWithAbsences = golfers.filter(g => {
+                    return sessions.some(sessionDate => {
+                        const sessionTime = sessionDate.getTime();
+                        return awayRecords.some(rec => {
+                            const gId = rec.golfer_id._id || rec.golfer_id;
+                            if (gId.toString() !== g._id.toString()) return false;
+                            
+                            const start = new Date(rec.date_from).setHours(0,0,0,0);
+                            if (rec.indefinite) return sessionTime >= start;
+                            
+                            const end = new Date(rec.date_to).setHours(23,59,59,999);
+                            return (sessionTime >= start && sessionTime <= end);
+                        });
+                    });
+                });
+
+                if (golfersWithAbsences.length === 0) {
+                    output.innerHTML = "<p style='color: #666;'>No absences planned for the selected 24 sessions.</p>";
+                    document.getElementById('copyBtn').style.display = 'none';
+                    return;
+                }
+
+                // 3. Start Table (Email-Safe formatting with 3px grid)
+                let html = `<table id="emailTable" style="border-collapse: collapse; font-family: Arial, sans-serif; font-size: 11px; border: 1px solid #999;">`;
+                
+                // Header Row: Dates
+                html += `<tr style="background-color: #444; color: #fff;">`;
+                html += `<th style="border: 1px solid #999; padding: 6px; text-align: left; min-width: 120px;">Golfer Name</th>`;
+                
+                sessions.forEach(date => {
+                    const d = date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' });
+                    const dayName = date.toLocaleDateString('en-GB', { weekday: 'short' });
+                    html += `<th style="border: 1px solid #999; padding: 4px; text-align: center; font-size: 10px; min-width: 35px;">${dayName}<br>${d}</th>`;
+                });
+                html += `</tr>`;
+
+                // 4. Rows for Filtered Golfers
+                golfersWithAbsences.forEach((g, idx) => {
+                    const rowBg = idx % 2 === 0 ? "#ffffff" : "#f2f2f2";
+                    html += `<tr style="background-color: ${rowBg};">`;
+                    html += `<td style="border: 1px solid #999; padding: 6px; white-space: nowrap; font-weight: bold; color: #333;">${g.name}</td>`;
+
+                    sessions.forEach(sessionDate => {
+                        const sessionTime = sessionDate.getTime();
+                        
+                        const isAway = awayRecords.some(rec => {
+                            const gId = rec.golfer_id._id || rec.golfer_id;
+                            if (gId.toString() !== g._id.toString()) return false;
+                            const start = new Date(rec.date_from).setHours(0,0,0,0);
+                            if (rec.indefinite) return sessionTime >= start;
+                            const end = new Date(rec.date_to).setHours(23,59,59,999);
+                            return (sessionTime >= start && sessionTime <= end);
+                        });
+
+                        const color = isAway ? "#f44336" : "#4caf50";
+                        html += `<td style="border: 3px solid #999; padding: 3px; text-align: center;">`;
+                        html += `<div style="background-color: ${color}; width: 100%; height: 25px;"></div>`;
+                        html += `</td>`;
+                    });
+                    html += `</tr>`;
+                });
+
+                html += `</table>`;
+                output.innerHTML = html;
+                document.getElementById('copyBtn').style.display = 'inline-block';
+
+            } catch (err) {
+                output.innerHTML = "Error loading data.";
+                console.error(err);
+            }
+        }
+
+        function copyTable() {
+            const el = document.getElementById('emailTable');
+            if(!el) return;
+            const range = document.createRange();
+            range.selectNode(el);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+            document.execCommand('copy');
+            alert("Copied! Paste into Gmail (Ctrl+V).");
+        }
+    </script>
+</body>
+</html>

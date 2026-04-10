@@ -12,46 +12,60 @@
 
         <style>
             body {
-                font-family: Arial;
-                /* background: #f2f2f2;> */
-                background-image: url('./images/IMG_0376a.jpg');
-                background-size: 100%;
-                background-position: center;
-                background-attachment: fixed;
-                background-repeat: no-repeat;
-
-                padding: 30px;
-                margin: 0;
-                padding: 30px;
-            }
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            background-color: #f4f7f6;
+            color: #333;
+        }
 
             .container {
-                max-width: 700px;
-                margin: auto;
-                /* I've added a bit of transparency (0.9) so you can see the photo 
-           behind the box slightly, which looks very professional */
-                background: rgba(255, 255, 255, 0.9);
-                padding: 30px;
-                border-radius: 8px;
-                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-                text-align: center;
-            }
+            max-width: 900px;
+            margin: 0 auto;
+        }
 
-            /* Style for the big green navigation buttons */
-            .navbutton {
-                display: block;
-                margin: 10px 0;
-                padding: 15px;
-                background: #221e6e;
-                color: white;
-                text-decoration: none;
-                border-radius: 50px;
-                font-size: 18px;
-            }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
 
-            .navbutton:hover {
-                background: #1b5e20;
-            }
+            /* Dashboard Grid */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 10px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+
+        .btn-green {
+            background-color: #28a745;
+        }
+
+        .btn-alt {
+            background-color: #6c757d;
+        }
         </style>
     </head>
 
@@ -71,30 +85,69 @@
         </div>
 
         <div class="container">
-            <img src="https://clubv1.blob.core.windows.net/clubcrests/06c7bacd-8e49-48a4-8ee4-e369f10e5a30_crest.png"
-                alt="Club Logo" style="max-height: 80px; margin-bottom: 20px;">
-            <h1>Golf Rollup Manager</h1>
+        <div class="header">
+            <h1>Admin Dashboard</h1>
+            <span id="current-date" style="font-weight: bold; color: #007bff;"></span>
+        </div>
 
-            <a class="navbutton" href="/golfers.html">Add/Delete a golfer or change golfer details</a>
-            <a class="navbutton" href="/golfer-status.html">Update golfer unavailability</a>
-            <a class="navbutton" href="/rollup.html">Generate rollup group</a>
-            <a class="navbutton" href="/history.html">View Previous Rollup Groupings by Date</a>
-            <a class="navbutton" href="/email-generator.html">Generate Email Table for Upcoming Rollup</a>
-            <a class="navbutton" href="/absence-report.html">Generate Absence & Unavailability Report</a>
-            <a class="navbutton" href="/participation-report.html">View Participation vs Booking Report</a>
-            <a class="navbutton" href="/indefinite_unavailable_golfers.html">View & Edit Indefinitely Unavailable
-                Golfers</a>
-                <a class="navbutton" href="/planner.html">High level availability planning view</a>
-            <a class="navbutton" href="/calendar.html">View Club Diary Events</a>
+            <div class="grid">
+            <div class="card">
+                <h3>Golfer Details</h3>
+                <p>Add new members, update contact details, or manage playing preferences.</p>
+                <a href="golfers.html" class="btn">Manage Members</a>
+            </div>
+
+            <div class="card">
+                <h3>Golfer Absences and Extra Days</h3>
+                <p>Log holiday dates, medical leave, or indefinite absences for players.</p>
+                <a href="golfer-status.html" class="btn">Log Absence</a>
+            </div>
+
+            <div class="card">
+                <h3>Upcoming Availability Report</h3>
+                <p>Generate the 24-session horizontal matrix. Suitable for cut and paste into emails.</p>
+                <a href="planner.html" class="btn btn-green">Go to Planner</a>
+            </div>
+
+            <div class="card">
+                <h3>Rollup Generation</h3>
+                <p>Run the rollup algorithm to create balanced groups for the next session.</p>
+                <a href="rollup.html" class="btn btn-alt">Generate Rollup</a>
+            </div>
+
+            <div class="card">
+                <h3>Historical Roll up Data</h3>
+                <p>Review past rollup groupings and availability patterns by date.</p>
+                <a href="history.html" class="btn">View History</a>
+            </div>
+
+            <div class="card">
+                <h3>Rollup Table Email Generator</h3>
+                <p>Create a formatted table of golfer availability for upcoming sessions. Suitable for cut and paste into emails.</p>
+                <a href="email-generator.html" class="btn btn-green">Generate Email Table</a>
+            </div>
+
+            <div class="card">
+                <h3>Participation Report</h3>
+                <p>Compare golfer participation against their bookings to identify trends.</p>
+                <a href="participation-report.html" class="btn btn-alt">View Report</a>
+            </div>
+
+            <div class="card">
+                <h3>Indefinite Absences</h3>
+                <p>View and edit golfers who are indefinitely unavailable.</p>
+                <a href="indefinite_unavailable_golfers.html" class="btn">Manage Indefinite Absences</a>
+            </div>
+
+            <div class="card">
+                <h3>Club Diary</h3>
+                <p>View upcoming club events, competitions, and important dates in the calendar.</p>
+                <a href="calendar.html" class="btn btn-green">View Calendar</a> 
+            </div>
 
             <button onclick="handleLogout()"
                 style="background:#d32f2f; color:white; border:none; padding:8px 15px; border-radius:4px; cursor:pointer;">Logout</button>
-
-            <div id="admin-panel" style="border-top: 2px solid #eee; margin-top: 20px; padding: 10px;">
-                <h3>System Administration</h3>
-            
-            </div>
-        </div>
+        
 
         <script>
             // When the page opens, check if we are already logged in

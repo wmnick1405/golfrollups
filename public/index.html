@@ -98,7 +98,8 @@
             padding:8px 15px; 
             border-radius:12px; 
             cursor:pointer;
-            font-size: 1em;
+            font-size: 2em;
+            font-weight: bold;
 
         }
         </style>
@@ -129,55 +130,58 @@
             <div class="card">
                 <h3>Golfer Details</h3>
                 <p>Add new members, update contact details, or manage playing preferences.</p>
-                <a href="golfers.html" class="btn">Manage Members</a>
+                <a href="golfers.html" class="btn btn-green">Manage Members</a>
             </div>
 
             <div class="card">
                 <h3>Golfer Absences and Extra Days</h3>
-                <p>Log holiday dates, medical leave, or indefinite absences for players.</p>
-                <a href="golfer-status.html" class="btn">Log Absence</a>
+                <p>Log holiday dates, medical leave, or indefinite absences for players. Also add extra play days and remove "Indefinite" status.</p>
+                <a href="golfer-status.html" class="btn btn-green">Log Absence</a>
             </div>
 
             <div class="card">
-                <h3>Upcoming Availability Report</h3>
-                <p>Generate the 24-session horizontal matrix. Suitable for cut and paste into emails.</p>
-                <a href="planner.html" class="btn btn-green">Go to Planner</a>
+                <h3>Availability Report</h3>
+                <p>Generate the 24-session unavailability matrix. Suitable for cut and paste into emails.</p>
+                <a href="planner.html" class="btn btn-green">Go to Matrix</a>
             </div>
 
             <div class="card">
                 <h3>Rollup Generation</h3>
                 <p>Run the rollup algorithm to create balanced groups for the next session.</p>
-                <a href="rollup.html" class="btn btn-alt">Generate Rollup</a>
+                <a href="rollup.html" class="btn btn-green">Generate Rollup</a>
             </div>
 
             <div class="card">
                 <h3>Historical Roll up Data</h3>
                 <p>Review past rollup groupings and availability patterns by date.</p>
-                <a href="history.html" class="btn">View History</a>
+                <a href="history.html" class="btn btn-green">View History</a>
             </div>
 
             <div class="card">
-                <h3>Rollup Table Email Generator</h3>
-                <p>Create a formatted table of golfer availability for upcoming sessions. Suitable for cut and paste into emails.</p>
+                <h3>Rollup Email Generator</h3>
+                <p>
+                    Create a email proforma containing roll up groupings for up to 3 dates and an unavailability table covering 24 sessions for a chosen date. A free text field is also included.
+                    Copy and paste the generated content into your email client to send out to members. 
+                </p>
                 <a href="email-generator.html" class="btn btn-green">Generate Email Table</a>
             </div>
 
             <div class="card">
                 <h3>Participation Report</h3>
                 <p>Compare golfer participation against their bookings to identify trends.</p>
-                <a href="participation-report.html" class="btn btn-alt">View Report</a>
+                <a href="participation-report.html" class="btn btn-green">Participation Report</a>
             </div>
 
             <div class="card">
                 <h3>Indefinite Absences</h3>
                 <p>View and edit golfers who are indefinitely unavailable.</p>
-                <a href="indefinite_unavailable_golfers.html" class="btn">Manage Indefinite Absences</a>
+                <a href="indefinite_unavailable_golfers.html" class="btn btn-green">Indefinite Absences</a>
             </div>
 
             <div class="card">
                 <h3>Club Diary</h3>
                 <p>View upcoming club events, competitions, and important dates in the calendar.</p>
-                <a href="calendar.html" class="btn btn-green">View Calendar</a> 
+                <a href="calendar.html" class="btn btn-green">Club Calendar</a> 
             </div>
 
             <button id="logout-btn" onclick="handleLogout()">Logout</button>

@@ -261,8 +261,6 @@ app.get('/api/competition-names', protect, async (req, res) => {
 });
 
 // 8. AVAILABILITY & ABSENCE ROUTES
-// 8. AVAILABILITY & ABSENCE ROUTES (Modified for Top-Box Monitor)
-// 8. AVAILABILITY & ABSENCE ROUTES
 app.get('/api/available', protect, async (req, res) => {
     try {
         const dateStr = req.query.date; // Expects "YYYY-MM-DD" from the frontend
@@ -666,7 +664,78 @@ app.post('/api/club-calendar/sync', async (req, res) => {
     }
 });
 
+// 12. ROLLUP EMAIL DATA and ADDRESSROUTE
 
+app.get('/api/email-data', protect, async (req, res) => {
+    try {
+        const { start, end, absence } = req.query;
+
+        // 1. Fetch Rollup Sessions (Planner Data)
+        // We look for any sessions between the two selected dates
+        // Note: Replace 'Session' with whatever model stores your 24-session data
+        const sessions = await Session.find({
+            date: { $gte: new Date(start), $lte: new Date(end) }
+        }).sort({ date: 1 });
+
+        // 2. Fetch Absences for the Report
+        // We want anyone whose absence overlaps with or starts after the 'absence' date
+        const absences = await unavailables.find({
+            $or: [
+                { date_from: { $gte: new Date(absence) } },
+                { indefinite: true }
+            ]
+        }).populate('golfer_id');
+
+        // 3. Format the data for the frontend
+        const formattedSessions = sessions.map(s => ({
+            date: new Date(s.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }),
+            time: s.time || "09:00",
+            count: s.golfers ? s.golfers.length : 0
+        }));
+
+        const formattedAbsences = absences.map(a => {
+            const name = a.golfer_id ? a.golfer_id.name : "Unknown";
+            let status = "";
+            if (a.indefinite) {
+                status = "Away Indefinitely";
+            } else {
+                const from = new Date(a.date_from).toLocaleDateString('en-GB');
+                const to = new Date(a.date_to).toLocaleDateString('en-GB');
+                status = `Away ${from} to ${to}`;
+            }
+            return { name, status };
+        });
+
+        res.json({
+            sessions: formattedSessions,
+            absences: formattedAbsences
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to fetch email data" });
+    }
+});
+
+app.get('/api/golfer-emails', protect, async (req, res) => {
+    try {
+        // Fetch only the email field from all golfers
+        const golfers = await Golfer.find({}, 'email');
+        
+        // Filter out any golfers who don't have an email on file
+        const emailList = golfers
+            .map(g => g.email)
+            .filter(email => email && email.trim() !== "");
+
+        res.json(emailList);
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch recipient list" });
+    }
+});
+
+//END OF ROUTES
+
+// START THE SERVER
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Secure Server running on port ${PORT}`));

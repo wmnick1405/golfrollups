@@ -621,7 +621,7 @@ app.post('/api/booker/:id', protect, async (req, res) => {
 // 11. CLUB CALENDAR SYNC ROUTES
 app.get('/api/club-calendar', async (req, res) => {
     try {
-        // Fetch future events only (optional, but cleaner)
+        // Fetch future events only
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
@@ -661,6 +661,16 @@ app.post('/api/club-calendar/sync', async (req, res) => {
     } catch (err) {
         console.error("ICS Sync Error:", err);
         res.status(500).json({ error: "Failed to fetch or parse ICS file" });
+    }
+});
+
+app.delete('/api/club-calendar/', async (req, res) => {
+    try {
+        // WARNING: This will delete ALL events in the calendar collection!
+        await ClubCalendar.deleteMany({});
+        res.json({ success: true, message: "Events deleted successfully" });
+    } catch (err) {
+        res.status(500).json({ error: "Could not delete events" });
     }
 });
 

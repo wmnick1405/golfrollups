@@ -239,17 +239,37 @@
         }
 
         async function syncCalendar() {
-            const status = document.getElementById('sync-status');
-            status.textContent = "Syncing...";
-            try {
-                const res = await fetch('/api/club-calendar/sync', { method: 'POST' });
-                if (res.ok) {
-                    status.textContent = "Success!";
-                    loadCalendar();
-                }
-            } catch (err) { status.textContent = "Error."; }
-            setTimeout(() => status.textContent = "", 3000);
+    const status = document.getElementById('sync-status');
+    status.textContent = "Syncing...";
+    
+    try {
+        // 1. Clear the old calendar
+        const deleteRes = await fetch('/api/club-calendar', { method: 'DELETE' });
+        
+        if (!deleteRes.ok) throw new Error("Delete failed");
+
+        // 2. Run the sync
+        const syncRes = await fetch('/api/club-calendar/sync', { method: 'POST' });
+        
+        if (syncRes.ok) {
+            status.textContent = "Success!";
+            // We only need to load the calendar once at the very end
+            await loadCalendar(); 
+        } else {
+            throw new Error("Sync failed");
         }
+    } catch (err) {
+        console.error(err);
+        status.textContent = "Error.";
+    }
+
+    // Clear the status message after 3 seconds
+    setTimeout(() => {
+        if (status.textContent !== "Syncing...") {
+            status.textContent = "";
+        }
+    }, 3000);
+}
 
         loadCalendar();
 

@@ -12,96 +12,102 @@
 
         <style>
             body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            padding: 20px;
-            background-color: #f4f7f6;
-            color: #333;
-        }
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                padding: 20px;
+                background-color: #f4f7f6;
+                color: #333;
+            }
+
+            .intro {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                color: black;
+                padding-bottom: 10px;
+            }
 
             .container {
-            max-width: 1100px;
-            margin: 0 auto;
-        }
+                max-width: 1100px;
+                margin: 0 auto;
+            }
 
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-        }
+            .header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 20px;
+            }
 
             /* Dashboard Grid */
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-        }
+            .grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 20px;
+            }
 
-        .card {
-            background: white;
-            padding: 10px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            display: flex;
-            flex-direction: column;
-            transition: transform 0.2s;
-        }
+            .card {
+                background: white;
+                padding: 10px;
+                border-radius: 12px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+                display: flex;
+                flex-direction: column;
+                transition: transform 0.2s;
+            }
 
-        .card:hover {
-            transform: translateY(-3px);
-        }
+            .card:hover {
+                transform: translateY(-3px);
+            }
 
-        .card h3 {
-            margin-top: 0;
-            color: #2c3e50;
-            border-bottom: 2px solid #f4f7f6;
-            padding-bottom: 10px;
-        }
+            .card h3 {
+                margin-top: 0;
+                color: #2c3e50;
+                border-bottom: 2px solid #f4f7f6;
+                padding-bottom: 10px;
+            }
 
-        .card p {
-            font-size: 0.9em;
-            color: #666;
-            flex-grow: 1;
-        }
+            .card p {
+                font-size: 0.9em;
+                color: #666;
+                flex-grow: 1;
+            }
 
-        .btn {
-            display: inline-block;
-            padding: 10px 15px;
-            background-color: #007bff;
-            color: white;
-            text-decoration: none;
-            border-radius: 6px;
-            text-align: center;
-            font-weight: bold;
-            margin-top: 15px;
-        }
+            .btn {
+                display: inline-block;
+                padding: 10px 15px;
+                background-color: #007bff;
+                color: white;
+                text-decoration: none;
+                border-radius: 6px;
+                text-align: center;
+                font-weight: bold;
+                margin-top: 15px;
+            }
 
-        .btn-green {
-            background-color: #28a745;
-        }
+            .btn-green {
+                background-color: #28a745;
+            }
 
-        .btn-alt {
-            background-color: #6c757d;
-        }
+            .btn-alt {
+                background-color: #6c757d;
+            }
 
-        .footer {
-            margin-top: 40px;
-            text-align: center;
-            font-size: 0.8em;
-            color: #888;
-        }
+            .footer {
+                margin-top: 40px;
+                text-align: center;
+                font-size: 0.8em;
+                color: #888;
+            }
 
-        #logout-btn {
-            background:#d32f2f; 
-            color:white; 
-            border:none; 
-            padding:8px 15px; 
-            border-radius:12px; 
-            cursor:pointer;
-            font-size: 2em;
-            font-weight: bold;
+            #logout-btn {
+                background: #d32f2f;
+                color: white;
+                border: none;
+                padding: 8px 15px;
+                border-radius: 12px;
+                cursor: pointer;
+                font-size: 2em;
+                font-weight: bold;
 
-        }
+            }
         </style>
     </head>
 
@@ -121,119 +127,127 @@
         </div>
 
         <div class="container">
-        <div class="header">
-            <h1>Admin Dashboard</h1>
-            <span id="current-date" style="font-weight: bold; color: #007bff;"></span>
-        </div>
+            <div class="header">
+                <h1>Admin Dashboard</h1>
+                <span id="current-date" style="font-weight: bold; color: #007bff;"></span>
+            </div>
+
+            <div class="intro">
+            <p>This website is for administrative use only. The back end is a mongodb database, which is backed up each
+                night and kept for 31 days. Contact for site and database is Nick Osborne</p>
+            </div>
+
 
             <div class="grid">
-            <div class="card">
-                <h3>Golfer Details</h3>
-                <p>Add new members, update contact details, or manage playing preferences.</p>
-                <a href="golfers.html" class="btn btn-green">Manage Members</a>
-            </div>
+                <div class="card">
+                    <h3>Golfer Details</h3>
+                    <p>Add new members, update contact details, or manage playing preferences.</p>
+                    <a href="golfers.html" class="btn btn-green">Manage Members</a>
+                </div>
 
-            <div class="card">
-                <h3>Absences and Extra Days</h3>
-                <p>Log holiday dates, medical leave, or indefinite absences for players. Also add extra play days and remove "Indefinite" status.</p>
-                <a href="golfer-status.html" class="btn btn-green">Log Absence</a>
-            </div>
+                <div class="card">
+                    <h3>Absences and Extra Days</h3>
+                    <p>Log holiday dates, medical leave, or indefinite absences for players. Also add extra play days
+                        and remove "Indefinite" status.</p>
+                    <a href="golfer-status.html" class="btn btn-green">Log Absence</a>
+                </div>
 
-            <div class="card">
-                <h3>Availability Report</h3>
-                <p>Generate the 24-session unavailability matrix. Suitable for cut and paste into emails.</p>
-                <a href="planner.html" class="btn btn-green">Go to Matrix</a>
-            </div>
+                <div class="card">
+                    <h3>Availability Report</h3>
+                    <p>Generate the 24-session unavailability matrix. Suitable for cut and paste into emails.</p>
+                    <a href="planner.html" class="btn btn-green">Go to Matrix</a>
+                </div>
 
-            <div class="card">
-                <h3>Rollup Generation</h3>
-                <p>Run the rollup algorithm to create balanced groups for the next session.</p>
-                <a href="rollup.html" class="btn btn-green">Generate Rollup</a>
-            </div>
+                <div class="card">
+                    <h3>Rollup Generation</h3>
+                    <p>Run the rollup algorithm to create balanced groups for the next session.</p>
+                    <a href="rollup.html" class="btn btn-green">Generate Rollup</a>
+                </div>
 
-            <div class="card">
-                <h3>Historical Roll up Data</h3>
-                <p>Review past rollup groupings and availability patterns by date.</p>
-                <a href="history.html" class="btn btn-green">View History</a>
-            </div>
+                <div class="card">
+                    <h3>Historical Roll up Data</h3>
+                    <p>Review past rollup groupings and availability patterns by date.</p>
+                    <a href="history.html" class="btn btn-green">View History</a>
+                </div>
 
-            <div class="card">
-                <h3>Rollup Email Generator</h3>
-                <p>
-                    Create a email proforma containing roll up groupings for up to 3 dates and an unavailability table covering 24 sessions for a chosen date. A free text field is also included.
-                    Copy and paste the generated content into your email client to send out to members. 
-                </p>
-                <a href="email-generator.html" class="btn btn-green">Generate Email Table</a>
-            </div>
+                <div class="card">
+                    <h3>Rollup Email Generator</h3>
+                    <p>
+                        Create a email proforma containing roll up groupings for up to 3 dates and an unavailability
+                        table covering 24 sessions for a chosen date. A free text field is also included.
+                        Copy and paste the generated content into your email client to send out to members.
+                    </p>
+                    <a href="email-generator.html" class="btn btn-green">Generate Email Table</a>
+                </div>
 
-            <div class="card">
-                <h3>Participation Report</h3>
-                <p>Compare golfer participation against their bookings to identify trends.</p>
-                <a href="participation-report.html" class="btn btn-green">Participation Report</a>
-            </div>
+                <div class="card">
+                    <h3>Participation Report</h3>
+                    <p>Compare golfer participation against their bookings to identify trends.</p>
+                    <a href="participation-report.html" class="btn btn-green">Participation Report</a>
+                </div>
 
-            <div class="card">
-                <h3>Indefinite Absences</h3>
-                <p>View and edit golfers who are indefinitely unavailable.</p>
-                <a href="indefinite_unavailable_golfers.html" class="btn btn-green">Indefinite Absences</a>
-            </div>
+                <div class="card">
+                    <h3>Indefinite Absences</h3>
+                    <p>View and edit golfers who are indefinitely unavailable.</p>
+                    <a href="indefinite_unavailable_golfers.html" class="btn btn-green">Indefinite Absences</a>
+                </div>
 
-            <div class="card">
-                <h3>Club Diary</h3>
-                <p>View upcoming club events, competitions, and important dates in the calendar.</p>
-                <a href="calendar.html" class="btn btn-green">Club Calendar</a> 
-            </div>
+                <div class="card">
+                    <h3>Club Diary</h3>
+                    <p>View upcoming club events, competitions, and important dates in the calendar.</p>
+                    <a href="calendar.html" class="btn btn-green">Club Calendar</a>
+                </div>
 
-            <button id="logout-btn" onclick="handleLogout()">Logout</button>
-        
+                <button id="logout-btn" onclick="handleLogout()">Logout</button>
 
-        <script>
-            // When the page opens, check if we are already logged in
-            window.onload = async () => {
-                const overlay = document.getElementById('login-overlay');
-                try {
-                    // Use the lightweight check-auth route
-                    const response = await fetch('/api/check-auth');
-                    const data = await response.json();
 
-                    if (data.loggedIn) {
-                        overlay.style.display = 'none'; // Hide overlay immediately
-                    } else {
-                        overlay.style.display = 'flex'; // Ensure it's shown if not logged in
+                <script>
+                    // When the page opens, check if we are already logged in
+                    window.onload = async () => {
+                        const overlay = document.getElementById('login-overlay');
+                        try {
+                            // Use the lightweight check-auth route
+                            const response = await fetch('/api/check-auth');
+                            const data = await response.json();
+
+                            if (data.loggedIn) {
+                                overlay.style.display = 'none'; // Hide overlay immediately
+                            } else {
+                                overlay.style.display = 'flex'; // Ensure it's shown if not logged in
+                            }
+                        } catch (err) {
+                            console.error("Auth check failed:", err);
+                            overlay.style.display = 'flex';
+                        }
+                    };
+
+                    // Sending login data to the server
+                    document.getElementById('login-form').onsubmit = async (e) => {
+                        e.preventDefault();
+                        const username = document.getElementById('username').value;
+                        const password = document.getElementById('password').value;
+
+                        const response = await fetch('/login', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ username, password })
+                        });
+
+                        if (response.ok) {
+                            // SUCCESS: Instead of just hiding the overlay, 
+                            // reload the page once to ensure all session variables are set
+                            window.location.reload();
+                        } else {
+                            alert("Login Failed");
+                        }
+                    };
+
+                    // This triggers the app.post('/api/logout') route in server.js
+                    async function handleLogout() {
+                        const response = await fetch('/api/logout', { method: 'POST' });
+                        if (response.ok) window.location.reload();
                     }
-                } catch (err) {
-                    console.error("Auth check failed:", err);
-                    overlay.style.display = 'flex';
-                }
-            };
-
-            // Sending login data to the server
-            document.getElementById('login-form').onsubmit = async (e) => {
-                e.preventDefault();
-                const username = document.getElementById('username').value;
-                const password = document.getElementById('password').value;
-
-                const response = await fetch('/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-
-                if (response.ok) {
-                    // SUCCESS: Instead of just hiding the overlay, 
-                    // reload the page once to ensure all session variables are set
-                    window.location.reload();
-                } else {
-                    alert("Login Failed");
-                }
-            };
-
-            // This triggers the app.post('/api/logout') route in server.js
-            async function handleLogout() {
-                const response = await fetch('/api/logout', { method: 'POST' });
-                if (response.ok) window.location.reload();
-            }
-        </script>
+                </script>
     </body>
 
     </html>

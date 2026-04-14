@@ -117,7 +117,7 @@ const ExtraAvailability = mongoose.model('ExtraAvailability', new mongoose.Schem
     golfer_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Golfer', required: true },
     date: { type: Date, required: true },
     note: String
-}));
+}, {collection: 'extra-availabilities'}));
 
 const ClubCalendar = mongoose.model('ClubCalendar', new mongoose.Schema({
     uid: { type: String, unique: true },
@@ -396,7 +396,7 @@ app.delete('/api/unavailable/:id', protect, async (req, res) => {
 });
 
 // API to save extra availability
-app.post('/api/extra-availability', protect, async (req, res) => {
+app.post('/api/extra-availabilities', protect, async (req, res) => {
     try {
         const record = new ExtraAvailability(req.body);
         await record.save();
@@ -405,13 +405,44 @@ app.post('/api/extra-availability', protect, async (req, res) => {
 });
 
 // API to get extra availability for a golfer
-app.get('/api/extra-availability/golfer/:id', protect, async (req, res) => {
+app.get('/api/extra-availabilities/golfer/:id', protect, async (req, res) => {
     const records = await ExtraAvailability.find({ golfer_id: req.params.id }).sort({ date: 1 });
     res.json(records);
 });
 
+app.get('/api/extra-availabilities', protect, async (req, res) => {
+    try {
+        const { date } = req.query; // This gets the "YYYY-MM-DD" from the fetch call
+        if (!date) return res.status(400).json({ error: "Date is required" });
+
+        // Normalize the date to start of day UTC to match how you store dates
+        const targetDate = new Date(date + "T00:00:00.000Z");
+
+        // Find records for this date and 'populate' the golfer details
+        // so we have the player's name and booking_exempt status
+        const extras = await ExtraAvailability.find({ date: targetDate }).populate('golfer_id');
+
+        // Map the data so it matches the format the frontend expects
+        const report = extras.map(e => {
+            if (!e.golfer_id) return null;
+            return {
+                _id: e.golfer_id._id,
+                name: e.golfer_id.name,
+                booking_exempt: e.golfer_id.booking_exempt,
+                isExtra: true,
+                isUnavailable: false // They are available by definition
+            };
+        }).filter(item => item !== null);
+
+        res.json(report);
+    } catch (err) {
+        console.error("Error in GET /api/extra-availabilities:", err);
+        res.status(500).json({ error: "Failed to fetch extra golfers" });
+    }
+});
+
 // API to delete
-app.delete('/api/extra-availability/:id', protect, async (req, res) => {
+app.delete('/api/extra-availabilities/:id', protect, async (req, res) => {
     await ExtraAvailability.findByIdAndDelete(req.params.id);
     res.json({ success: true });
 });

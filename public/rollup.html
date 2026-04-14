@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <!-- Generate Rollup - This is the main page for generating rollup groups. -->
+
 <head>
     <title>Generate Rollup</title>
     <style>
@@ -158,8 +159,10 @@
 
         <div class="main-content">
             <h2>Generate Rollup</h2>
-            <p>First check the club calendar to see if there are any events that may affect your planned rollup events.</p>
-            <p>To use: select required date, type in the name of the competition if it's not a social round,click the "Get
+            <p>First check the club calendar to see if there are any events that may affect your planned rollup events.
+            </p>
+            <p>To use: select required date, type in the name of the competition if it's not a social round,click the
+                "Get
                 Available" button, then click the "Auto-Group" button. Drag
                 players between groups as needed. When complete, click the "Save Rollup" button.</p>
             <div class="controls">
@@ -205,6 +208,7 @@
             if (!date) return alert("Please select a date first.");
 
             try {
+                // 1. Check if Rollup already exists
                 const checkRes = await fetch(`/api/rollups/check?date=${date}`);
                 const checkData = await checkRes.json();
 
@@ -213,40 +217,53 @@
                     dateInput.value = "";
                     pool = [];
                     groups = [];
-                    absenceBox.style.display = "none"; // Hide if it was showing
+                    absenceBox.style.display = "none";
                     renderAll();
                     return;
                 }
 
-                const res = await fetch(`/api/available?date=${date}`);
-                const data = await res.json();
+                // 2. Fetch Regular Availability AND Extra Availabilities in parallel
+                const [resRegular, resExtra] = await Promise.all([
+                    fetch(`/api/available?date=${date}`),
+                    fetch(`/api/extra-availabilities?date=${date}`)
+                ]);
 
-                if (data.length === 0) {
-                    alert("No golfers found for this day's schedule.");
+                const regularData = await resRegular.json();
+                const extraData = await resExtra.json();
+
+                // 3. Combine the data
+                // We mark extra players so we know where they came from (optional)
+                const combinedData = [
+                    ...regularData,
+                    ...extraData.map(p => ({ ...p, isExtra: true }))
+                ];
+
+                if (combinedData.length === 0) {
+                    alert("No golfers found for this day's schedule or extra list.");
                     return;
                 }
 
                 // --- SPLIT LOGIC ---
-                // 1. Filter out the ACTIVE players for the sidebar pool
-                pool = data.filter(p => !p.isUnavailable).map(p => ({
-                    golfer_id: p._id,
+                // 1. Filter out the ACTIVE players (Regular + Extra)
+                pool = combinedData.filter(p => !p.isUnavailable).map(p => ({
+                    golfer_id: p._id || p.golfer_id,
                     name: p.name,
                     booker: false,
-                    booking_exempt: p.booking_exempt
+                    booking_exempt: p.booking_exempt,
+                    isExtra: p.isExtra || false
                 }));
 
-                // 2. Filter out the UNAVAILABLE players for the top monitor
-                const awayPlayers = data.filter(p => p.isUnavailable);
+                // 2. Filter out the UNAVAILABLE players
+                const awayPlayers = combinedData.filter(p => p.isUnavailable);
 
                 // --- UPDATE ABSENCE MONITOR UI ---
                 if (awayPlayers.length > 0) {
                     absenceBox.style.display = "block";
-                    absencePills.innerHTML = ""; // Clear old pills
+                    absencePills.innerHTML = "";
 
                     awayPlayers.forEach(p => {
                         const pill = document.createElement("span");
                         pill.style = "background:#bbdefb; color:#0d47a1; padding:5px 12px; border-radius:15px; font-size:0.85em; border:1px solid #90caf9; font-weight:bold;";
-                        // Add icon based on reason or type
                         const icon = p.indefinitely_unavailable ? "🚑" : "✈️";
                         pill.innerHTML = `${p.name} ${icon}`;
                         absencePills.appendChild(pill);
@@ -407,20 +424,14 @@
             const span = document.createElement("span");
             span.classList.add("player-tag");
 
-            // 1. Apply visual highlights
-            if (player.booking_exempt) {
-                span.classList.add("is-exempt");
-            }
+            if (player.booking_exempt) span.classList.add("is-exempt");
+            if (isTop && !isPool) span.classList.add("is-top-slot");
 
-            // Only show Green if they are at the top of a group (not in the pool)
-            if (isTop && !isPool) {
-                span.classList.add("is-top-slot");
-            }
+            // Add a (+) if they are an extra availability player
+            const extraSuffix = player.isExtra ? " (+)" : "";
+            const exemptSuffix = player.booking_exempt ? " (E)" : "";
 
-            // 2. Set the text
-            span.textContent = player.name + (player.booking_exempt ? " (E)" : "");
-
-            // 3. CRITICAL: Re-enable the draggable attribute
+            span.textContent = player.name + exemptSuffix + extraSuffix;
             span.draggable = true;
 
             return span;

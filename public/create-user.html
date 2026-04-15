@@ -1,39 +1,57 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>Create Admin User</title>
     <style>
-        body { font-family: Arial; padding: 30px; background: #f4f4f4; }
-        .form-container { 
-            max-width: 400px; 
-            margin: auto; 
-            background: white; 
-            padding: 20px; 
-            border-radius: 8px; 
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+        body {
+            font-family: Arial;
+            padding: 30px;
+            background: #f4f4f4;
         }
-        input { 
-            width: 100%; 
-            padding: 10px; 
-            margin: 10px 0; 
-            box-sizing: border-box; 
-            border: 1px solid #ccc; 
+
+        .form-container {
+            max-width: 400px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
             border-radius: 4px;
         }
-        button { 
-            width: 100%; 
-            padding: 10px; 
-            background: #2e7d32; 
-            color: white; 
-            border: none; 
-            border-radius: 4px; 
-            cursor: pointer; 
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background: #2e7d32;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
         }
-        button:hover { background: #1b5e20; }
-        .msg { margin-top: 10px; text-align: center; }
+
+        button:hover {
+            background: #1b5e20;
+        }
+
+        .msg {
+            margin-top: 10px;
+            text-align: center;
+        }
     </style>
 </head>
+
 <body>
+    <div id="nav-placeholder"></div>
+
     <div class="form-container">
         <h2>Add New Admin</h2>
         <input type="text" id="newUsername" placeholder="Username" required>
@@ -44,12 +62,22 @@
 
     <script>
         async function createUser() {
-            const username = document.getElementById('newUsername').value;
+
             const password = document.getElementById('newPassword').value;
             const msgDiv = document.getElementById('message');
+            const username = document.getElementById('newUsername').value;
+            if (!username.includes('@')) {
+                alert("The username must be an email address");
+                return;
+            }
 
             if (!username || !password) {
                 msgDiv.innerText = "Please fill in both fields.";
+                return;
+            }
+
+            if (!checkRobustness(password)) {
+                alert("Password must be 8+ characters with a number and special character.");
                 return;
             }
 
@@ -75,6 +103,11 @@
                 msgDiv.innerText = "Server communication error.";
             }
         }
+
+        function checkRobustness(p) {
+            return /^(?=.*[0-9])(?=.*[!@#$%^&*])[a-zA-Z0-9!@#$%^&*]{8,}$/.test(p);
+        }
     </script>
 </body>
+
 </html>

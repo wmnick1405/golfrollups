@@ -60,15 +60,41 @@ mongoose.connect(process.env.MONGO_URI)
 
 // 4. DATA SCHEMAS
 // --- AUTHENTICATION SCHEMA ---
-const userSchema = new mongoose.Schema({
-    username: { type: String, required: true, unique: true },
-    password: { type: String, required: true }
+
+// This runs once when the server starts to "fix" old users
+mongoose.connection.once('open', async () => {
+    const User = mongoose.model('User');
+    // Find users who don't have the passwordChangedAt field and set it to now
+    await User.updateMany(
+        { passwordChangedAt: { $exists: false } },
+        { $set: { passwordChangedAt: new Date() } }
+    );
+    console.log("Verified all admin users have password age tracking.");
 });
+
+const userSchema = new mongoose.Schema({
+    username: { 
+        type: String, 
+        required: true, 
+        unique: true,
+        match: [/.+\@.+\..+/, 'Please use a valid email address']
+    },
+    password: { type: String, required: true },
+    passwordChangedAt: { type: Date, default: Date.now }, // <--- Add this
+    otp: String,
+    otpExpires: Date
+});
+
+// This function checks if a password meets our security requirements
+function isPasswordRobust(password) {
+    const regex = /^(?=.*[0-9])(?=.*[!@#$%^&*])[a-zA-Z0-9!@#$%^&*]{8,}$/;
+    return regex.test(password);
+}
 
 // PRE-SAVE HOOK: Automatically hashes password before saving to DB
 userSchema.pre('save', async function () {
     // Only hash the password if it has been modified (or is new)
-    if (!this.isModified('password')) return; 
+    if (!this.isModified('password')) return;
 
     try {
         const salt = await bcrypt.genSalt(10);
@@ -122,7 +148,7 @@ const ExtraAvailability = mongoose.model('ExtraAvailability', new mongoose.Schem
     golfer_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Golfer', required: true },
     date: { type: Date, required: true },
     note: String
-}, {collection: 'extra-availabilities'}));
+}, { collection: 'extra-availabilities' }));
 
 const ClubCalendar = mongoose.model('ClubCalendar', new mongoose.Schema({
     uid: { type: String, unique: true },
@@ -136,7 +162,7 @@ const ClubCalendar = mongoose.model('ClubCalendar', new mongoose.Schema({
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: 'wmnick1405@gmail.com', 
+        user: 'wmnick1405@gmail.com',
         pass: process.env.GMAIL_APP_PASSWORD // We will add this to your .env file
     }
 });
@@ -158,6 +184,98 @@ app.post('/login', async (req, res) => {
         }
     } catch (err) {
         res.status(500).json({ error: "Server error" });
+    }
+});
+
+// OTP LOGIN ROUTE
+app.post('/api/auth/request-otp', async (req, res) => {
+    const { email } = req.body;
+    const user = await User.findOne({ username: email });
+
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.otp = otp;
+    user.otpExpires = new Date(Date.now() + 10 * 60000); // 10 mins
+    await user.save();
+
+    await transporter.sendMail({
+        from: 'wmnick1405@gmail.com',
+        to: email,
+        subject: 'Your Login Code',
+        text: `Your code is ${otp}. It expires in 10 minutes.`
+    });
+
+    res.json({ success: true });
+});
+
+// This route now handles both password and OTP logins
+app.post('/api/login', async (req, res) => {
+    try {
+        const { username, password, otp } = req.body;
+        const user = await User.findOne({ username });
+
+        if (!user) return res.status(401).json({ error: "Invalid credentials" });
+
+        // OPTION 1: User provided a password
+        if (password) {
+            const match = await bcrypt.compare(password, user.password);
+            if (!match) return res.status(401).json({ error: "Invalid password" });
+        }
+        if (password) {
+            const match = await bcrypt.compare(password, user.password);
+            if (!match) return res.status(401).json({ error: "Invalid password" });
+
+            // 90 Day Policy Check
+            const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+            if (user.passwordChangedAt < ninetyDaysAgo) {
+                return res.status(403).json({
+                    error: "Password Expired",
+                    message: "Your password is older than 90 days. Please use the OTP method to log in and update your password."
+                });
+            }
+        }
+        // OPTION 2: User provided an OTP
+        else if (otp) {
+            if (user.otp !== otp || user.otpExpires < Date.now()) {
+                return res.status(401).json({ error: "Invalid or expired code" });
+            }
+            // Clear OTP after successful use
+            user.otp = undefined;
+            user.otpExpires = undefined;
+            await user.save();
+        }
+        else {
+            return res.status(400).json({ error: "Password or OTP required" });
+        }
+
+        // Common Session Logic
+        req.session.userId = user._id;
+        res.json({ success: true });
+
+    } catch (err) {
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
+app.post('/api/admin/change-password', protect, async (req, res) => {
+    try {
+        const { newPassword } = req.body;
+        
+        if (!isPasswordRobust(newPassword)) {
+            return res.status(400).json({ 
+                error: "Password too weak. Must be at least 8 characters long and include a number and a special character (!@#$%^&*)." 
+            });
+        }
+
+        const user = await User.findById(req.session.userId);
+        user.password = newPassword; // Bcrypt hook handles hashing
+        user.passwordChangedAt = Date.now();
+        await user.save();
+
+        res.json({ success: true, message: "Password updated successfully." });
+    } catch (err) {
+        res.status(500).json({ error: "Failed to update password." });
     }
 });
 
@@ -200,12 +318,12 @@ app.post('/api/admin/create-user', protect, async (req, res) => {
     } catch (err) {
         // This is the CRITICAL part: look at your Raspberry Pi terminal for this log!
         console.error("--- USER CREATION ERROR ---");
-        console.error(err); 
-        
+        console.error(err);
+
         // Return the actual technical error to the browser for debugging
-        res.status(500).json({ 
-            error: "Failed to create secure user", 
-            message: err.message 
+        res.status(500).json({
+            error: "Failed to create secure user",
+            message: err.message
         });
     }
 });
@@ -297,7 +415,7 @@ app.get('/api/available', protect, async (req, res) => {
         // We create a date object and immediately strip the time to 00:00:00 UTC.
         // This makes it a "Calendar Day" rather than a specific timestamp.
         const targetDate = new Date(dateStr + "T00:00:00.000Z");
-        
+
         // 2. DETERMINE THE DAY NAME (e.g., "Monday")
         const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
         const dayName = dayNames[targetDate.getUTCDay()];
@@ -325,7 +443,7 @@ app.get('/api/available', protect, async (req, res) => {
         const report = golfers.map(g => {
             const gId = g._id.toString();
             const isAway = awayIds.includes(gId);
-            
+
             // Find the specific record to check for the 'indefinite' flag
             const personalRecord = awayRecords.find(a => a.golfer_id?.toString() === gId);
 
@@ -373,12 +491,12 @@ app.post('/api/unavailable', protect, async (req, res) => {
         // Only run this if sendEmail is true AND the golfer has an email
         if (sendEmail === true) {
             const golfer = await Golfer.findById(golfer_id);
-            
+
             if (golfer && golfer.email) {
                 const startStr = cleanFrom.toDateString();
-                let dateText = (indefinite) ? `from ${startStr} (Indefinite)` : 
-                               (startStr === cleanTo.toDateString()) ? `for ${startStr}` : 
-                               `from ${startStr} to ${cleanTo.toDateString()}`;
+                let dateText = (indefinite) ? `from ${startStr} (Indefinite)` :
+                    (startStr === cleanTo.toDateString()) ? `for ${startStr}` :
+                        `from ${startStr} to ${cleanTo.toDateString()}`;
 
                 const mailOptions = {
                     from: 'your-email@gmail.com',
@@ -393,8 +511,8 @@ app.post('/api/unavailable', protect, async (req, res) => {
 
         res.json({ success: true });
 
-    } catch (err) { 
-        res.status(500).json({ error: "Failed to save record." }); 
+    } catch (err) {
+        res.status(500).json({ error: "Failed to save record." });
     }
 });
 
@@ -789,7 +907,7 @@ app.get('/api/golfer-emails', protect, async (req, res) => {
     try {
         // Fetch only the email field from all golfers
         const golfers = await Golfer.find({}, 'email');
-        
+
         // Filter out any golfers who don't have an email on file
         const emailList = golfers
             .map(g => g.email)

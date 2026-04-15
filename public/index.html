@@ -114,16 +114,42 @@
     <body>
         <div id="login-overlay"
             style="position:fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:9999; display:flex; justify-content:center; align-items:center;">
-            <form id="login-form" style="border:1px solid #ccc; padding:20px; border-radius:8px; text-align: center;">
+            <div
+                style="border:1px solid #ccc; padding:30px; border-radius:12px; text-align: center; width: 320px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
                 <img src="https://clubv1.blob.core.windows.net/clubcrests/06c7bacd-8e49-48a4-8ee4-e369f10e5a30_crest.png"
                     alt="Club Logo" style="max-height: 80px; display: block; margin: 0 auto 20px auto;">
                 <h2>Golf Rollup Login</h2>
-                <input type="text" id="username" placeholder="Username" required
-                    style="display:block; margin: 0 auto 10px auto; padding: 8px;">
-                <input type="password" id="password" placeholder="Password" required
-                    style="display:block; margin: 0 auto 10px auto; padding: 8px;">
-                <button type="submit" style="padding: 10px 20px; cursor: pointer;">Login</button>
-            </form>
+
+                <input type="text" id="username" placeholder="Email Address" required
+                    style="display:block; width:90%; margin: 0 auto 10px auto; padding: 10px; border-radius: 6px; border: 1px solid #ccc;">
+
+                <div id="password-area">
+                    <input type="password" id="password" placeholder="Password"
+                        style="display:block; width:90%; margin: 0 auto 10px auto; padding: 10px; border-radius: 6px; border: 1px solid #ccc;">
+                    <button onclick="handleLogin('password')"
+                        style="width:90%; padding: 10px; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 6px; font-weight: bold;">Login
+                        with Password</button>
+                    <p style="margin: 15px 0 5px 0; font-size: 0.8em; color: #666;">-- OR --</p>
+                    <button onclick="requestOtp()"
+                        style="width:90%; padding: 8px; cursor: pointer; background: #eee; border: 1px solid #ccc; border-radius: 6px;">Email
+                        me a 6-digit code</button>
+                </div>
+
+                <div id="otp-area" style="display:none;">
+                    <p style="font-size: 0.85em; color: #1565c0;">Check your email for the code.</p>
+                    <input type="text" id="otp" placeholder="6-Digit Code" maxlength="6"
+                        style="display:block; width:90%; margin: 0 auto 10px auto; padding: 10px; border-radius: 6px; border: 1px solid #ccc; text-align: center; letter-spacing: 5px; font-weight: bold;">
+                    <button onclick="handleLogin('otp')"
+                        style="width:90%; padding: 10px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 6px; font-weight: bold;">Verify
+                        & Login</button>
+                    <br>
+                    <button onclick="toggleLoginMethod('password')"
+                        style="background:none; border:none; color:blue; text-decoration:underline; font-size:0.8em; margin-top:10px; cursor:pointer;">Back
+                        to password</button>
+                </div>
+
+                <div id="login-msg" style="margin-top: 15px; color: red; font-size: 0.9em;"></div>
+            </div>
         </div>
 
         <div class="container">
@@ -133,8 +159,9 @@
             </div>
 
             <div class="intro">
-            <p>This website is for administrative use only. The back end is a mongodb database, which is backed up each
-                night and kept for 31 days. Contact for site and database is Nick Osborne</p>
+                <p>This website is for administrative use only. The back end is a mongodb database, which is backed up
+                    each
+                    night and kept for 31 days. Contact for site and database is Nick Osborne</p>
             </div>
 
 
@@ -209,44 +236,84 @@
 
                 <script>
                     // When the page opens, check if we are already logged in
+                    // Check auth on load
                     window.onload = async () => {
                         const overlay = document.getElementById('login-overlay');
                         try {
-                            // Use the lightweight check-auth route
                             const response = await fetch('/api/check-auth');
                             const data = await response.json();
-
                             if (data.loggedIn) {
-                                overlay.style.display = 'none'; // Hide overlay immediately
+                                overlay.style.display = 'none';
                             } else {
-                                overlay.style.display = 'flex'; // Ensure it's shown if not logged in
+                                overlay.style.display = 'flex';
                             }
                         } catch (err) {
-                            console.error("Auth check failed:", err);
                             overlay.style.display = 'flex';
                         }
                     };
 
-                    // Sending login data to the server
-                    document.getElementById('login-form').onsubmit = async (e) => {
-                        e.preventDefault();
+                    const msg = document.getElementById('login-msg');
+
+                    function toggleLoginMethod(method) {
+                        document.getElementById('password-area').style.display = (method === 'password') ? 'block' : 'none';
+                        document.getElementById('otp-area').style.display = (method === 'otp') ? 'block' : 'none';
+                        msg.innerText = "";
+                    }
+
+                    async function requestOtp() {
+                        const email = document.getElementById('username').value;
+                        if (!email || !email.includes('@')) return alert("Please enter a valid email address first.");
+
+                        msg.style.color = "blue";
+                        msg.innerText = "Sending code...";
+
+                        try {
+                            const res = await fetch('/api/auth/request-otp', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ email })
+                            });
+
+                            if (res.ok) {
+                                toggleLoginMethod('otp');
+                            } else {
+                                const data = await res.json();
+                                msg.style.color = "red";
+                                msg.innerText = data.error || "Failed to send code.";
+                            }
+                        } catch (err) {
+                            msg.innerText = "Server error.";
+                        }
+                    }
+
+                    async function handleLogin(method) {
                         const username = document.getElementById('username').value;
                         const password = document.getElementById('password').value;
+                        const otp = document.getElementById('otp').value;
 
-                        const response = await fetch('/login', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ username, password })
-                        });
+                        const payload = { username };
+                        if (method === 'password') payload.password = password;
+                        if (method === 'otp') payload.otp = otp;
 
-                        if (response.ok) {
-                            // SUCCESS: Instead of just hiding the overlay, 
-                            // reload the page once to ensure all session variables are set
-                            window.location.reload();
-                        } else {
-                            alert("Login Failed");
+                        try {
+                            // NOTE: Ensure your server route matches "/api/login"
+                            const response = await fetch('/api/login', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
+
+                            if (response.ok) {
+                                window.location.reload();
+                            } else {
+                                const data = await response.json();
+                                msg.style.color = "red";
+                                msg.innerText = data.error || "Login failed.";
+                            }
+                        } catch (err) {
+                            msg.innerText = "Connection error.";
                         }
-                    };
+                    }
 
                     // This triggers the app.post('/api/logout') route in server.js
                     async function handleLogout() {

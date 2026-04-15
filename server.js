@@ -66,13 +66,18 @@ const userSchema = new mongoose.Schema({
 });
 
 // PRE-SAVE HOOK: Automatically hashes password before saving to DB
-userSchema.pre('save', async function (next) {
-    if (!this.isModified('password')) return next();
+userSchema.pre('save', async function () {
+    // Only hash the password if it has been modified (or is new)
+    if (!this.isModified('password')) return; 
+
     try {
         const salt = await bcrypt.genSalt(10);
         this.password = await bcrypt.hash(this.password, salt);
-        next();
-    } catch (err) { next(err); }
+        // DO NOT call next() here
+    } catch (err) {
+        // If there's an error, just throw it; Mongoose will catch it
+        throw err;
+    }
 });
 
 const User = mongoose.model('User', userSchema);
@@ -177,10 +182,32 @@ app.post('/api/logout', (req, res) => {
 // Admin route to create new users - now uses the .pre('save') hashing automatically
 app.post('/api/admin/create-user', protect, async (req, res) => {
     try {
-        const newUser = new User(req.body);
+        const { username, password } = req.body;
+
+        // 1. Check if the username already exists manually (just to be sure)
+        const existingUser = await User.findOne({ username });
+        if (existingUser) {
+            return res.status(400).json({ error: "This username is already taken." });
+        }
+
+        // 2. Attempt to save
+        const newUser = new User({ username, password });
         await newUser.save();
+
+        console.log(`[Success] New admin created: ${username}`);
         res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: "Failed to create secure user" }); }
+
+    } catch (err) {
+        // This is the CRITICAL part: look at your Raspberry Pi terminal for this log!
+        console.error("--- USER CREATION ERROR ---");
+        console.error(err); 
+        
+        // Return the actual technical error to the browser for debugging
+        res.status(500).json({ 
+            error: "Failed to create secure user", 
+            message: err.message 
+        });
+    }
 });
 
 

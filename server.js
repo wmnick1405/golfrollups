@@ -328,6 +328,32 @@ app.post('/api/admin/create-user', protect, async (req, res) => {
     }
 });
 
+// Get list of all admin users
+app.get('/api/admin/list', protect, async (req, res) => {
+    try {
+        const users = await User.find({}, 'username passwordChangedAt');
+        res.json(users);
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch admin list" });
+    }
+});
+
+// Delete an admin user
+app.post('/api/admin/delete-user', protect, async (req, res) => {
+    try {
+        const { userId } = req.body;
+        
+        // Prevent accidental self-deletion
+        if (userId === req.session.userId) {
+            return res.status(400).json({ error: "You cannot delete your own account while logged in." });
+        }
+
+        await User.findByIdAndDelete(userId);
+        res.json({ success: true, message: "User deleted successfully" });
+    } catch (err) {
+        res.status(500).json({ error: "Failed to delete user" });
+    }
+});
 
 
 // 6. TEE TIME ROUTES

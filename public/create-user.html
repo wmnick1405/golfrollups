@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>Create Admin User</title>
+    <title>Admin Management</title>
     <style>
         body {
             font-family: Arial;
@@ -10,13 +10,18 @@
             background: #f4f4f4;
         }
 
-        .form-container {
-            max-width: 400px;
+        .container {
+            max-width: 600px;
             margin: auto;
+        }
+
+        .form-container,
+        .table-container {
             background: white;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
         }
 
         input {
@@ -36,15 +41,96 @@
             border: none;
             border-radius: 4px;
             cursor: pointer;
+            font-weight: bold;
         }
 
         button:hover {
             background: #1b5e20;
         }
 
+        button.delete-btn {
+            background: #d32f2f;
+            width: auto;
+            padding: 5px 10px;
+            font-size: 0.8em;
+        }
+
+        button.delete-btn:hover {
+            background: #b71c1c;
+        }
+
         .msg {
             margin-top: 10px;
             text-align: center;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            font-size: 0.9em;
+        }
+
+        th {
+            background: #f8f9fa;
+        }
+
+
+        /* Navbar Container Styling */
+        #nav-placeholder {
+            width: 100%;
+            margin-bottom: 30px;
+        }
+
+        .navbar {
+            background-color: #2e7d32;
+            padding: 10px 20px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-sizing: border-box;
+        }
+
+        /* Ensure navbar links/buttons don't inherit the 100% width from your form */
+        .navbar a,
+        .navbar button {
+            width: auto !important;
+            /* Forces them to only be as wide as the text */
+            padding: 10px 15px !important;
+            margin: 0 5px !important;
+            display: inline-block !important;
+            text-decoration: none;
+            font-weight: bold;
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+
+        .navbar-brand {
+            font-size: 1.2em;
+            color: white;
+        }
+
+        .navbar a:hover {
+            background-color: #1b5e20;
+        }
+
+        #nav-placeholder button {
+            background: #d32f2f;
+            border: none;
+            color: white;
+            cursor: pointer;
+        }
+
+        #nav-placeholder button:hover {
+            background: #b71c1c;
         }
     </style>
 </head>
@@ -52,20 +138,74 @@
 <body>
     <div id="nav-placeholder"></div>
 
-    <div class="form-container">
-        <h2>Add New Admin</h2>
-        <input type="text" id="newUsername" placeholder="Username" required>
-        <input type="password" id="newPassword" placeholder="Password" required>
-        <button onclick="createUser()">Create User</button>
-        <div id="message" class="msg"></div>
+    <div class="container">
+        <div class="form-container">
+            <h2>Add New Admin</h2>
+            <input type="text" id="newUsername" placeholder="Email Address" required>
+            <input type="password" id="newPassword" placeholder="Password" required>
+            <button onclick="createUser()">Create User</button>
+            <div id="message" class="msg"></div>
+        </div>
+
+        <div class="table-container">
+            <h2>Current Admins</h2>
+            <table id="adminTable">
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="adminList">
+                </tbody>
+            </table>
+        </div>
     </div>
 
-    <script>
-        async function createUser() {
 
+    <script src="js/shared.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Load Navbar
+            fetch('nav.html')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('nav-placeholder').innerHTML = data;
+                });
+
+            // Load Admin List
+            fetchAdmins();
+        });
+
+        // Load the list when the page opens
+        document.addEventListener('DOMContentLoaded', fetchAdmins);
+
+        async function fetchAdmins() {
+            try {
+                const res = await fetch('/api/admin/list');
+                const users = await res.json();
+                const list = document.getElementById('adminList');
+                list.innerHTML = "";
+
+                users.forEach(user => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${user.username}</td>
+                        <td><button class="delete-btn" onclick="deleteUser('${user._id}', '${user.username}')">Delete</button></td>
+                    `;
+                    list.appendChild(row);
+                });
+            } catch (err) {
+                console.error("Error fetching admin list");
+            }
+        }
+
+        async function createUser() {
+            const username = document.getElementById('newUsername').value;
             const password = document.getElementById('newPassword').value;
             const msgDiv = document.getElementById('message');
-            const username = document.getElementById('newUsername').value;
+
             if (!username.includes('@')) {
                 alert("The username must be an email address");
                 return;
@@ -76,7 +216,7 @@
                 return;
             }
 
-            if (!checkRobustness(password)) {
+            if (!/^(?=.*[0-9])(?=.*[!@#$%^&*])[a-zA-Z0-9!@#$%^&*]{8,}$/.test(password)) {
                 alert("Password must be 8+ characters with a number and special character.");
                 return;
             }
@@ -88,14 +228,14 @@
                     body: JSON.stringify({ username, password })
                 });
 
-                const data = await response.json();
-
                 if (response.ok) {
                     msgDiv.style.color = "green";
                     msgDiv.innerText = "Success! New admin created.";
                     document.getElementById('newUsername').value = "";
                     document.getElementById('newPassword').value = "";
+                    fetchAdmins(); // Refresh the table
                 } else {
+                    const data = await response.json();
                     msgDiv.style.color = "red";
                     msgDiv.innerText = "Error: " + (data.error || "Unauthorized");
                 }
@@ -104,9 +244,31 @@
             }
         }
 
-        function checkRobustness(p) {
-            return /^(?=.*[0-9])(?=.*[!@#$%^&*])[a-zA-Z0-9!@#$%^&*]{8,}$/.test(p);
+        async function deleteUser(id, username) {
+            if (!confirm(`Are you sure you want to delete ${username}? This cannot be undone.`)) {
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/admin/delete-user', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: id })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    alert(`Confirmed: ${username} has been deleted.`);
+                    fetchAdmins(); // Refresh the table
+                } else {
+                    alert("Error: " + data.error);
+                }
+            } catch (err) {
+                alert("Failed to connect to server.");
+            }
         }
+
     </script>
 </body>
 

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Custom Golfer Planner</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background-color: #f8f9fa; }
+        .box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); max-width: 1000px; margin: auto; }
+        
+        .controls { 
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px; 
+            margin: 20px 0;
+            padding: 15px;
+            background: #eee;
+            border-radius: 8px;
+        }
+
+        .control-group { display: flex; flex-direction: column; gap: 5px; }
+
+        button { 
+            padding: 10px 15px; 
+            cursor: pointer; 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            font-weight: bold; 
+            align-self: flex-end;
+        }
+
+        select, input { 
+            padding: 8px; 
+            border: 1px solid #ccc; 
+            border-radius: 4px; 
+        }
+
+        #copyBtn { background: #28a745; display: none; margin-top: 10px; }
+        #plannerOutput { margin-top: 25px; overflow-x: auto; }
+        label { font-weight: bold; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+
+    <div id="nav-placeholder"></div>
+
+    <div class="box">
+        <h2>Custom Availability Planner</h2>
+        <p>Generate a personalized availability table for a specific golfer.</p>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>1. Select Golfer:</label>
+                <select id="golferSelect">
+                    <option value="">Loading golfers...</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label>2. Start From:</label>
+                <input type="date" id="startDate">
+            </div>
+
+            <div class="control-group">
+                <label>3. Number of Sessions:</label>
+                <input type="number" id="sessionCount" value="12" min="1" max="50">
+            </div>
+
+            <button onclick="generateCustomPlanner()">Generate Table</button>
+        </div>
+
+        <div id="plannerOutput"></div>
+        <button id="copyBtn" onclick="copyTable()">Copy for Email</button>
+    </div>
+
+    <script src="js/shared.js"></script>
+    <script>
+        document.getElementById('startDate').valueAsDate = new Date();
+
+        // Load golfers into dropdown on startup
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const res = await fetch('/api/golfers');
+                const golfers = await res.json();
+                const select = document.getElementById('golferSelect');
+                select.innerHTML = '<option value="">-- Choose a Golfer --</option>';
+                golfers.forEach(g => {
+                    const opt = document.createElement('option');
+                    opt.value = g._id;
+                    opt.textContent = g.name;
+                    select.appendChild(opt);
+                });
+            } catch (err) {
+                console.error("Failed to load golfers", err);
+            }
+        });
+
+        async function generateCustomPlanner() {
+    const output = document.getElementById('plannerOutput');
+    const golferId = document.getElementById('golferSelect').value;
+    const startInput = document.getElementById('startDate').value;
+    const count = parseInt(document.getElementById('sessionCount').value);
+
+    if (!golferId) return alert("Please select a golfer.");
+    if (!startInput) return alert("Please select a start date.");
+    if (isNaN(count) || count <= 0) return alert("Please enter a valid number of sessions.");
+
+    output.innerHTML = "Generating...";
+
+    try {
+        const [golferRes, awayRes] = await Promise.all([
+            fetch(`/api/golfers`),
+            fetch('/api/unavailable/all')
+        ]);
+        
+        const golfers = await golferRes.json();
+        const selectedGolfer = golfers.find(g => g._id === golferId);
+        const awayRecords = await awayRes.json();
+
+        const sessions = [];
+        let curr = new Date(startInput);
+        curr.setHours(0,0,0,0);
+
+        while (sessions.length < count) {
+            const day = curr.getDay();
+            if (day === 1 || day === 3 || day === 5) {
+                sessions.push(new Date(curr));
+            }
+            curr.setDate(curr.getDate() + 1);
+        }
+
+        // --- COMPACT EMAIL-SAFE TABLE ---
+        // We set max-width to 300px to ensure it stays "mobile-friendly"
+        let html = `<table id="emailTable" style="border-collapse: collapse; font-family: Arial, sans-serif; font-size: 13px; border: 1px solid #999; width: 100%; max-width: 280px;">`;
+        
+        // Header
+        html += `<tr style="background-color: #2e7d32; color: white;">`;
+        html += `<th colspan="2" style="border: 1px solid #999; padding: 10px; text-align: center;">Planner: ${selectedGolfer.name}</th>`;
+        html += `</tr>`;
+
+        sessions.forEach(sessionDate => {
+            const sessionTime = sessionDate.getTime();
+            
+            // Shortened Date Format: "Wed 14/04"
+            const dayName = sessionDate.toLocaleDateString('en-GB', { weekday: 'short' });
+            const dayNum = sessionDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' });
+            const shortDate = `${dayName} ${dayNum}`;
+
+            const isAway = awayRecords.some(rec => {
+                const gId = rec.golfer_id._id || rec.golfer_id;
+                if (gId.toString() !== golferId) return false;
+                const start = new Date(rec.date_from).setHours(0,0,0,0);
+                if (rec.indefinite) return sessionTime >= start;
+                const end = new Date(rec.date_to).setHours(23,59,59,999);
+                return (sessionTime >= start && sessionTime <= end);
+            });
+
+            const statusText = isAway ? "AWAY" : "OK";
+            const color = isAway ? "#f44336" : "#4caf50";
+
+            html += `<tr>`;
+            html += `<td style="border: 1px solid #999; padding: 6px; width: 100px; font-weight: bold; background: #f9f9f9;">${shortDate}</td>`;
+            html += `<td style="border: 1px solid #999; padding: 6px; text-align: center; font-weight: bold; color: white; background-color: ${color}; width: 80px;">${statusText}</td>`;
+            html += `</tr>`;
+        });
+
+        html += `</table>`;
+        output.innerHTML = html;
+        document.getElementById('copyBtn').style.display = 'block';
+
+    } catch (err) {
+        console.error(err);
+        output.innerHTML = "Error generating custom planner.";
+    }
+}
+
+        function copyTable() {
+            const el = document.getElementById('emailTable');
+            const range = document.createRange();
+            range.selectNode(el);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+            document.execCommand('copy');
+            alert("Table copied to clipboard!");
+        }
+    </script>
+</body>
+</html>

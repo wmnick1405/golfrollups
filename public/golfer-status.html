@@ -250,7 +250,7 @@
             renderUnavailability(recordsUn);
 
             // Fetch Extra Days
-            const resEx = await fetch(`/api/extra-availability/golfer/${golferId}`);
+            const resEx = await fetch(`/api/extra-availabilities/golfer/${golferId}`);
             const recordsEx = await resEx.json();
             renderExtraDays(recordsEx);
         }
@@ -344,7 +344,7 @@
 
             if (!date) return alert("Please select a date");
 
-            const res = await fetch('/api/extra-availability', {
+            const res = await fetch('/api/extra-availabilities', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ golfer_id, date, note })
@@ -359,7 +359,7 @@
 
         async function deleteRecord(id, type) {
             if (!confirm("Remove this record?")) return;
-            const url = type === 'un' ? `/api/unavailable/${id}` : `/api/extra-availability/${id}`;
+            const url = type === 'un' ? `/api/unavailable/${id}` : `/api/extra-availabilities/${id}`;
             await fetch(url, { method: 'DELETE' });
             fetchGolferStatus();
         }

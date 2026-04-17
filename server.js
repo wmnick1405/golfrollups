@@ -581,6 +581,7 @@ app.get('/api/extra-availabilities/golfer/:id', protect, async (req, res) => {
     res.json(records);
 });
 
+//
 app.get('/api/extra-availabilities', protect, async (req, res) => {
     try {
         const { date } = req.query; // This gets the "YYYY-MM-DD" from the fetch call

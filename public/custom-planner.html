@@ -1,46 +1,77 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Custom Golfer Planner</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; background-color: #f8f9fa; }
-        .box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); max-width: 1000px; margin: auto; }
-        
-        .controls { 
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+
+        .box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            max-width: 1000px;
+            margin: auto;
+        }
+
+        .controls {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px; 
+            gap: 15px;
             margin: 20px 0;
             padding: 15px;
             background: #eee;
             border-radius: 8px;
         }
 
-        .control-group { display: flex; flex-direction: column; gap: 5px; }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
 
-        button { 
-            padding: 10px 15px; 
-            cursor: pointer; 
-            background: #007bff; 
-            color: white; 
-            border: none; 
-            border-radius: 4px; 
-            font-weight: bold; 
+        button {
+            padding: 10px 15px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
             align-self: flex-end;
         }
 
-        select, input { 
-            padding: 8px; 
-            border: 1px solid #ccc; 
-            border-radius: 4px; 
+        select,
+        input {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
         }
 
-        #copyBtn { background: #28a745; display: none; margin-top: 10px; }
-        #plannerOutput { margin-top: 25px; overflow-x: auto; }
-        label { font-weight: bold; font-size: 0.9em; }
+        #copyBtn {
+            background: #28a745;
+            display: none;
+            margin-top: 10px;
+        }
+
+        #plannerOutput {
+            margin-top: 25px;
+            overflow-x: auto;
+        }
+
+        label {
+            font-weight: bold;
+            font-size: 0.9em;
+        }
     </style>
 </head>
+
 <body>
 
     <div id="nav-placeholder"></div>
@@ -48,7 +79,7 @@
     <div class="box">
         <h2>Custom Availability Planner</h2>
         <p>Generate a personalized availability table for a specific golfer.</p>
-        
+
         <div class="controls">
             <div class="control-group">
                 <label>1. Select Golfer:</label>
@@ -56,7 +87,7 @@
                     <option value="">Loading golfers...</option>
                 </select>
             </div>
-            
+
             <div class="control-group">
                 <label>2. Start From:</label>
                 <input type="date" id="startDate">
@@ -106,53 +137,70 @@
     if (!startInput) return alert("Please select a start date.");
     if (isNaN(count) || count <= 0) return alert("Please enter a valid number of sessions.");
 
-    output.innerHTML = "Generating...";
+    output.innerHTML = "Generating personalized schedule...";
 
     try {
-        const [golferRes, awayRes] = await Promise.all([
-            fetch(`/api/golfers`),
-            fetch('/api/unavailable/all')
+        const [golfersRes, awayRes, extraRes] = await Promise.all([
+            fetch('/api/golfers'),
+            fetch('/api/unavailable/all'),
+            fetch(`/api/extra-availabilities/golfer/${golferId}`)
         ]);
-        
-        const golfers = await golferRes.json();
+
+        const golfers = await golfersRes.json();
         const selectedGolfer = golfers.find(g => g._id === golferId);
         const awayRecords = await awayRes.json();
-
+        const extraDatesRaw = await extraRes.json();
+        
+        const extraDates = extraDatesRaw.map(e => new Date(e.date).setHours(0,0,0,0));
+        const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        
         const sessions = [];
         let curr = new Date(startInput);
-        curr.setHours(0,0,0,0);
+        curr.setHours(0, 0, 0, 0);
 
-        while (sessions.length < count) {
-            const day = curr.getDay();
-            if (day === 1 || day === 3 || day === 5) {
-                sessions.push(new Date(curr));
+        let safetyExit = 0; 
+        while (sessions.length < count && safetyExit < 365) {
+            const sessionTime = curr.getTime();
+            const dayName = dayNames[curr.getDay()];
+            
+            const isNormalDay = selectedGolfer.play_days.includes(dayName);
+            const isExtraDay = extraDates.includes(sessionTime);
+
+            // LOGIC: If it's a day they usually play OR they asked for an extra day, 
+            // we include it in the table regardless of away status.
+            if (isNormalDay || isExtraDay) {
+                sessions.push({
+                    date: new Date(curr),
+                    isExtra: isExtraDay && !isNormalDay,
+                    isNormal: isNormalDay
+                });
             }
             curr.setDate(curr.getDate() + 1);
+            safetyExit++;
         }
 
-        // --- COMPACT EMAIL-SAFE TABLE ---
-        // We set max-width to 300px to ensure it stays "mobile-friendly"
         let html = `<table id="emailTable" style="border-collapse: collapse; font-family: Arial, sans-serif; font-size: 13px; border: 1px solid #999; width: 100%; max-width: 280px;">`;
-        
-        // Header
         html += `<tr style="background-color: #2e7d32; color: white;">`;
-        html += `<th colspan="2" style="border: 1px solid #999; padding: 10px; text-align: center;">Planner: ${selectedGolfer.name}</th>`;
+        html += `<th colspan="2" style="border: 1px solid #999; padding: 10px; text-align: center;">Schedule for: ${selectedGolfer.name}</th>`;
         html += `</tr>`;
 
-        sessions.forEach(sessionDate => {
+        sessions.forEach(sessionObj => {
+            const sessionDate = sessionObj.date;
             const sessionTime = sessionDate.getTime();
             
-            // Shortened Date Format: "Wed 14/04"
-            const dayName = sessionDate.toLocaleDateString('en-GB', { weekday: 'short' });
-            const dayNum = sessionDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' });
-            const shortDate = `${dayName} ${dayNum}`;
+            const dayShort = sessionDate.toLocaleDateString('en-GB', { weekday: 'short' });
+            const dateShort = sessionDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' });
+            let displayDate = `${dayShort} ${dateShort}`;
+            
+            // Helpful visual indicators
+            if (sessionObj.isExtra) displayDate += " <span style='color:#2e7d32'>(Extra)</span>";
 
             const isAway = awayRecords.some(rec => {
                 const gId = rec.golfer_id._id || rec.golfer_id;
                 if (gId.toString() !== golferId) return false;
-                const start = new Date(rec.date_from).setHours(0,0,0,0);
+                const start = new Date(rec.date_from).setHours(0, 0, 0, 0);
                 if (rec.indefinite) return sessionTime >= start;
-                const end = new Date(rec.date_to).setHours(23,59,59,999);
+                const end = new Date(rec.date_to).setHours(23, 59, 59, 999);
                 return (sessionTime >= start && sessionTime <= end);
             });
 
@@ -160,8 +208,8 @@
             const color = isAway ? "#f44336" : "#4caf50";
 
             html += `<tr>`;
-            html += `<td style="border: 1px solid #999; padding: 6px; width: 100px; font-weight: bold; background: #f9f9f9;">${shortDate}</td>`;
-            html += `<td style="border: 1px solid #999; padding: 6px; text-align: center; font-weight: bold; color: white; background-color: ${color}; width: 80px;">${statusText}</td>`;
+            html += `<td style="border: 1px solid #999; padding: 6px; width: 130px; font-weight: bold; background: #f9f9f9;">${displayDate}</td>`;
+            html += `<td style="border: 1px solid #999; padding: 6px; text-align: center; font-weight: bold; color: white; background-color: ${color}; width: 60px;">${statusText}</td>`;
             html += `</tr>`;
         });
 
@@ -186,4 +234,5 @@
         }
     </script>
 </body>
+
 </html>

@@ -100,110 +100,109 @@
         }
 
         async function generateEmailContent() {
-            const ids = [document.getElementById('date1').value, document.getElementById('date2').value, document.getElementById('date3').value].filter(id => id !== "");
-            const gStart = document.getElementById('gridStart').value;
+    const ids = [document.getElementById('date1').value, document.getElementById('date2').value, document.getElementById('date3').value].filter(id => id !== "");
+    const gStart = document.getElementById('gridStart').value;
 
-            if (ids.length === 0) return alert("Select at least one date.");
+    if (ids.length === 0) return alert("Select at least one date.");
 
-            try {
-                const [golfersRes, awayRes] = await Promise.all([fetch('/api/golfers'), fetch('/api/unavailable/all')]);
-                const golfers = await golfersRes.json();
-                const awayRecords = await awayRes.json();
-                
-                let rollupData = [];
-                for (const id of ids) {
-                    const response = await fetch(`/api/rollups/${id}`);
-                    rollupData.push(await response.json());
-                }
-                rollupData.sort((a, b) => new Date(a.date) - new Date(b.date));
+    try {
+        const [golfersRes, awayRes, extraRes] = await Promise.all([
+            fetch('/api/golfers'), 
+            fetch('/api/unavailable/all'),
+            fetch('/api/extra-availabilities')
+        ]);
+        
+        const golfers = await golfersRes.json();
+        const awayRecords = await awayRes.json();
+        
+        // Ensure extraRecords is an array to prevent "not a function" errors
+        let extraRecords = await extraRes.json();
+        if (!Array.isArray(extraRecords)) extraRecords = [];
 
-                let html = `<div style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">`;
-                html += `<p>Hi everyone,</p><p>[Type your message here...]</p>`;
+        const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        
+        let rollupData = [];
+        for (const id of ids) {
+            const response = await fetch(`/api/rollups/${id}`);
+            rollupData.push(await response.json());
+        }
+        rollupData.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-                // --- NARROW ROLLUP TABLE (Max-width 500px) ---
-                html += `<div style="max-width: 500px; margin: 0 left;">`;
-                html += `<table border="1" cellpadding="6" style="border-collapse: collapse; width: 100%; table-layout: fixed; margin-bottom: 25px; word-wrap: break-word; border: 1px solid #ccc;">`;
-                html += `<tr style="background-color: #2e7d32; color: white;">`;
-                
-                rollupData.forEach(rd => {
-                    const d = new Date(rd.date);
-                    html += `<th style="text-align: center; border: 1px solid #1b5e20; font-size: 11px; padding: 5px; color:white">
-                        ${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}<br>
-                        <span style="font-weight: normal; font-size: 9px; display: block; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 2px;">${rd.competition || 'Social'}</span>
-                        ${d.toLocaleDateString('en-GB', { weekday: 'long' })}
-                    </th>`;
-                });
-                html += `</tr><tr valign="top">`;
-                
-                rollupData.forEach(rd => {
-                    html += `<td style="padding: 6px; border: 1px solid #ccc; background-color: #ffffff; font-size: 11px;">`;
-                    const groups = (rd.groups || []).filter(g => g.length > 0);
-                    groups.forEach((group, gIdx) => {
-                        html += `<div style="margin-bottom: 8px;"><b style="color:#2e7d32;">Group ${gIdx + 1}</b><br>`;
-                        htmlContent = group.map((p, pIdx) => (p.booker || pIdx === 0) ? `<strong>${p.name}</strong>` : p.name).join("<br>");
-                        html += htmlContent + `</div>`;
-                    });
-                    html += `</td>`;
-                });
-                html += `</tr></table></div>`;
+        let html = `<div style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">`;
+        html += `<p>Hi everyone,</p><p>[Type your message here...]</p>`;
 
-                // --- 24-SESSION GRID ---
+        // --- ROLLUP TABLE ---
+        html += `<div style="max-width: 500px;"><table border="1" cellpadding="6" style="border-collapse: collapse; width: 100%; margin-bottom: 25px; border: 1px solid #ccc;">`;
+        html += `<tr style="background-color: #2e7d32; color: white;">`;
+        rollupData.forEach(rd => {
+            const d = new Date(rd.date);
+            html += `<th style="text-align: center; border: 1px solid #1b5e20; font-size: 11px; padding: 5px;">${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}<br>${d.toLocaleDateString('en-GB', { weekday: 'long' })}</th>`;
+        });
+        html += `</tr><tr valign="top">`;
+        rollupData.forEach(rd => {
+            html += `<td style="padding: 6px; border: 1px solid #ccc; font-size: 11px;">`;
+            (rd.groups || []).filter(g => g.length > 0).forEach((group, gIdx) => {
+                html += `<div style="margin-bottom: 8px;"><b style="color:#2e7d32;">Group ${gIdx + 1}</b><br>`;
+                html += group.map((p, pIdx) => (p.booker || pIdx === 0) ? `<strong>${p.name}</strong>` : p.name).join("<br>") + `</div>`;
+            });
+            html += `</td>`;
+        });
+        html += `</tr></table></div>`;
+
+        // --- 24-SESSION GRID (Mon/Wed/Fri Only) ---
                 const sessions = [];
                 let curr = new Date(gStart);
                 curr.setHours(0,0,0,0);
+                
+                // Keep looking until we find 24 valid sessions
                 while (sessions.length < 24) {
-                    if ([1,3,5].includes(curr.getDay())) sessions.push(new Date(curr));
+                    const day = curr.getDay(); // 1=Mon, 3=Wed, 5=Fri
+                    if (day === 1 || day === 3 || day === 5) {
+                        sessions.push(new Date(curr));
+                    }
                     curr.setDate(curr.getDate() + 1);
                 }
 
-                const golfersWithAbsences = golfers.filter(g => sessions.some(sDate => {
-                    return awayRecords.some(rec => {
+        html += `<h3 style="color: #444; border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-top: 20px;">Availability Grid</h3>`;
+        html += `<table border="1" cellpadding="2" style="border-collapse: collapse; font-size: 9px; border: 1px solid #999; width: 100%;">`;
+        html += `<tr style="background-color: #444; color: #fff;"><th style="padding: 4px; text-align: left;">Golfer</th>`;
+        sessions.forEach(d => html += `<th style="text-align: center;">${d.toLocaleDateString('en-GB', {day:'2-digit', month:'2-digit'})}</th>`);
+        html += `</tr>`;
+        
+        golfers.forEach((g, idx) => {
+            html += `<tr style="background-color: ${idx % 2 === 0 ? '#fff' : '#f2f2f2'};"><td style="padding: 3px; font-weight: bold;">${g.name}</td>`;
+            sessions.forEach(sDate => {
+                const sTime = sDate.getTime();
+                const dayName = dayNames[sDate.getDay()];
+                const isNormalDay = g.play_days?.includes(dayName);
+                const isExtraDay = extraRecords.some(e => e.golfer_id === g._id && new Date(e.date).setHours(0,0,0,0) === sTime);
+
+                if (!isNormalDay && !isExtraDay) {
+                    html += `<td style="padding: 1px; background-color: #e0e0e0;"></td>`;
+                } else {
+                    const isAway = awayRecords.some(rec => {
                         const gId = rec.golfer_id?._id || rec.golfer_id;
                         if (gId.toString() !== g._id.toString()) return false;
                         const start = new Date(rec.date_from).setHours(0,0,0,0);
-                        if (rec.indefinite) return sDate.getTime() >= start;
-                        const end = new Date(rec.date_to).setHours(23,59,59,999);
-                        return (sDate.getTime() >= start && sDate.getTime() <= end);
+                        const end = rec.indefinite ? Infinity : new Date(rec.date_to).setHours(23,59,59,999);
+                        return sTime >= start && sTime <= end;
                     });
-                }));
+                    html += `<td style="padding: 1px; text-align: center; border: 1px solid #999;">
+                        <div style="background-color: ${isAway ? '#f44336' : '#4caf50'}; height: 10px; width: 100%;"></div>
+                    </td>`;
+                }
+            });
+            html += `</tr>`;
+        });
+        html += `</table><p>Regards,<br>Nick</p></div>`;
 
-                html += `<h3 style="color: #444; border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-top: 20px;">Availability Grid</h3>`;
-                html += `<table border="1" cellpadding="2" style="border-collapse: collapse; font-size: 9px; border: 1px solid #999; width: 100%;">`;
-                html += `<tr style="background-color: #444; color: #fff;">`;
-                html += `<th style="padding: 4px; text-align: left; min-width: 80px;">Golfer</th>`;
-                sessions.forEach(d => {
-                    html += `<th style="text-align: center;">${d.toLocaleDateString('en-GB', {day:'2-digit', month:'2-digit'})}</th>`;
-                });
-                html += `</tr>`;
-                
-                golfersWithAbsences.forEach((g, idx) => {
-                    html += `<tr style="background-color: ${idx % 2 === 0 ? '#fff' : '#f2f2f2'};">`;
-                    html += `<td style="padding: 3px; font-weight: bold;">${g.name}</td>`;
-                    sessions.forEach(sDate => {
-                        const isAway = awayRecords.some(rec => {
-                            const gId = rec.golfer_id?._id || rec.golfer_id;
-                            if (gId.toString() !== g._id.toString()) return false;
-                            const start = new Date(rec.date_from).setHours(0,0,0,0);
-                            if (rec.indefinite) return sDate.getTime() >= start;
-                            const end = new Date(rec.date_to).setHours(23,59,59,999);
-                            return (sDate.getTime() >= start && sDate.getTime() <= end);
-                        });
-                        html += `<td style="padding: 1px; text-align: center; border: 1px solid #999;">
-                            <div style="background-color: ${isAway ? '#f44336' : '#4caf50'}; height: 10px; width: 100%;"></div>
-                        </td>`;
-                    });
-                    html += `</tr>`;
-                });
-                html += `</table><p>Regards,<br>Admin</p></div>`;
-
-                document.getElementById('emailDraft').innerHTML = html;
-                document.getElementById('previewSection').style.display = 'block';
-
-            } catch (err) { 
-                console.error("Generator Error:", err);
-                alert("Generation failed. Check the console (F12) for details."); 
-            }
-        }
+        document.getElementById('emailDraft').innerHTML = html;
+        document.getElementById('previewSection').style.display = 'block';
+    } catch (err) { 
+        console.error("Generator Error:", err);
+        alert("Generation failed. Check the console (F12) for details."); 
+    }
+}
 
         async function openEmailClient() {
             try {

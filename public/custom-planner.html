@@ -84,18 +84,18 @@
             <div class="control-group">
                 <label>1. Select Golfer:</label>
                 <select id="golferSelect">
-                    <option value="">Loading golfers...</option>
+                    <option value="">Loading...</option>
                 </select>
             </div>
 
             <div class="control-group">
-                <label>2. Start From:</label>
+                <label>2. Start Date:</label>
                 <input type="date" id="startDate">
             </div>
 
             <div class="control-group">
-                <label>3. Number of Sessions:</label>
-                <input type="number" id="sessionCount" value="12" min="1" max="50">
+                <label>3. End Date:</label>
+                <input type="date" id="endDate">
             </div>
 
             <button onclick="generateCustomPlanner()">Generate Table</button>
@@ -131,15 +131,19 @@
     const output = document.getElementById('plannerOutput');
     const golferId = document.getElementById('golferSelect').value;
     const startInput = document.getElementById('startDate').value;
-    const count = parseInt(document.getElementById('sessionCount').value);
+    const endInput = document.getElementById('endDate').value;
 
     if (!golferId) return alert("Please select a golfer.");
-    if (!startInput) return alert("Please select a start date.");
-    if (isNaN(count) || count <= 0) return alert("Please enter a valid number of sessions.");
+    if (!startInput || !endInput) return alert("Please select both start and end dates.");
+    
+    const startDate = new Date(startInput);
+    const endDate = new Date(endInput);
+    if (startDate > endDate) return alert("Start date must be before end date.");
 
     output.innerHTML = "Generating personalized schedule...";
 
     try {
+        // Fetch all data in parallel
         const [golfersRes, awayRes, extraRes] = await Promise.all([
             fetch('/api/golfers'),
             fetch('/api/unavailable/all'),
@@ -151,48 +155,54 @@
         const awayRecords = await awayRes.json();
         const extraDatesRaw = await extraRes.json();
         
-        const extraDates = extraDatesRaw.map(e => new Date(e.date).setHours(0,0,0,0));
-        const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-        
-        const sessions = [];
-        let curr = new Date(startInput);
-        curr.setHours(0, 0, 0, 0);
+        // Normalize Extra Dates to timestamps for reliable comparison
+        const extraDates = extraDatesRaw.map(e => {
+            const d = new Date(e.date);
+            d.setHours(0, 0, 0, 0);
+            return d.getTime();
+        });
 
-        let safetyExit = 0; 
-        while (sessions.length < count && safetyExit < 365) {
+        const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        const sessions = [];
+        let curr = new Date(startDate);
+        curr.setHours(0, 0, 0, 0);
+        
+        // Loop from Start Date to End Date
+        while (curr <= endDate) {
             const sessionTime = curr.getTime();
             const dayName = dayNames[curr.getDay()];
             
             const isNormalDay = selectedGolfer.play_days.includes(dayName);
             const isExtraDay = extraDates.includes(sessionTime);
 
-            // LOGIC: If it's a day they usually play OR they asked for an extra day, 
-            // we include it in the table regardless of away status.
+            // Include in table if it's a normal playing day OR an extra day
             if (isNormalDay || isExtraDay) {
                 sessions.push({
                     date: new Date(curr),
-                    isExtra: isExtraDay && !isNormalDay,
-                    isNormal: isNormalDay
+                    isExtra: isExtraDay && !isNormalDay
                 });
             }
             curr.setDate(curr.getDate() + 1);
-            safetyExit++;
         }
 
+        if (sessions.length === 0) {
+            output.innerHTML = "<p>No scheduled playing days found in this date range.</p>";
+            document.getElementById('copyBtn').style.display = 'none';
+            return;
+        }
+
+        // Build Table
         let html = `<table id="emailTable" style="border-collapse: collapse; font-family: Arial, sans-serif; font-size: 13px; border: 1px solid #999; width: 100%; max-width: 280px;">`;
         html += `<tr style="background-color: #2e7d32; color: white;">`;
-        html += `<th colspan="2" style="border: 1px solid #999; padding: 10px; text-align: center;">Schedule for: ${selectedGolfer.name}</th>`;
+        html += `<th colspan="2" style="border: 1px solid #999; padding: 10px; text-align: center;">Schedule: ${selectedGolfer.name}</th>`;
         html += `</tr>`;
 
         sessions.forEach(sessionObj => {
-            const sessionDate = sessionObj.date;
-            const sessionTime = sessionDate.getTime();
-            
-            const dayShort = sessionDate.toLocaleDateString('en-GB', { weekday: 'short' });
-            const dateShort = sessionDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' });
+            const sessionTime = sessionObj.date.getTime();
+            const dayShort = sessionObj.date.toLocaleDateString('en-GB', { weekday: 'short' });
+            const dateShort = sessionObj.date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' });
             let displayDate = `${dayShort} ${dateShort}`;
             
-            // Helpful visual indicators
             if (sessionObj.isExtra) displayDate += " <span style='color:#2e7d32'>(Extra)</span>";
 
             const isAway = awayRecords.some(rec => {
@@ -208,7 +218,7 @@
             const color = isAway ? "#f44336" : "#4caf50";
 
             html += `<tr>`;
-            html += `<td style="border: 1px solid #999; padding: 6px; width: 130px; font-weight: bold; background: #f9f9f9;">${displayDate}</td>`;
+            html += `<td style="border: 1px solid #999; padding: 6px; font-weight: bold; background: #f9f9f9;">${displayDate}</td>`;
             html += `<td style="border: 1px solid #999; padding: 6px; text-align: center; font-weight: bold; color: white; background-color: ${color}; width: 60px;">${statusText}</td>`;
             html += `</tr>`;
         });

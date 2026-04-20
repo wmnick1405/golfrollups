@@ -517,6 +517,7 @@ app.post('/api/unavailable', protect, async (req, res) => {
         // Only run this if sendEmail is true AND the golfer has an email
         if (sendEmail === true) {
             const golfer = await Golfer.findById(golfer_id);
+            const adminMail = process.env.ADMIN_MAIL;
 
             if (golfer && golfer.email) {
                 const startStr = cleanFrom.toDateString();
@@ -528,7 +529,7 @@ app.post('/api/unavailable', protect, async (req, res) => {
                     from: 'your-email@gmail.com',
                     to: golfer.email,
                     subject: 'Unavailability Confirmation',
-                    text: `Hello ${golfer.name},\n\nThis is to confirm that your rollup unavailability has been logged ${dateText}.\n\nRegards,\nGolf Rollup Admin`
+                    text: `Hello ${golfer.name},\n\nThis is to confirm that your rollup unavailability has been logged ${dateText}.\n\nRegards,\n${adminMail}`
                 };
 
                 transporter.sendMail(mailOptions).catch(err => console.error("Email skip/fail:", err));

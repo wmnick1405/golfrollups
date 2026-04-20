@@ -219,6 +219,14 @@
             const data = [new ClipboardItem({ ["text/html"]: blob })];
             navigator.clipboard.write(data).then(() => alert("Content copied! Paste into your email."));
         }
+
+        
+        // Load the navigation bar
+        fetch('nav.html')
+            .then(response => response.text())
+            .then(data => { 
+                document.getElementById('nav-placeholder').innerHTML = data; 
+            });
     </script>
 </body>
 </html>

@@ -98,6 +98,15 @@
                 <input type="date" id="endDate">
             </div>
 
+            <div class="control-group">
+                <label>4. Filter Status:</label>
+                <select id="statusFilter" onchange="filterTable()">
+                    <option value="all">Show All</option>
+                    <option value="OK">Show OK Only</option>
+                    <option value="AWAY">Show AWAY Only</option>
+                </select>
+            </div>
+
             <button onclick="generateCustomPlanner()">Generate Table</button>
         </div>
 
@@ -128,108 +137,136 @@
         });
 
         async function generateCustomPlanner() {
-    const output = document.getElementById('plannerOutput');
-    const golferId = document.getElementById('golferSelect').value;
-    const startInput = document.getElementById('startDate').value;
-    const endInput = document.getElementById('endDate').value;
+            const output = document.getElementById('plannerOutput');
+            const golferId = document.getElementById('golferSelect').value;
+            const startInput = document.getElementById('startDate').value;
+            const endInput = document.getElementById('endDate').value;
 
-    if (!golferId) return alert("Please select a golfer.");
-    if (!startInput || !endInput) return alert("Please select both start and end dates.");
-    
-    const startDate = new Date(startInput);
-    const endDate = new Date(endInput);
-    if (startDate > endDate) return alert("Start date must be before end date.");
+            if (!golferId) return alert("Please select a golfer.");
+            if (!startInput || !endInput) return alert("Please select both start and end dates.");
 
-    output.innerHTML = "Generating personalized schedule...";
+            const startDate = new Date(startInput);
+            const endDate = new Date(endInput);
+            if (startDate > endDate) return alert("Start date must be before end date.");
 
-    try {
-        // Fetch all data in parallel
-        const [golfersRes, awayRes, extraRes] = await Promise.all([
-            fetch('/api/golfers'),
-            fetch('/api/unavailable/all'),
-            fetch(`/api/extra-availabilities/golfer/${golferId}`)
-        ]);
+            output.innerHTML = "Generating personalized schedule...";
 
-        const golfers = await golfersRes.json();
-        const selectedGolfer = golfers.find(g => g._id === golferId);
-        const awayRecords = await awayRes.json();
-        const extraDatesRaw = await extraRes.json();
-        
-        // Normalize Extra Dates to timestamps for reliable comparison
-        const extraDates = extraDatesRaw.map(e => {
-            const d = new Date(e.date);
-            d.setHours(0, 0, 0, 0);
-            return d.getTime();
-        });
+            try {
+                // Fetch all data in parallel
+                const [golfersRes, awayRes, extraRes] = await Promise.all([
+                    fetch('/api/golfers'),
+                    fetch('/api/unavailable/all'),
+                    fetch(`/api/extra-availabilities/golfer/${golferId}`)
+                ]);
 
-        const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-        const sessions = [];
-        let curr = new Date(startDate);
-        curr.setHours(0, 0, 0, 0);
-        
-        // Loop from Start Date to End Date
-        while (curr <= endDate) {
-            const sessionTime = curr.getTime();
-            const dayName = dayNames[curr.getDay()];
-            
-            const isNormalDay = selectedGolfer.play_days.includes(dayName);
-            const isExtraDay = extraDates.includes(sessionTime);
+                const golfers = await golfersRes.json();
+                const selectedGolfer = golfers.find(g => g._id === golferId);
+                const awayRecords = await awayRes.json();
+                const extraDatesRaw = await extraRes.json();
 
-            // Include in table if it's a normal playing day OR an extra day
-            if (isNormalDay || isExtraDay) {
-                sessions.push({
-                    date: new Date(curr),
-                    isExtra: isExtraDay && !isNormalDay
+                // Normalize Extra Dates to timestamps for reliable comparison
+                const extraDates = extraDatesRaw.map(e => {
+                    const d = new Date(e.date);
+                    d.setHours(0, 0, 0, 0);
+                    return d.getTime();
                 });
+
+                const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+                const sessions = [];
+                let curr = new Date(startDate);
+                curr.setHours(0, 0, 0, 0);
+
+                // Loop from Start Date to End Date
+                while (curr <= endDate) {
+                    const sessionTime = curr.getTime();
+                    const dayName = dayNames[curr.getDay()];
+
+                    const isNormalDay = selectedGolfer.play_days.includes(dayName);
+                    const isExtraDay = extraDates.includes(sessionTime);
+
+                    // Include in table if it's a normal playing day OR an extra day
+                    if (isNormalDay || isExtraDay) {
+                        sessions.push({
+                            date: new Date(curr),
+                            isExtra: isExtraDay && !isNormalDay
+                        });
+                    }
+                    curr.setDate(curr.getDate() + 1);
+                }
+
+                if (sessions.length === 0) {
+                    output.innerHTML = "<p>No scheduled playing days found in this date range.</p>";
+                    document.getElementById('copyBtn').style.display = 'none';
+                    return;
+                }
+
+                // Build Table
+                let html = `<table id="emailTable" style="border-collapse: collapse; font-family: Arial, sans-serif; font-size: 13px; border: 1px solid #999; width: 100%; max-width: 280px;">`;
+                html += `<tr style="background-color: #2e7d32; color: white;">`;
+                html += `<th colspan="2" style="border: 1px solid #999; padding: 10px; text-align: center;">Schedule: ${selectedGolfer.name}</th>`;
+                html += `</tr>`;
+
+                sessions.forEach(sessionObj => {
+                    const sessionTime = sessionObj.date.getTime();
+                    const dayShort = sessionObj.date.toLocaleDateString('en-GB', { weekday: 'short' });
+                    const dateShort = sessionObj.date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' });
+                    let displayDate = `${dayShort} ${dateShort}`;
+
+                    if (sessionObj.isExtra) displayDate += " <span style='color:#2e7d32'>(Extra)</span>";
+
+                    const isAway = awayRecords.some(rec => {
+                        const gId = rec.golfer_id._id || rec.golfer_id;
+                        if (gId.toString() !== golferId) return false;
+                        const start = new Date(rec.date_from).setHours(0, 0, 0, 0);
+                        if (rec.indefinite) return sessionTime >= start;
+                        const end = new Date(rec.date_to).setHours(23, 59, 59, 999);
+                        return (sessionTime >= start && sessionTime <= end);
+                    });
+
+                    const statusText = isAway ? "AWAY" : "OK";
+                    const color = isAway ? "#f44336" : "#4caf50";
+
+                    html += `<tr>`;
+                    html += `<td style="border: 1px solid #999; padding: 6px; font-weight: bold; background: #f9f9f9;">${displayDate}</td>`;
+                    html += `<td style="border: 1px solid #999; padding: 6px; text-align: center; font-weight: bold; color: white; background-color: ${color}; width: 60px;">${statusText}</td>`;
+                    html += `</tr>`;
+                });
+
+                html += `</table>`;
+                output.innerHTML = html;
+                document.getElementById('copyBtn').style.display = 'block';
+
+                filterTable(); // Apply initial filter state
+
+            } catch (err) {
+                console.error(err);
+                output.innerHTML = "Error generating custom planner.";
             }
-            curr.setDate(curr.getDate() + 1);
+
+
         }
 
-        if (sessions.length === 0) {
-            output.innerHTML = "<p>No scheduled playing days found in this date range.</p>";
-            document.getElementById('copyBtn').style.display = 'none';
-            return;
+        function filterTable() {
+    const filter = document.getElementById('statusFilter').value;
+    const table = document.getElementById('emailTable');
+    if (!table) return;
+
+    const rows = table.getElementsByTagName('tr');
+    
+    // Start from 1 to skip the header row
+    for (let i = 1; i < rows.length; i++) {
+        const statusCell = rows[i].getElementsByTagName('td')[1];
+        if (!statusCell) continue;
+        
+        const status = statusCell.textContent; // "OK" or "AWAY"
+        
+        if (filter === 'all') {
+            rows[i].style.display = "";
+        } else if (filter === status) {
+            rows[i].style.display = "";
+        } else {
+            rows[i].style.display = "none";
         }
-
-        // Build Table
-        let html = `<table id="emailTable" style="border-collapse: collapse; font-family: Arial, sans-serif; font-size: 13px; border: 1px solid #999; width: 100%; max-width: 280px;">`;
-        html += `<tr style="background-color: #2e7d32; color: white;">`;
-        html += `<th colspan="2" style="border: 1px solid #999; padding: 10px; text-align: center;">Schedule: ${selectedGolfer.name}</th>`;
-        html += `</tr>`;
-
-        sessions.forEach(sessionObj => {
-            const sessionTime = sessionObj.date.getTime();
-            const dayShort = sessionObj.date.toLocaleDateString('en-GB', { weekday: 'short' });
-            const dateShort = sessionObj.date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' });
-            let displayDate = `${dayShort} ${dateShort}`;
-            
-            if (sessionObj.isExtra) displayDate += " <span style='color:#2e7d32'>(Extra)</span>";
-
-            const isAway = awayRecords.some(rec => {
-                const gId = rec.golfer_id._id || rec.golfer_id;
-                if (gId.toString() !== golferId) return false;
-                const start = new Date(rec.date_from).setHours(0, 0, 0, 0);
-                if (rec.indefinite) return sessionTime >= start;
-                const end = new Date(rec.date_to).setHours(23, 59, 59, 999);
-                return (sessionTime >= start && sessionTime <= end);
-            });
-
-            const statusText = isAway ? "AWAY" : "OK";
-            const color = isAway ? "#f44336" : "#4caf50";
-
-            html += `<tr>`;
-            html += `<td style="border: 1px solid #999; padding: 6px; font-weight: bold; background: #f9f9f9;">${displayDate}</td>`;
-            html += `<td style="border: 1px solid #999; padding: 6px; text-align: center; font-weight: bold; color: white; background-color: ${color}; width: 60px;">${statusText}</td>`;
-            html += `</tr>`;
-        });
-
-        html += `</table>`;
-        output.innerHTML = html;
-        document.getElementById('copyBtn').style.display = 'block';
-
-    } catch (err) {
-        console.error(err);
-        output.innerHTML = "Error generating custom planner.";
     }
 }
 

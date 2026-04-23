@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Competition Manager</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+            background: #f4f7f6;
+        }
+
+        .box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 900px;
+            margin: auto;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .input-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+
+        .btn {
+            padding: 8px 12px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+        }
+
+        .btn-save {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-del {
+            background: #dc3545;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="nav-placeholder"></div>
+    <div class="box">
+        <h1>Competition Manager</h1>
+
+        <div class="input-group">
+            <input type="text" id="newName" placeholder="Competition Name">
+            <input type="text" id="newDesc" placeholder="Description">
+            <button class="btn btn-save" onclick="addCompetition()">Add New</button>
+        </div>
+
+        <table id="compTable">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Dates</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script src="js/shared.js"></script>
+    <script>
+        async function loadComps() {
+            try {
+                const res = await fetch('/api/competition-names');
+                if (!res.ok) throw new Error("Failed to fetch");
+
+                const comps = await res.json();
+                const tbody = document.querySelector('#compTable tbody');
+                tbody.innerHTML = '';
+
+                comps.forEach(c => {
+                    const name = c['comp-name'] || "Unknown";
+                    const desc = c.desc || "";
+                    // Join dates with a newline character (\n) to put them on separate lines
+                    const dates = (c.CompetitionDates || []).join('\n');
+                    tbody.innerHTML += `<tr>
+    <td>${name}</td>
+    <td>
+        <textarea id="desc-${c._id}" rows="1" style="width: 100%; overflow: hidden; resize: none;" 
+                  oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'">${desc}</textarea>
+    </td>
+    <td>
+        <textarea id="dates-${c._id}" rows="3" style="width: 100%;">${dates}</textarea>
+    </td>
+    <td>
+        <button class="btn btn-save" onclick="updateComp('${c._id}')">Save</button>
+        <button class="btn btn-del" onclick="deleteComp('${c._id}')">Delete</button>
+    </td>
+</tr>`;
+setTimeout(() => {
+    document.querySelectorAll('textarea[id^="desc-"]').forEach(ta => {
+        ta.style.height = ta.scrollHeight + 'px';
+    });
+}, 0);
+                });
+            } catch (err) {
+                console.error("Load Error:", err);
+            }
+        }
+
+        async function addCompetition() {
+            const name = document.getElementById('newName').value;
+            const desc = document.getElementById('newDesc').value;
+            await fetch('/api/competition-names', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 'comp-name': name, 'desc': desc, 'CompetitionDates': [] })
+            });
+            loadComps();
+        }
+
+        async function updateComp(id) {
+            const desc = document.getElementById(`desc-${id}`).value;
+            const datesRaw = document.getElementById(`dates-${id}`).value;
+
+            // Split by newline AND comma, then filter out empty lines/spaces
+            const dates = datesRaw.split(/[\n,]+/).map(d => d.trim()).filter(d => d !== "");
+
+            await fetch(`/api/competition-names/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ desc: desc, CompetitionDates: dates })
+            });
+            alert("Updated!");
+            loadComps();
+        }
+
+        async function deleteComp(id) {
+            if (!confirm("WARNING: This will delete the competition and all associated data. Proceed?")) return;
+            await fetch(`/api/competition-names/${id}`, { method: 'DELETE' });
+            loadComps();
+        }
+
+        document.addEventListener('DOMContentLoaded', loadComps);
+        fetch('nav.html').then(r => r.text()).then(d => document.getElementById('nav-placeholder').innerHTML = d);
+    </script>
+</body>
+
+</html>

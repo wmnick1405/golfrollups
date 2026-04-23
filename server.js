@@ -140,7 +140,9 @@ const Unavailable = mongoose.model('Unavailable', new mongoose.Schema({
 }));
 
 const CompetitionName = mongoose.model('CompetitionName', new mongoose.Schema({
-    'comp-name': { type: String, required: true }
+    'comp-name': { type: String, required: true },
+    'desc': { type: String, required: true },
+    'CompetitionDates': [String] // This will hold an array of date strings like ["2025-02-24", "2025-03-03"]   
 }), 'competition-names');
 
 // Extra Availability for golfers (e.g. if they can play on a day they normally don't)
@@ -420,7 +422,7 @@ app.delete('/api/golfers/:id', protect, async (req, res) => {
     } catch (err) { res.status(500).json({ error: "Delete failed" }); }
 });
 
-// Get list of all competition names for the dropdown in rollup creation
+// COMPETITION NAME ROUTES
 app.get('/api/competition-names', protect, async (req, res) => {
     try {
         const comps = await CompetitionName.find().sort({ 'comp-name': 1 });
@@ -429,6 +431,25 @@ app.get('/api/competition-names', protect, async (req, res) => {
     } catch (err) {
         res.status(500).json({ error: "Failed to fetch competition names" });
     }
+});
+
+// 2. POST (Create)
+app.post('/api/competition-names', protect, async (req, res) => {
+    const newComp = new CompetitionName(req.body);
+    await newComp.save();
+    res.status(201).send();
+});
+
+// 3. PUT (Update)
+app.put('/api/competition-names/:id', protect, async (req, res) => {
+    await CompetitionName.findByIdAndUpdate(req.params.id, req.body);
+    res.send();
+});
+
+// 4. DELETE
+app.delete('/api/competition-names/:id', protect, async (req, res) => {
+    await CompetitionName.findByIdAndDelete(req.params.id);
+    res.send();
 });
 
 // 8. AVAILABILITY & ABSENCE ROUTES

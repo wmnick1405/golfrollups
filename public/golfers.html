@@ -1,22 +1,23 @@
 <!DOCTYPE html>
 <html>
 <!-- Golfers Admin - This is the main page for managing golfer information and availability. -->
+
 <head>
     <title>Golfers Admin</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body {
-                font-family: Arial;
-                /* background: #f2f2f2;> */
-                background-image: url('./images/IMG_0376a.jpg');
-                background-size: 100%;
-                background-position: center;
-                background-attachment: fixed;
-                background-repeat: no-repeat;
+            font-family: Arial;
+            /* background: #f2f2f2;> */
+            background-image: url('./images/IMG_0376a.jpg');
+            background-size: 100%;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
 
-                padding: 30px;
-                margin: 0;
-                padding: 30px;
+            padding: 30px;
+            margin: 0;
+            padding: 30px;
         }
 
         .container {
@@ -202,44 +203,48 @@
         <h2>Golfers Admin</h2>
 
         <div class="add-box">
-    <h3>Add New Golfer</h3>
-    <div id="msg"></div>
-    
-    <div class="input-row">
-        <div class="field-group" style="flex: 1.5;">
-            <label>Name (Required)</label>
-            <input type="text" id="newName" placeholder="Full Name" style="height: 40px; box-sizing: border-box; background-color: whitesmoke;">
-        </div>
+            <h3>Add New Golfer</h3>
+            <div id="msg"></div>
 
-        <div class="field-group" style="flex: 1;">
-            <label>Phone</label>
-            <input type="text" id="newPhone" placeholder="Phone" style="height: 40px; box-sizing: border-box; background-color: whitesmoke;">
-        </div>
+            <div class="input-row">
+                <div class="field-group" style="flex: 1.5;">
+                    <label>Name (Required)</label>
+                    <input type="text" id="newName" placeholder="Full Name"
+                        style="height: 40px; box-sizing: border-box; background-color: whitesmoke;">
+                </div>
 
-        <div class="field-group" style="flex: 1.5;">
-            <label>Email</label>
-            <input type="email" id="newEmail" placeholder="Email" style="height: 40px; box-sizing: border-box; background-color: whitesmoke;">
-        </div>
-        
-        <div class="field-group">
-            <label>Default Play Days</label>
-            <div id="daysPicker">
-                <label class="checkbox-label"><input type="checkbox" class="day-opt" value="Monday"> Mon</label>
-                <label class="checkbox-label"><input type="checkbox" class="day-opt" value="Wednesday"> Wed</label>
-                <label class="checkbox-label"><input type="checkbox" class="day-opt" value="Friday"> Fri</label>
+                <div class="field-group" style="flex: 1;">
+                    <label>Phone</label>
+                    <input type="text" id="newPhone" placeholder="Phone"
+                        style="height: 40px; box-sizing: border-box; background-color: whitesmoke;">
+                </div>
+
+                <div class="field-group" style="flex: 1.5;">
+                    <label>Email</label>
+                    <input type="email" id="newEmail" placeholder="Email"
+                        style="height: 40px; box-sizing: border-box; background-color: whitesmoke;">
+                </div>
+
+                <div class="field-group">
+                    <label>Default Play Days</label>
+                    <div id="daysPicker">
+                        <label class="checkbox-label"><input type="checkbox" class="day-opt" value="Monday"> Mon</label>
+                        <label class="checkbox-label"><input type="checkbox" class="day-opt" value="Wednesday">
+                            Wed</label>
+                        <label class="checkbox-label"><input type="checkbox" class="day-opt" value="Friday"> Fri</label>
+                    </div>
+                </div>
+
+                <div class="exempt-wrapper">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="newExempt">
+                        <span>Booking Exempt</span>
+                    </label>
+                </div>
+
+                <button class="btn-add" onclick="addGolfer()" style="height: 40px;">Add Golfer</button>
             </div>
         </div>
-
-        <div class="exempt-wrapper">
-            <label class="checkbox-label">
-                <input type="checkbox" id="newExempt">
-                <span>Booking Exempt</span>
-            </label>
-        </div>
-
-        <button class="btn-add" onclick="addGolfer()" style="height: 40px;">Add Golfer</button>
-    </div>
-</div>
 
         <table id="golfersTable">
             <thead>
@@ -255,6 +260,8 @@
             <tbody></tbody>
         </table>
     </div>
+
+    <script src="js/shared.js?v=2"></script>
 
     <script>
         function showMsg(text, isError = false) {
@@ -358,10 +365,19 @@
                 });
 
                 if (res.ok) {
-                    alert("Golfer updated!");
-                    loadGolfers();
+                    showToast("Golfer updated!");
+                    await loadGolfers(); // Wait for the reload to finish
+                } else {
+                    // Handle server-side errors (like 400 or 500)
+                    const errorData = await res.json().catch(() => ({ error: "Unknown error" }));
+                    console.error("Update failed:", errorData);
+                    showToast("Error: " + (errorData.error || "Update failed"));
                 }
-            } catch (err) { alert("Server error"); }
+            } catch (err) {
+                // This catches network connectivity issues
+                console.error("Network error:", err);
+                showToast("Server unavailable. Please check your connection.");
+            }
         }
 
         async function deleteGolfer(id) {

@@ -1,22 +1,23 @@
 <!DOCTYPE html>
 <html>
 <!-- Golfer Availability & Management - This files enables the recording of notified absences or extra play dates per player. -->
+
 <head>
     <title>Golfer Availability & Management</title>
     <style>
-         body {
-                font-family: Arial;
-                /* background: #f2f2f2;> */
-                background-image: url('./images/IMG_0376a.jpg');
-                background-size: 100%;
-                background-position: center;
-                background-attachment: fixed;
-                background-repeat: no-repeat;
+        body {
+            font-family: Arial;
+            /* background: #f2f2f2;> */
+            background-image: url('./images/IMG_0376a.jpg');
+            background-size: 100%;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
 
-                padding: 30px;
-                margin: 0;
-                padding: 30px;
-            }
+            padding: 30px;
+            margin: 0;
+            padding: 30px;
+        }
 
         .controls,
         .quick-add {
@@ -140,6 +141,15 @@
 
             <div id="indefiniteNotice" class="indefinite-notice hidden">
                 This golfer is currently marked as Indefinitely Unavailable.
+            </div>
+
+            <div id="pendingEmailArea" class="hidden"
+                style="background: #fff3cd; padding: 15px; border: 1px solid #ffeeba; border-radius: 8px; margin-bottom: 20px;">
+                <p><strong>Pending Confirmation:</strong> <span id="pendingCount">0</span> record(s) added this session.
+                </p>
+                <button onclick="sendSummaryEmail()" style="background: #28a745;">Send Summary Email to Golfer</button>
+                <button onclick="clearPending()" style="background: #6c757d; margin-left: 10px;">Done (No
+                    Email)</button>
             </div>
 
             <div id="tableContainer">
@@ -291,51 +301,75 @@
             });
         }
 
+        // Global array to track dates added during this specific browser session
+        let pendingDates = [];
+
         async function saveUnavailability() {
-    const golfer_id = document.getElementById('golferSelect').value;
-    const date_from = document.getElementById('newDateFrom').value;
-    const date_to = document.getElementById('newDateTo').value;
-    const indefinite = document.getElementById('newIndefinite').checked;
+            const golfer_id = document.getElementById('golferSelect').value;
+            const date_from = document.getElementById('newDateFrom').value;
+            const date_to = document.getElementById('newDateTo').value;
+            const indefinite = document.getElementById('newIndefinite').checked;
 
-    if (!date_from) return alert("Please select a starting date");
-    if (!indefinite && !date_to) return alert("Please select an end date");
+            if (!date_from) return alert("Please select a starting date");
 
-    // 1. Conflict check logic (remains the same)
-    const newStart = new Date(date_from).getTime();
-    const newEnd = indefinite ? Infinity : new Date(date_to).getTime();
-    const conflict = window.currentRecords.find(rec => {
-        const existStart = new Date(rec.date_from).getTime();
-        const existEnd = rec.indefinite ? Infinity : new Date(rec.date_to).getTime();
-        return (newStart <= existEnd && newEnd >= existStart);
-    });
+            // Save to DB (Notice we removed the sendEmail flag here)
+            const res = await fetch('/api/unavailable', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ golfer_id, date_from, date_to, indefinite, sendEmail: false })
+            });
 
-    if (conflict && !confirm("Conflict detected. Save anyway?")) return;
+            if (res.ok) {
+                // Track this date for our summary email
+                const dateRange = indefinite ?
+                    `${formatDate(date_from)} (Indefinite)` :
+                    `${formatDate(date_from)} to ${formatDate(date_to)}`;
 
-    // 2. NEW: Ask about the email notification
-    const sendEmail = confirm("Would you like to send a confirmation email to the golfer? Cancel if you do not wish to send an email.");
+                pendingDates.push(dateRange);
+                updatePendingUI();
 
-    // 3. Updated fetch with the 'sendEmail' flag included in the body
-    const res = await fetch('/api/unavailable', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-            golfer_id, 
-            date_from, 
-            date_to, 
-            indefinite,
-            sendEmail // This tells the server whether to trigger Nodemailer
-        })
-    });
+                showToast("Record added to list.");
+                fetchGolferStatus();
+            }
+        }
 
-    if (res.ok) {
-        // Clear fields or refresh as normal
-        fetchGolferStatus();
-        // Optional: Provide feedback that it saved
-        console.log(sendEmail ? "Saved and email sent." : "Saved (No email sent).");
-    } else {
-        alert("Error saving record.");
-    }
-}
+        function updatePendingUI() {
+            const area = document.getElementById('pendingEmailArea');
+            const count = document.getElementById('pendingCount');
+            if (pendingDates.length > 0) {
+                area.classList.remove('hidden');
+                count.textContent = pendingDates.length;
+            } else {
+                area.classList.add('hidden');
+            }
+        }
+
+        function clearPending() {
+            pendingDates = [];
+            updatePendingUI();
+            showToast("Session cleared.");
+        }
+
+        async function sendSummaryEmail() {
+            const golfer_id = document.getElementById('golferSelect').value;
+            if (pendingDates.length === 0) return;
+
+            const res = await fetch('/api/unavailable/send-summary', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    golfer_id,
+                    dates: pendingDates
+                })
+            });
+
+            if (res.ok) {
+                showToast("Summary email sent!");
+                clearPending();
+            } else {
+                alert("Failed to send summary email.");
+            }
+        }
 
         async function saveExtraAvailability() {
             const golfer_id = document.getElementById('golferSelect').value;

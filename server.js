@@ -73,9 +73,9 @@ mongoose.connection.once('open', async () => {
 });
 
 const userSchema = new mongoose.Schema({
-    username: { 
-        type: String, 
-        required: true, 
+    username: {
+        type: String,
+        required: true,
         unique: true,
         match: [/.+\@.+\..+/, 'Please use a valid email address']
     },
@@ -263,10 +263,10 @@ app.post('/api/login', async (req, res) => {
 app.post('/api/admin/change-password', protect, async (req, res) => {
     try {
         const { newPassword } = req.body;
-        
+
         if (!isPasswordRobust(newPassword)) {
-            return res.status(400).json({ 
-                error: "Password too weak. Must be at least 8 characters long and include a number and a special character (!@#$%^&*)." 
+            return res.status(400).json({
+                error: "Password too weak. Must be at least 8 characters long and include a number and a special character (!@#$%^&*)."
             });
         }
 
@@ -344,7 +344,7 @@ app.get('/api/admin/list', protect, async (req, res) => {
 app.post('/api/admin/delete-user', protect, async (req, res) => {
     try {
         const { userId } = req.body;
-        
+
         // Prevent accidental self-deletion
         if (userId === req.session.userId) {
             return res.status(400).json({ error: "You cannot delete your own account while logged in." });
@@ -586,6 +586,33 @@ app.delete('/api/unavailable/:id', protect, async (req, res) => {
         await Unavailable.findByIdAndDelete(req.params.id);
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: "Delete failed" }); }
+});
+
+app.post('/api/unavailable/send-summary', protect, async (req, res) => {
+    try {
+        const { golfer_id, dates } = req.body;
+        const golfer = await Golfer.findById(golfer_id);
+
+        if (!golfer || !golfer.email) {
+            return res.status(400).json({ error: "Golfer has no email on file." });
+        }
+
+        // Build a bulleted list of dates
+        const dateList = dates.map(d => `• ${d}`).join('\n');
+
+        const mailOptions = {
+            from: 'wmnick1405@gmail.com',
+            to: golfer.email,
+            subject: 'Rollup Absence Confirmation',
+            text: `Hello ${golfer.name},\n\nThis is to confirm your absences have been recorded for the following dates:\n\n${dateList}\n\nRegards,\nNick Osborne`
+        };
+
+        await transporter.sendMail(mailOptions);
+        res.json({ success: true });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to send summary email." });
+    }
 });
 
 // API to save extra availability

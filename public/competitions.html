@@ -20,6 +20,18 @@
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
 
+        /* New Search Bar Styling */
+        .search-group {
+            background: #eef2f7;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            border: 1px solid #d1d9e6;
+        }
+
         .input-group {
             display: grid;
             grid-template-columns: 1fr 1fr auto;
@@ -40,15 +52,19 @@
             text-align: left;
         }
 
+        input[type="text"],
+        input[type="search"] {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
         .btn {
             padding: 8px 12px;
             cursor: pointer;
             border: none;
             border-radius: 4px;
-        }
-
-        .btn:hover {
-            opacity: 0.9;
+            font-weight: bold;
         }
 
         .btn-save {
@@ -56,16 +72,12 @@
             color: white;
         }
 
-        .btn-save:hover {
-            opacity: 0.9;
-        }
-
         .btn-del {
             background: #dc3545;
             color: white;
         }
 
-        .btn-del:hover {
+        .btn:hover {
             opacity: 0.9;
         }
     </style>
@@ -76,10 +88,25 @@
     <div class="box">
         <h1>Competition Manager</h1>
 
+        <!-- ADD NEW SECTION -->
         <div class="input-group">
             <input type="text" id="newName" placeholder="Competition Name">
             <input type="text" id="newDesc" placeholder="Description">
             <button class="btn btn-save" onclick="addCompetition()">Add New</button>
+        </div>
+
+        <!-- SEARCH SECTION -->
+        <div class="search-group">
+            <div>
+                <label style="font-size: 0.8em; font-weight: bold;">Search by Name:</label>
+                <input type="search" id="searchName" placeholder="Type to filter..." style="width: 100%;"
+                    oninput="filterTable()">
+            </div>
+            <div>
+                <label style="font-size: 0.8em; font-weight: bold;">Search by Date:</label>
+                <input type="search" id="searchDate" placeholder="e.g. yyyy-mm-dd" style="width: 100%;"
+                    oninput="filterTable()">
+            </div>
         </div>
 
         <table id="compTable">
@@ -97,61 +124,101 @@
 
     <script src="js/shared.js"></script>
     <script>
+        let allComps = []; // Local cache for filtering
+
         async function loadComps() {
             try {
                 const res = await fetch('/api/competition-names');
                 if (!res.ok) throw new Error("Failed to fetch");
 
-                const comps = await res.json();
-                const tbody = document.querySelector('#compTable tbody');
-                tbody.innerHTML = '';
-
-                comps.forEach(c => {
-                    const name = c['comp-name'] || "Unknown";
-                    const desc = c.desc || "";
-                    // Join dates with a newline character (\n) to put them on separate lines
-                    const dates = (c.CompetitionDates || []).join('\n');
-                    tbody.innerHTML += `<tr>
-    <td>${name}</td>
-    <td>
-        <textarea id="desc-${c._id}" rows="1" style="width: 100%; overflow: hidden; resize: none;" 
-                  oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'">${desc}</textarea>
-    </td>
-    <td>
-        <textarea id="dates-${c._id}" rows="3" style="width: 100%;">${dates}</textarea>
-    </td>
-    <td>
-        <button class="btn btn-save" onclick="updateComp('${c._id}')">Save</button>
-        <button class="btn btn-del" onclick="deleteComp('${c._id}')">Delete</button>
-    </td>
-</tr>`;
-setTimeout(() => {
-    document.querySelectorAll('textarea[id^="desc-"]').forEach(ta => {
-        ta.style.height = ta.scrollHeight + 'px';
-    });
-}, 0);
-                });
+                allComps = await res.json();
+                renderTable(allComps); // Initial render
             } catch (err) {
                 console.error("Load Error:", err);
             }
         }
 
+        // Logic for filtering by name (partial/non-case sensitive) and date
+        function filterTable() {
+            const nameQuery = document.getElementById('searchName').value.toLowerCase();
+            const dateQuery = document.getElementById('searchDate').value.trim();
+
+            const filtered = allComps.filter(c => {
+                const compName = (c['comp-name'] || "").toLowerCase();
+                const compDates = (c.CompetitionDates || []).join(" ");
+
+                // Matches name query AND matches date query
+                const matchesName = compName.includes(nameQuery);
+                const matchesDate = compDates.includes(dateQuery);
+
+                return matchesName && matchesDate;
+            });
+
+            renderTable(filtered);
+        }
+
+        function renderTable(data) {
+            const tbody = document.querySelector('#compTable tbody');
+            tbody.innerHTML = '';
+
+            data.forEach(c => {
+                const name = c['comp-name'] || "Unknown";
+                const desc = c.desc || "";
+                const dates = (c.CompetitionDates || []).join('\n');
+
+                tbody.innerHTML += `<tr>
+                    <td>${name}</td>
+                    <td>
+                        <textarea id="desc-${c._id}" rows="1" style="width: 100%; overflow: hidden; resize: none;" 
+                                  oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'">${desc}</textarea>
+                    </td>
+                    <td>
+                        <textarea id="dates-${c._id}" rows="3" style="width: 100%;">${dates}</textarea>
+                    </td>
+                    <td>
+                        <button class="btn btn-save" onclick="updateComp('${c._id}')">Save</button>
+                        <button class="btn btn-del" onclick="deleteComp('${c._id}')">Delete</button>
+                    </td>
+                </tr>`;
+            });
+
+            // Adjust textareas after render
+            setTimeout(() => {
+                document.querySelectorAll('textarea[id^="desc-"]').forEach(ta => {
+                    ta.style.height = ta.scrollHeight + 'px';
+                });
+            }, 0);
+        }
+
         async function addCompetition() {
             const name = document.getElementById('newName').value;
             const desc = document.getElementById('newDesc').value;
-            await fetch('/api/competition-names', {
+            if (!name) return alert("Name is required");
+            if (!desc) return alert("Description is required");
+
+            const response = await fetch('/api/competition-names', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 'comp-name': name, 'desc': desc, 'CompetitionDates': [] })
             });
+
+            // Only show the toast if the server returns a successful status (200-299)
+            if (response.ok) {
+                showToast("Competition added");
+                loadComps(); // Refresh the list
+            } else {
+                console.error("Failed to add competition");
+                alert("Error: Could not save the competition.");
+            }
+            
             loadComps();
+            document.getElementById('newName').value = '';
+            document.getElementById('newDesc').value = '';
         }
 
         async function updateComp(id) {
             const desc = document.getElementById(`desc-${id}`).value;
             const datesRaw = document.getElementById(`dates-${id}`).value;
-
-            // Split by newline AND comma, then filter out empty lines/spaces
             const dates = datesRaw.split(/[\n,]+/).map(d => d.trim()).filter(d => d !== "");
 
             await fetch(`/api/competition-names/${id}`, {
@@ -159,18 +226,18 @@ setTimeout(() => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ desc: desc, CompetitionDates: dates })
             });
-            alert("Updated!");
+            showToast("Competition updated");
             loadComps();
         }
 
         async function deleteComp(id) {
-            if (!confirm("WARNING: This will delete the competition and all associated data. Proceed?")) return;
+            if (!confirm("Proceed with deletion?")) return;
             await fetch(`/api/competition-names/${id}`, { method: 'DELETE' });
+            showToast("Competition deleted");
             loadComps();
         }
 
         document.addEventListener('DOMContentLoaded', loadComps);
-        fetch('nav.html').then(r => r.text()).then(d => document.getElementById('nav-placeholder').innerHTML = d);
     </script>
 </body>
 

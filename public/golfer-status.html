@@ -1,26 +1,30 @@
 <!DOCTYPE html>
 <html>
-<!-- Golfer Availability & Management - This files enables the recording of notified absences or extra play dates per player. -->
-
 <head>
     <title>Golfer Availability & Management</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body {
-            font-family: Arial;
-            /* background: #f2f2f2;> */
+            font-family: Arial, sans-serif;
             background-image: url('./images/IMG_0376a.jpg');
-            background-size: 100%;
+            background-size: cover;
             background-position: center;
             background-attachment: fixed;
             background-repeat: no-repeat;
-
-            padding: 30px;
+            padding: 20px;
             margin: 0;
-            padding: 30px;
         }
 
-        .controls,
-        .quick-add {
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .controls, .quick-add {
             margin-bottom: 20px;
             padding: 20px;
             background: #f9f9f9;
@@ -28,28 +32,20 @@
             border-radius: 8px;
         }
 
-        /* The Split Pane Layout */
         .status-container {
             display: flex;
             gap: 20px;
+            flex-wrap: wrap; 
             align-items: flex-start;
         }
 
         .column {
             flex: 1;
-            min-width: 0;
+            min-width: 320px; 
         }
 
-        /* Original Styles */
-        .quick-add {
-            background: #eef9f0;
-            border-color: #c3e6cb;
-        }
-
-        .quick-add.extra-pane {
-            background: #e3f2fd;
-            border-color: #bbdefb;
-        }
+        .quick-add { background: #eef9f0; border-color: #c3e6cb; }
+        .quick-add.extra-pane { background: #e3f2fd; border-color: #bbdefb; }
 
         table {
             border-collapse: collapse;
@@ -58,51 +54,78 @@
             background: white;
         }
 
-        th,
-        td {
+        th, td {
             border: 1px solid #ccc;
-            padding: 10px;
+            padding: 12px;
             text-align: left;
         }
 
+        th { background-color: #f2f2f2; }
+
         .indefinite-notice {
-            padding: 20px;
+            padding: 15px;
             background-color: #fff3cd;
             border: 1px solid #ffeeba;
             color: #856404;
             border-radius: 4px;
             font-weight: bold;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
 
-        select,
-        input {
-            padding: 8px;
-            margin-right: 10px;
+        select, input {
+            padding: 10px;
+            margin: 5px 0;
             border: 1px solid #ccc;
             border-radius: 4px;
+            font-size: 16px; 
         }
 
         button {
-            padding: 8px 15px;
+            padding: 10px 20px;
             cursor: pointer;
             background: #2196F3;
             color: white;
             border: none;
             border-radius: 50px;
+            font-weight: bold;
+            transition: 0.3s;
         }
 
-        button:hover {
-            opacity: 0.9;
-        }
+        button:hover { opacity: 0.8; }
 
-        .hidden {
-            display: none;
-        }
+        .hidden { display: none; }
 
         .form-group {
-            margin-bottom: 10px;
-            display: inline-block;
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @media screen and (max-width: 600px) {
+            body { padding: 10px; }
+            .status-container { flex-direction: column; }
+            .column { width: 100%; min-width: 100%; }
+            table, thead, tbody, th, td, tr { display: block; }
+            thead tr { position: absolute; top: -9999px; left: -9999px; }
+            tr { border: 1px solid #ccc; margin-bottom: 10px; border-radius: 8px; }
+            td { 
+                border: none;
+                border-bottom: 1px solid #eee; 
+                position: relative;
+                padding-left: 50%; 
+                text-align: right;
+            }
+            td:before {
+                position: absolute;
+                left: 10px;
+                width: 45%;
+                padding-right: 10px;
+                white-space: nowrap;
+                font-weight: bold;
+                text-align: left;
+                content: attr(data-label);
+            }
+            td:last-child { border-bottom: 0; text-align: center; padding-left: 12px; }
         }
     </style>
 </head>
@@ -110,131 +133,121 @@
 <body>
     <div id="nav-placeholder"></div>
 
-    <h2>Golfer Availability Management</h2>
+    <div class="container">
+        <h2>Golfer Availability Management</h2>
 
-    <div class="controls">
-        <label><strong>Select Golfer:</strong> </label>
-        <select id="golferSelect" onchange="fetchGolferStatus()">
-            <option value="">-- Choose a Golfer --</option>
-        </select>
-        <div id="preferredDaysDisplay" style="margin-top: 10px; color: #2e7d32; font-weight: bold;"></div>
-    </div>
-
-    <div id="mainDashboard" class="status-container hidden">
-
-        <div class="column">
-            <div class="quick-add">
-                <h3>Add New Unavailability</h3>
-                <div class="form-group">
-                    <label>From:</label>
-                    <input type="date" id="newDateFrom" oninput="syncDates()">
-                </div>
-                <div class="form-group" id="dateToGroup">
-                    <label>To:</label>
-                    <input type="date" id="newDateTo">
-                </div>
-                <div class="form-group">
-                    <label><input type="checkbox" id="newIndefinite" onchange="toggleDateTo()"> Indefinite</label>
-                </div>
-                <button onclick="saveUnavailability()">Add Record</button>
+        <div class="controls">
+            <div class="form-group">
+                <label><strong>Select Golfer:</strong></label>
+                <select id="golferSelect" onchange="fetchGolferStatus()">
+                    <option value="">-- Choose a Golfer --</option>
+                </select>
             </div>
-
-            <div id="indefiniteNotice" class="indefinite-notice hidden">
-                This golfer is currently marked as Indefinitely Unavailable.
-            </div>
-
-            <div id="pendingEmailArea" class="hidden"
-                style="background: #fff3cd; padding: 15px; border: 1px solid #ffeeba; border-radius: 8px; margin-bottom: 20px;">
-                <p><strong>Pending Confirmation:</strong> <span id="pendingCount">0</span> record(s) added this session.
-                </p>
-                <button onclick="sendSummaryEmail()" style="background: #28a745;">Send Summary Email to Golfer</button>
-                <button onclick="clearPending()" style="background: #6c757d; margin-left: 10px;">Done (No
-                    Email)</button>
-            </div>
-
-            <div id="tableContainer">
-                <h3>Scheduled Absence Dates</h3>
-                <table id="datesTable">
-                    <thead>
-                        <tr>
-                            <th>From</th>
-                            <th>To</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-                <p id="noAbsenceMessage" class="hidden">No upcoming unavailability recorded.</p>
-            </div>
+            <div id="preferredDaysDisplay" style="margin-top: 10px; color: #2e7d32; font-weight: bold;"></div>
         </div>
 
-        <div class="column">
-            <div class="quick-add extra-pane">
-                <h3>Add Extra Play Date</h3>
-                <p style="font-size: 0.9em; color: #555;">Add dates outside of their normal preferred days.</p>
-                <div class="form-group">
-                    <label>Date:</label>
-                    <input type="date" id="extraDate">
+        <div id="mainDashboard" class="status-container hidden">
+            <div class="column">
+                <div class="quick-add">
+                    <h3>Add New Unavailability</h3>
+                    <div class="form-group">
+                        <label>From:</label>
+                        <input type="date" id="newDateFrom" oninput="syncDates()">
+                    </div>
+                    <div class="form-group" id="dateToGroup">
+                        <label>To:</label>
+                        <input type="date" id="newDateTo">
+                    </div>
+                    <div class="form-group" style="flex-direction: row; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="newIndefinite" onchange="toggleDateTo()" style="width: auto;">
+                        <label for="newIndefinite">Indefinite</label>
+                    </div>
+                    <button onclick="saveUnavailability()" style="width: 100%;">Add Record</button>
                 </div>
-                <div class="form-group">
-                    <input type="text" id="extraNote" placeholder="Note (Optional)" style="width: 200px;">
+
+                <div id="indefiniteNotice" class="indefinite-notice hidden">
+                    This golfer is currently marked as Indefinitely Unavailable.
                 </div>
-                <button onclick="saveExtraAvailability()" style="background: #4caf50;">Add Extra Day</button>
+
+                <div id="pendingEmailArea" class="hidden" style="background: #fff3cd; padding: 15px; border: 1px solid #ffeeba; border-radius: 8px; margin-bottom: 20px;">
+                    <p><strong>Pending Confirmation:</strong> <span id="pendingCount">0</span> record(s).</p>
+                    <button onclick="sendSummaryEmail()" style="background: #28a745; width: 100%; margin-bottom: 10px;">Send Summary Email</button>
+                    <button onclick="clearPending()" style="background: #6c757d; width: 100%;">Done (No Email)</button>
+                </div>
+
+                <div id="tableContainer">
+                    <h3>Scheduled Absence Dates</h3>
+                    <table id="datesTable">
+                        <thead>
+                            <tr>
+                                <th>From</th>
+                                <th>To</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                    <p id="noAbsenceMessage" class="hidden">No upcoming unavailability recorded.</p>
+                </div>
             </div>
 
-            <div id="extraTableContainer">
-                <h3>Extra Play Days</h3>
-                <table id="extraTable">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Note</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-                <p id="noExtraMessage" class="hidden">No extra play dates recorded.</p>
+            <div class="column">
+                <div class="quick-add extra-pane">
+                    <h3>Add Extra Play Date</h3>
+                    <p style="font-size: 0.9em; color: #555;">Add dates outside of their normal preferred days.</p>
+                    <div class="form-group">
+                        <label>Date:</label>
+                        <input type="date" id="extraDate">
+                    </div>
+                    <div class="form-group">
+                        <label>Note:</label>
+                        <input type="text" id="extraNote" placeholder="Note (Optional)">
+                    </div>
+                    <button onclick="saveExtraAvailability()" style="background: #4caf50; width: 100%;">Add Extra Day</button>
+                </div>
+
+                <div id="extraTableContainer">
+                    <h3>Extra Play Days</h3>
+                    <table id="extraTable">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Note</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                    <p id="noExtraMessage" class="hidden">No extra play dates recorded.</p>
+                </div>
             </div>
         </div>
-
     </div>
 
     <script src="js/shared.js"></script>
-
     <script>
-        // Store current records for conflict checking
-        window.currentRecords = [];
+        // --- INITIALIZATION ---
+        window.addEventListener('DOMContentLoaded', () => {
+            loadGolfers();
+            // Load Navbar
+            fetch('nav.html').then(r => r.text()).then(d => document.getElementById('nav-placeholder').innerHTML = d);
+        });
 
+        // --- CORE FUNCTIONS ---
         async function loadGolfers() {
-            const res = await fetch('/api/golfers');
-            const golfers = await res.json();
-            const select = document.getElementById('golferSelect');
-            select.innerHTML = '<option value="">-- Choose a Golfer --</option>';
-            golfers.forEach(g => {
-                const opt = document.createElement('option');
-                opt.value = g._id;
-                opt.textContent = g.name;
-                opt.dataset.days = (g.play_days || []).join(', ');
-                select.appendChild(opt);
-            });
-        }
-
-        function toggleDateTo() {
-            const isIndefinite = document.getElementById('newIndefinite').checked;
-            document.getElementById('dateToGroup').style.opacity = isIndefinite ? "0.3" : "1.0";
-            document.getElementById('newDateTo').disabled = isIndefinite;
-        }
-
-        function syncDates() {
-            const dateFrom = document.getElementById('newDateFrom').value;
-            const dateToInput = document.getElementById('newDateTo');
-            if (dateFrom) {
-                dateToInput.setAttribute('min', dateFrom);
-                if (!document.getElementById('newIndefinite').checked) {
-                    dateToInput.value = dateFrom;
-                }
-            }
+            try {
+                const res = await fetch('/api/golfers');
+                const golfers = await res.json();
+                const select = document.getElementById('golferSelect');
+                select.innerHTML = '<option value="">-- Choose a Golfer --</option>';
+                golfers.forEach(g => {
+                    const opt = document.createElement('option');
+                    opt.value = g._id;
+                    opt.textContent = g.name;
+                    opt.dataset.days = (g.play_days || []).join(', ');
+                    select.appendChild(opt);
+                });
+            } catch (err) { console.error("Load golfers error:", err); }
         }
 
         async function fetchGolferStatus() {
@@ -256,7 +269,6 @@
             // Fetch Unavailability
             const resUn = await fetch(`/api/unavailable/golfer/${golferId}`);
             const recordsUn = await resUn.json();
-            window.currentRecords = recordsUn;
             renderUnavailability(recordsUn);
 
             // Fetch Extra Days
@@ -265,6 +277,28 @@
             renderExtraDays(recordsEx);
         }
 
+        // --- UI HELPERS ---
+        function toggleDateTo() {
+            const isIndefinite = document.getElementById('newIndefinite').checked;
+            const group = document.getElementById('dateToGroup');
+            const input = document.getElementById('newDateTo');
+            group.style.opacity = isIndefinite ? "0.3" : "1.0";
+            input.disabled = isIndefinite;
+            if (isIndefinite) input.value = "";
+        }
+
+        function syncDates() {
+            const dateFrom = document.getElementById('newDateFrom').value;
+            const dateToInput = document.getElementById('newDateTo');
+            if (dateFrom) {
+                dateToInput.setAttribute('min', dateFrom);
+                if (!document.getElementById('newIndefinite').checked) {
+                    dateToInput.value = dateFrom;
+                }
+            }
+        }
+
+        // --- RENDER TABLES ---
         function renderUnavailability(records) {
             const tbody = document.querySelector("#datesTable tbody");
             const notice = document.getElementById('indefiniteNotice');
@@ -279,8 +313,13 @@
                 if (rec.indefinite) notice.classList.remove('hidden');
                 const row = document.createElement("tr");
                 const fromDate = new Date(rec.date_from).toLocaleDateString('en-GB');
-                const toDate = rec.indefinite ? "<em>Indefinite</em>" : new Date(rec.date_to).toLocaleDateString('en-GB');
-                row.innerHTML = `<td>${fromDate}</td><td>${toDate}</td><td><button style="background:#ff4444" onclick="deleteRecord('${rec._id}', 'un')">Delete</button></td>`;
+                const toDate = rec.indefinite ? "Indefinite" : new Date(rec.date_to).toLocaleDateString('en-GB');
+                
+                row.innerHTML = `
+                    <td data-label="From">${fromDate}</td>
+                    <td data-label="To">${toDate}</td>
+                    <td data-label=""><button style="background:#ff4444; width:100%" onclick="deleteRecord('${rec._id}', 'un')">Delete</button></td>
+                `;
                 tbody.appendChild(row);
             });
         }
@@ -296,12 +335,16 @@
             records.forEach(rec => {
                 const row = document.createElement("tr");
                 const dateStr = new Date(rec.date).toLocaleDateString('en-GB');
-                row.innerHTML = `<td>${dateStr}</td><td>${rec.note || ''}</td><td><button style="background:#ff4444" onclick="deleteRecord('${rec._id}', 'ex')">Delete</button></td>`;
+                row.innerHTML = `
+                    <td data-label="Date">${dateStr}</td>
+                    <td data-label="Note">${rec.note || ''}</td>
+                    <td data-label=""><button style="background:#ff4444; width:100%" onclick="deleteRecord('${rec._id}', 'ex')">Delete</button></td>
+                `;
                 tbody.appendChild(row);
             });
         }
 
-        // Global array to track dates added during this specific browser session
+        // --- DATA ACTIONS ---
         let pendingDates = [];
 
         async function saveUnavailability() {
@@ -312,7 +355,6 @@
 
             if (!date_from) return alert("Please select a starting date");
 
-            // Save to DB (Notice we removed the sendEmail flag here)
             const res = await fetch('/api/unavailable', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -320,54 +362,11 @@
             });
 
             if (res.ok) {
-                // Track this date for our summary email
-                const dateRange = indefinite ?
-                    `${formatDate(date_from)} (Indefinite)` :
-                    `${formatDate(date_from)} to ${formatDate(date_to)}`;
-
+                const dateRange = indefinite ? `${formatDate(date_from)} (Indefinite)` : `${formatDate(date_from)} to ${formatDate(date_to)}`;
                 pendingDates.push(dateRange);
                 updatePendingUI();
-
-                showToast("Record added to list.");
+                showToast("Record added.");
                 fetchGolferStatus();
-            }
-        }
-
-        function updatePendingUI() {
-            const area = document.getElementById('pendingEmailArea');
-            const count = document.getElementById('pendingCount');
-            if (pendingDates.length > 0) {
-                area.classList.remove('hidden');
-                count.textContent = pendingDates.length;
-            } else {
-                area.classList.add('hidden');
-            }
-        }
-
-        function clearPending() {
-            pendingDates = [];
-            updatePendingUI();
-            showToast("Session cleared.");
-        }
-
-        async function sendSummaryEmail() {
-            const golfer_id = document.getElementById('golferSelect').value;
-            if (pendingDates.length === 0) return;
-
-            const res = await fetch('/api/unavailable/send-summary', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    golfer_id,
-                    dates: pendingDates
-                })
-            });
-
-            if (res.ok) {
-                showToast("Summary email sent!");
-                clearPending();
-            } else {
-                alert("Failed to send summary email.");
             }
         }
 
@@ -398,8 +397,38 @@
             fetchGolferStatus();
         }
 
-        loadGolfers();
+        // --- EMAIL SUMMARY ---
+        function updatePendingUI() {
+            const area = document.getElementById('pendingEmailArea');
+            const count = document.getElementById('pendingCount');
+            if (pendingDates.length > 0) {
+                area.classList.remove('hidden');
+                count.textContent = pendingDates.length;
+            } else {
+                area.classList.add('hidden');
+            }
+        }
+
+        function clearPending() {
+            pendingDates = [];
+            updatePendingUI();
+        }
+
+        async function sendSummaryEmail() {
+            const golfer_id = document.getElementById('golferSelect').value;
+            if (pendingDates.length === 0) return;
+
+            const res = await fetch('/api/unavailable/send-summary', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ golfer_id, dates: pendingDates })
+            });
+
+            if (res.ok) {
+                showToast("Email sent!");
+                clearPending();
+            }
+        }
     </script>
 </body>
-
 </html>

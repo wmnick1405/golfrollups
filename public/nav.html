@@ -21,9 +21,7 @@
         color: white;
         text-decoration: none;
         margin-right: 10px;
-        /* Increased from 5px */
         padding: 12px 18px;
-        /* Increased padding */
         border-radius: 6px;
         transition: all 0.2s ease;
         font-size: 15px;
@@ -50,15 +48,10 @@
         z-index: 1000;
         border-radius: 8px;
         top: 100%;
-        /* Starts at the bottom of the nav bar */
         margin-top: 8px;
-        /* Adds a 8px visual gap */
-        /* SAFETY: This invisible "bridge" prevents the menu from 
-       closing when the mouse moves over the gap */
         padding-top: 0;
         border-top: 8px solid transparent;
         background-clip: padding-box;
-
         overflow: hidden;
     }
 
@@ -71,10 +64,6 @@
         border-bottom: 1px solid #eee;
     }
 
-    .dropdown-content a:last-child {
-        border-bottom: none;
-    }
-
     .dropdown-content a:hover {
         background-color: #f1f1f1;
         color: #2e7d32;
@@ -84,22 +73,58 @@
         display: block;
     }
 
-    /* PILL STYLE LOGOUT */
     .btn-logout {
         background: #d32f2f;
         color: white;
         border: none;
         padding: 8px 20px;
         border-radius: 50px;
-        /* Pill Shape */
         font-weight: 600;
         cursor: pointer;
         transition: transform 0.1s;
     }
 
-    .btn-logout:hover {
-        background: #b71c1c;
-        transform: scale(1.03);
+    /* --- MOBILE RESPONSIVE FIXES --- */
+    @media screen and (max-width: 768px) {
+        .navbar {
+            flex-direction: column;
+            height: auto;
+            padding: 15px;
+        }
+
+        .nav-group {
+            flex-direction: column;
+            width: 100%;
+            gap: 5px;
+        }
+
+        .dropdown, .nav-link {
+            width: 100%;
+            margin-right: 0;
+        }
+
+        .dropbtn, .nav-link {
+            display: block;
+            width: 100%;
+            text-align: center;
+            box-sizing: border-box;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Make dropdowns appear below the button on click/tap for mobile */
+        .dropdown-content {
+            position: static; /* Flows with the document on mobile */
+            width: 100%;
+            box-shadow: none;
+            border-radius: 0;
+            background-color: #f9f9f9;
+        }
+
+        .btn-logout {
+            width: 100%;
+            margin-top: 15px;
+            padding: 12px;
+        }
     }
 </style>
 
@@ -131,7 +156,7 @@
             <div class="dropdown-content">
                 <a href="history.html">Rollup History</a>
                 <a href="absence-report.html">Absence Reports</a>
-                <a href="indefinite_unavailable_golfers.html">Golfers Away Indefinitely</a>
+                <a href="indefinite_unavailable_golfers.html">Away Indefinitely</a>
                 <a href="participation-report.html">Participation Reports</a>
                 <a href="planner.html">20-Session Absence Viewer</a>
                 <a href="custom-planner.html">Custom Player Absence Planner</a>
@@ -141,13 +166,3 @@
 
     <button onclick="handleLogout()" class="btn-logout">Logout</button>
 </div>
-
-<script>
-    async function handleLogout() {
-        if (!confirm("Are you sure you want to logout?")) return;
-        const res = await fetch('/api/logout', { method: 'POST' });
-        if (res.ok) {
-            window.location.href = "/";
-        }
-    }
-</script>

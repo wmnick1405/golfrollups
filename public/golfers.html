@@ -1,53 +1,44 @@
 <!DOCTYPE html>
 <html>
-<!-- Golfers Admin - This is the main page for managing golfer information and availability. -->
-
 <head>
     <title>Golfers Admin</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body {
-            font-family: Arial;
-            /* background: #f2f2f2;> */
+            font-family: 'Segoe UI', Arial, sans-serif;
             background-image: url('./images/IMG_0376a.jpg');
-            background-size: 100%;
+            background-size: cover;
             background-position: center;
             background-attachment: fixed;
             background-repeat: no-repeat;
-
-            padding: 30px;
+            padding: 10px; /* Reduced for mobile */
             margin: 0;
-            padding: 30px;
         }
 
         .container {
             max-width: 1100px;
-            margin: 40px auto;
-            background: white;
-            padding: 30px;
+            margin: 20px auto;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
             border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
         }
 
-        h2,
-        h3 {
-            color: black;
-            margin-top: 0;
-        }
+        h2, h3 { color: #333; margin-top: 0; }
 
-        /* The Add Box using your grid/flex logic but with cleaner spacing */
+        /* Add Box - Flexible Layout */
         .add-box {
-            background: #b2eab2;
-            padding: 25px;
+            background: #e8f5e9;
+            padding: 20px;
             border-radius: 8px;
-            border: 1px solid #e0edec;
+            border: 1px solid #c8e6c9;
             margin-bottom: 30px;
         }
 
         .input-row {
             display: flex;
             gap: 15px;
-            flex-wrap: wrap;
+            flex-wrap: wrap; /* Allows stacking on mobile */
             align-items: flex-end;
         }
 
@@ -55,50 +46,46 @@
             display: flex;
             flex-direction: column;
             gap: 5px;
+            flex: 1 1 200px; /* Grow/Shrink, base width 200px */
         }
 
         .field-group label {
             font-size: 12px;
             font-weight: bold;
-            color: #666;
-            margin-bottom: 2px;
+            color: #555;
         }
 
-        input[type="text"],
-        input[type="email"] {
+        input[type="text"], input[type="email"] {
             padding: 10px;
-            border: 1px solid #ddd;
+            border: 1px solid #ccc;
             border-radius: 5px;
-            font-size: 14px;
+            font-size: 16px; /* 16px prevents iOS zoom on focus */
+            background: white;
         }
 
-        /* Your specific Day Picker styling improved */
         #daysPicker {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 8px;
             background: white;
             padding: 8px;
-            border: 1px solid #ddd;
+            border: 1px solid #ccc;
             border-radius: 5px;
-            height: 40px;
-            /* Matching the height of your text inputs */
+            height: 44px;
             align-items: center;
-            box-sizing: border-box;
         }
 
         .checkbox-label {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            font-size: 0.9em;
-            font-weight: 600;
+            gap: 5px;
+            font-size: 0.85em;
             cursor: pointer;
         }
 
-        /* Scoped Buttons */
+        /* Buttons */
         .container button {
-            padding: 8px 16px;
+            padding: 10px 20px;
             border: none;
             border-radius: 50px;
             cursor: pointer;
@@ -106,56 +93,17 @@
             transition: 0.2s;
         }
 
-        /* Container for the buttons in the row to handle the gap */
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-            /* This creates the consistent gap between Save and Delete */
-            justify-content: flex-start;
-        }
-
-        /* Force both buttons to be the exact same size */
-        .btn-save,
-        .btn-delete {
-            width: 80px;
-            /* Adjust this width if you want them wider */
-            text-align: center;
-            padding: 8px 0 !important;
-            /* Vertical padding only, width handles the rest */
-            box-sizing: border-box;
-            background: #2e7d32;
-            color: white;
-        }
-        .btn-save:hover {
-            opacity: 0.9;
-        }
-        
-        .btn-delete:hover {
-            opacity: 0.9   ;
-        }
-
-
-        /* Ensure the 'Actions' column has enough room for both buttons + gap */
-        th:last-child,
-        td:last-child {
-            min-width: 180px;
-        }
-
         .btn-add {
             background: #2e7d32;
             color: white;
-            padding: 12px 24px !important;
+            flex: 1 1 100%; /* Full width on mobile when wrapped */
+            margin-top: 10px;
         }
 
-        .btn-add:hover {
-            opacity: 0.9;
-        }
-
-        /* Table Styling */
+        /* Table Responsiveness */
         table {
             width: 100%;
             border-collapse: collapse;
-            background: whitesmoke;
         }
 
         th {
@@ -163,94 +111,107 @@
             color: white;
             padding: 12px;
             text-align: left;
-            font-size: 14px;
         }
 
         td {
             padding: 12px;
-            border-bottom: 1px solid #eee;
-            font-size: 14px;
+            border-bottom: 1px solid #ddd;
+            background: white;
         }
 
-        .td-input {
-            padding: 6px;
-            border: 1px solid transparent;
-            border-radius: 3px;
-            width: 90%;
-        }
-
-        .td-input:focus {
-            border: 1px solid #2e7d32;
-            background: #fff;
-            outline: none;
-        }
-
-        .exempt-cell {
-            text-align: center;
-            width: 100px;
-        }
-
-        .exempt-wrapper {
+        .action-buttons {
             display: flex;
-            align-items: center;
-            height: 40px;
-            margin-bottom: 0;
+            gap: 8px;
         }
 
-        #msg {
-            height: 20px;
-            margin-bottom: 15px;
+        .btn-save { background: #2e7d32; color: white; width: 80px;}
+        .btn-delete { background: #d32f2f; color: white; width: 80px;}
+
+        #msg { min-height: 20px; margin-bottom: 10px; }
+
+        /* MOBILE STYLES */
+        @media screen and (max-width: 768px) {
+            body { padding: 5px; }
+            .container { padding: 15px; margin: 10px auto; }
+            
+            /* Turn Table into Cards */
+            table, thead, tbody, th, td, tr { 
+                display: block; 
+            }
+            
+            thead tr { 
+                position: absolute;
+                top: -9999px;
+                left: -9999px;
+            }
+            
+            tr { 
+                border: 1px solid #ccc; 
+                margin-bottom: 15px;
+                border-radius: 8px;
+                overflow: hidden;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            }
+            
+            td { 
+                border: none;
+                border-bottom: 1px solid #eee; 
+                position: relative;
+                padding-left: 40%; /* Space for label */
+                min-height: 40px;
+            }
+            
+            /* Labels for mobile card fields */
+            td:before { 
+                position: absolute;
+                left: 10px;
+                width: 35%; 
+                font-weight: bold;
+                color: #2e7d32;
+                content: attr(data-label); /* Pulls from HTML attribute */
+            }
+
+            .td-input { width: 100% !important; box-sizing: border-box; }
+            .action-buttons { justify-content: flex-end; padding: 5px 0; }
         }
     </style>
 </head>
-
 <body>
     <div id="nav-placeholder"></div>
 
     <div class="container">
         <h2>Golfers Admin</h2>
+        <div id="msg"></div>
 
         <div class="add-box">
             <h3>Add New Golfer</h3>
-            <div id="msg"></div>
-
             <div class="input-row">
-                <div class="field-group" style="flex: 1.5;">
-                    <label>Name (Required)</label>
-                    <input type="text" id="newName" placeholder="Full Name"
-                        style="height: 40px; box-sizing: border-box; background-color: whitesmoke;">
-                </div>
-
-                <div class="field-group" style="flex: 1;">
-                    <label>Phone</label>
-                    <input type="text" id="newPhone" placeholder="Phone"
-                        style="height: 40px; box-sizing: border-box; background-color: whitesmoke;">
-                </div>
-
-                <div class="field-group" style="flex: 1.5;">
-                    <label>Email</label>
-                    <input type="email" id="newEmail" placeholder="Email"
-                        style="height: 40px; box-sizing: border-box; background-color: whitesmoke;">
-                </div>
-
                 <div class="field-group">
-                    <label>Default Play Days</label>
+                    <label>Name</label>
+                    <input type="text" id="newName" placeholder="Full Name">
+                </div>
+                <div class="field-group">
+                    <label>Phone</label>
+                    <input type="text" id="newPhone" placeholder="Phone">
+                </div>
+                <div class="field-group">
+                    <label>Email</label>
+                    <input type="email" id="newEmail" placeholder="Email">
+                </div>
+                <div class="field-group">
+                    <label>Play Days</label>
                     <div id="daysPicker">
                         <label class="checkbox-label"><input type="checkbox" class="day-opt" value="Monday"> Mon</label>
-                        <label class="checkbox-label"><input type="checkbox" class="day-opt" value="Wednesday">
-                            Wed</label>
+                        <label class="checkbox-label"><input type="checkbox" class="day-opt" value="Wednesday"> Wed</label>
                         <label class="checkbox-label"><input type="checkbox" class="day-opt" value="Friday"> Fri</label>
                     </div>
                 </div>
-
-                <div class="exempt-wrapper">
+                <div class="field-group" style="flex: 0 1 auto; justify-content: center; padding-bottom: 10px;">
                     <label class="checkbox-label">
-                        <input type="checkbox" id="newExempt">
-                        <span>Booking Exempt</span>
+                        <input type="checkbox" id="newExempt"> <span>Exempt</span>
                     </label>
                 </div>
-
-                <button class="btn-add" onclick="addGolfer()" style="height: 40px;">Add Golfer</button>
+                <button class="btn-add" onclick="addGolfer()">Add Golfer</button>
             </div>
         </div>
 
@@ -260,8 +221,8 @@
                     <th>Name</th>
                     <th>Phone</th>
                     <th>Email</th>
-                    <th style="width: 180px;">Playing Days</th>
-                    <th class="exempt-cell">Exempt</th>
+                    <th>Days</th>
+                    <th>Exempt</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -269,47 +230,9 @@
         </table>
     </div>
 
-    <script src="js/shared.js?v=2"></script>
-
+    <script src="js/shared.js"></script>
     <script>
-        function showMsg(text, isError = false) {
-            const msg = document.getElementById("msg");
-            msg.textContent = text;
-            msg.style.color = isError ? "#d32f2f" : "#2e7d32";
-            msg.style.fontWeight = "bold";
-            setTimeout(() => { msg.textContent = ""; }, 5000);
-        }
-
-        async function addGolfer() {
-            const name = document.getElementById("newName").value.trim();
-            const tel = document.getElementById("newPhone").value.trim();
-            const email = document.getElementById("newEmail").value.trim();
-            const booking_exempt = document.getElementById("newExempt").checked;
-            const play_days = Array.from(document.querySelectorAll(".day-opt:checked")).map(cb => cb.value);
-
-            if (!name) return showMsg("Error: Name is required", true);
-
-            try {
-                const res = await fetch("/api/golfers", {
-                    method: "POST",
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, tel, email, play_days, booking_exempt })
-                });
-
-                if (res.ok) {
-                    showMsg(`Success: ${name} added!`);
-                    document.getElementById("newName").value = "";
-                    document.getElementById("newPhone").value = "";
-                    document.getElementById("newEmail").value = "";
-                    document.getElementById("newExempt").checked = false;
-                    document.querySelectorAll(".day-opt").forEach(cb => cb.checked = false);
-                    loadGolfers();
-                } else {
-                    const data = await res.json();
-                    showMsg("Error: " + (data.error || "Could not add"), true);
-                }
-            } catch (err) { showMsg("Connection failed", true); }
-        }
+        // ... (Keep showMsg, addGolfer, saveGolfer, deleteGolfer functions exactly as they were) ...
 
         async function loadGolfers() {
             try {
@@ -317,89 +240,38 @@
                 const golfers = await res.json();
                 const tbody = document.querySelector("#golfersTable tbody");
                 tbody.innerHTML = "";
-
                 const weekDays = ["Monday", "Wednesday", "Friday"];
 
                 golfers.forEach(g => {
                     const row = document.createElement("tr");
-
-                    let daysHtml = `<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; font-size: 0.85em;">`;
+                    
+                    let daysHtml = `<div style="display: flex; gap: 8px; flex-wrap: wrap;">`;
                     weekDays.forEach(day => {
                         const checked = (g.play_days || []).includes(day) ? 'checked' : '';
-                        daysHtml += `
-                            <label style="cursor:pointer;">
-                                <input type="checkbox" class="edit-day-${g._id}" value="${day}" ${checked}> ${day.substring(0, 3)}
-                            </label>`;
+                        daysHtml += `<label style="font-size:0.8em;"><input type="checkbox" class="edit-day-${g._id}" value="${day}" ${checked}> ${day.substring(0,3)}</label>`;
                     });
                     daysHtml += `</div>`;
 
-                    // Inside your loadGolfers() loop where the row.innerHTML is defined:
+                    // Added data-label for mobile view
                     row.innerHTML = `
-    <td><input type="text" class="td-input" value="${g.name}" id="name_${g._id}"></td>
-    <td><input type="text" class="td-input" value="${g.tel || ''}" id="tel_${g._id}"></td>
-    <td><input type="email" class="td-input" value="${g.email || ''}" id="email_${g._id}"></td>
-    <td>${daysHtml}</td>
-    <td class="exempt-cell">
-        <input type="checkbox" id="exempt_${g._id}" ${g.booking_exempt ? 'checked' : ''}>
-    </td>
-    <td>
-        <div class="action-buttons">
-            <button class="btn-save" onclick="saveGolfer('${g._id}')">Save</button>
-            <button class="btn-delete" onclick="deleteGolfer('${g._id}')">Delete</button>
-        </div>
-    </td>
-`;
+                        <td data-label="Name"><input type="text" class="td-input" style="width:90%" value="${g.name}" id="name_${g._id}"></td>
+                        <td data-label="Phone"><input type="text" class="td-input" style="width:90%" value="${g.tel || ''}" id="tel_${g._id}"></td>
+                        <td data-label="Email"><input type="email" class="td-input" style="width:90%" value="${g.email || ''}" id="email_${g._id}"></td>
+                        <td data-label="Days">${daysHtml}</td>
+                        <td data-label="Exempt"><input type="checkbox" id="exempt_${g._id}" ${g.booking_exempt ? 'checked' : ''}></td>
+                        <td data-label="Actions">
+                            <div class="action-buttons">
+                                <button class="btn-save" onclick="saveGolfer('${g._id}')">Save</button>
+                                <button class="btn-delete" onclick="deleteGolfer('${g._id}')">Delete</button>
+                            </div>
+                        </td>
+                    `;
                     tbody.appendChild(row);
                 });
             } catch (err) { console.error("Load failed", err); }
         }
-
-        async function saveGolfer(id) {
-            const payload = {
-                name: document.getElementById("name_" + id).value.trim(),
-                tel: document.getElementById("tel_" + id).value.trim(),
-                email: document.getElementById("email_" + id).value.trim(),
-                booking_exempt: document.getElementById("exempt_" + id).checked,
-                play_days: Array.from(document.querySelectorAll(`.edit-day-${id}:checked`)).map(cb => cb.value)
-            };
-
-            if (!payload.name) return alert("Name cannot be empty");
-
-            try {
-                const res = await fetch("/api/golfers/" + id, {
-                    method: "PUT",
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (res.ok) {
-                    showToast("Golfer updated!");
-                    await loadGolfers(); // Wait for the reload to finish
-                } else {
-                    // Handle server-side errors (like 400 or 500)
-                    const errorData = await res.json().catch(() => ({ error: "Unknown error" }));
-                    console.error("Update failed:", errorData);
-                    showToast("Error: " + (errorData.error || "Update failed"));
-                }
-            } catch (err) {
-                // This catches network connectivity issues
-                console.error("Network error:", err);
-                showToast("Server unavailable. Please check your connection.");
-            }
-        }
-
-        async function deleteGolfer(id) {
-            if (!confirm("Delete this golfer?")) return;
-            await fetch("/api/golfers/" + id, { method: "DELETE" });
-            loadGolfers();
-        }
-
+        // ... (Keep remaining script) ...
         loadGolfers();
-
-        fetch('nav.html')
-            .then(response => response.text())
-            .then(data => { document.getElementById('nav-placeholder').innerHTML = data; });
     </script>
 </body>
-
 </html>

@@ -170,7 +170,7 @@
                 Available" button, then click the "Auto-Group" button. Drag
                 players between groups as needed. When complete, click the "Save Rollup" button.</p>
             <div class="controls">
-                <input type="date" id="rollupDate">
+                <input type="date" id="rollupDate" onchange="autoCheckCompetition()">
 
                 <label style="margin-left: 10px;">Comp:</label>
                 <select id="compName" style="padding: 8px; width: 200px; border: 1px solid #ccc; border-radius: 4px;">
@@ -309,6 +309,47 @@
                 });
             } catch (err) {
                 console.error("Dropdown Load Error:", err);
+            }
+        }
+
+        // Auto-check the competition dropdown based on the selected date
+        async function autoCheckCompetition() {
+            const selectedDate = document.getElementById("rollupDate").value;
+            const dropdown = document.getElementById("compName");
+
+            if (!selectedDate) return;
+
+            try {
+                const response = await fetch('/api/competition-names');
+                if (!response.ok) throw new Error("API error");
+
+                const comps = await response.json();
+
+                // Search for a competition where the selected date exists in its CompetitionDates array
+                const match = comps.find(c =>
+                    c.CompetitionDates && c.CompetitionDates.includes(selectedDate)
+                );
+
+                if (match) {
+                    const compValue = match['comp-name'];
+
+                    // Check if the option already exists in the dropdown
+                    let optionExists = Array.from(dropdown.options).some(opt => opt.value === compValue);
+
+                    if (!optionExists) {
+                        const newOpt = document.createElement("option");
+                        newOpt.value = compValue;
+                        newOpt.textContent = compValue;
+                        dropdown.appendChild(newOpt);
+                    }
+                    dropdown.value = compValue;
+                } else {
+                    // Default to Social if no date match is found
+                    dropdown.value = "Social";
+                }
+            } catch (err) {
+                console.error("Auto-check error:", err);
+                dropdown.value = "Social";
             }
         }
 

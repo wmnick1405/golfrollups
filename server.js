@@ -116,8 +116,7 @@ const Golfer = mongoose.model('Golfer', new mongoose.Schema({
     play_days: [String],
     booking_count: { type: Number, default: 0 },
     last_booked: { type: Date, default: new Date("2000-01-01") },
-    booking_exempt: { type: Boolean, default: false },
-    active: { type: Boolean, default: true }
+    booking_exempt: { type: Boolean, default: false }
 }));
 
 const TeeTime = mongoose.model('TeeTime', new mongoose.Schema({
@@ -369,12 +368,9 @@ app.get('/api/tee-times', protect, async (req, res) => {
 
 
 // 7. GOLFER ROUTES
-
-
-
 app.get('/api/golfers', protect, async (req, res) => {
     try {
-        const golfers = await Golfer.find({ active: true }).sort({ name: 1 });
+        const golfers = await Golfer.find().sort({ name: 1 });
         res.json(golfers);
     } catch (err) { res.status(500).json({ error: "Failed to fetch golfers" }); }
 });
@@ -412,27 +408,6 @@ app.post('/api/golfers', protect, async (req, res) => {
     }
 });
 
-// This new route allows us to "soft delete" a golfer by setting their active status to false
-app.patch('/api/golfers/:id/deactivate', protect, async (req, res) => {
-    console.log("--- Deactivate Route Hit! ---"); // Add this line
-    try {
-        const result = await Golfer.findByIdAndUpdate(
-            req.params.id, 
-            { active: false }, 
-            { new: true }
-        );
-
-        if (!result) {
-            return res.status(404).json({ error: "Golfer not found" });
-        }
-
-        res.json({ message: "Golfer deactivated successfully" });
-    } catch (err) {
-        res.status(500).json({ error: "Failed to deactivate golfer" });
-    }
-});
-
-
 app.put('/api/golfers/:id', protect, async (req, res) => {
     try {
         await Golfer.findByIdAndUpdate(req.params.id, req.body);
@@ -440,9 +415,12 @@ app.put('/api/golfers/:id', protect, async (req, res) => {
     } catch (err) { res.status(500).json({ error: "Update failed" }); }
 });
 
-
-
-
+app.delete('/api/golfers/:id', protect, async (req, res) => {
+    try {
+        await Golfer.findByIdAndDelete(req.params.id);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: "Delete failed" }); }
+});
 
 // COMPETITION NAME ROUTES
 app.get('/api/competition-names', protect, async (req, res) => {

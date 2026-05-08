@@ -397,26 +397,7 @@
         }
 
         
-async function deleteGolfer(e, id) {
-    e.preventDefault(); // This stops the browser from trying to 'GET' or refresh
 
-    if (!confirm("Are you sure you want to remove this golfer?")) return;
-
-    try {
-        const res = await fetch(`/api/golfers/${id}/deactivate`, { 
-            method: 'PATCH' 
-        });
-
-        if (res.ok) {
-            showMsg("Golfer removed successfully", "green");
-            loadGolfers(); // Refresh the table 🔄
-        } else {
-            showMsg("Error removing golfer", "red");
-        }
-    } catch (err) {
-        console.error("Delete failed", err);
-    }
-}
         loadGolfers();
     </script>
 </body>

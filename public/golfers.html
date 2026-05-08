@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>Golfers Admin</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -11,7 +12,8 @@
             background-position: center;
             background-attachment: fixed;
             background-repeat: no-repeat;
-            padding: 10px; /* Reduced for mobile */
+            padding: 10px;
+            /* Reduced for mobile */
             margin: 0;
         }
 
@@ -24,7 +26,11 @@
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
         }
 
-        h2, h3 { color: #333; margin-top: 0; }
+        h2,
+        h3 {
+            color: #333;
+            margin-top: 0;
+        }
 
         /* Add Box - Flexible Layout */
         .add-box {
@@ -38,7 +44,8 @@
         .input-row {
             display: flex;
             gap: 15px;
-            flex-wrap: wrap; /* Allows stacking on mobile */
+            flex-wrap: wrap;
+            /* Allows stacking on mobile */
             align-items: flex-end;
         }
 
@@ -46,7 +53,8 @@
             display: flex;
             flex-direction: column;
             gap: 5px;
-            flex: 1 1 200px; /* Grow/Shrink, base width 200px */
+            flex: 1 1 200px;
+            /* Grow/Shrink, base width 200px */
         }
 
         .field-group label {
@@ -55,11 +63,13 @@
             color: #555;
         }
 
-        input[type="text"], input[type="email"] {
+        input[type="text"],
+        input[type="email"] {
             padding: 10px;
             border: 1px solid #ccc;
             border-radius: 5px;
-            font-size: 16px; /* 16px prevents iOS zoom on focus */
+            font-size: 16px;
+            /* 16px prevents iOS zoom on focus */
             background: white;
         }
 
@@ -96,7 +106,8 @@
         .btn-add {
             background: #2e7d32;
             color: white;
-            flex: 1 1 100%; /* Full width on mobile when wrapped */
+            flex: 1 1 100%;
+            /* Full width on mobile when wrapped */
             margin-top: 10px;
         }
 
@@ -124,58 +135,91 @@
             gap: 8px;
         }
 
-        .btn-save { background: #2e7d32; color: white; width: 80px;}
-        .btn-delete { background: #d32f2f; color: white; width: 80px;}
+        .btn-save {
+            background: #2e7d32;
+            color: white;
+            width: 80px;
+        }
 
-        #msg { min-height: 20px; margin-bottom: 10px; }
+        .btn-delete {
+            background: #d32f2f;
+            color: white;
+            width: 80px;
+        }
+
+        #msg {
+            min-height: 20px;
+            margin-bottom: 10px;
+        }
 
         /* MOBILE STYLES */
         @media screen and (max-width: 768px) {
-            body { padding: 5px; }
-            .container { padding: 15px; margin: 10px auto; }
-            
-            /* Turn Table into Cards */
-            table, thead, tbody, th, td, tr { 
-                display: block; 
+            body {
+                padding: 5px;
             }
-            
-            thead tr { 
+
+            .container {
+                padding: 15px;
+                margin: 10px auto;
+            }
+
+            /* Turn Table into Cards */
+            table,
+            thead,
+            tbody,
+            th,
+            td,
+            tr {
+                display: block;
+            }
+
+            thead tr {
                 position: absolute;
                 top: -9999px;
                 left: -9999px;
             }
-            
-            tr { 
-                border: 1px solid #ccc; 
+
+            tr {
+                border: 1px solid #ccc;
                 margin-bottom: 15px;
                 border-radius: 8px;
                 overflow: hidden;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            }
-            
-            td { 
-                border: none;
-                border-bottom: 1px solid #eee; 
-                position: relative;
-                padding-left: 40%; /* Space for label */
-                min-height: 40px;
-            }
-            
-            /* Labels for mobile card fields */
-            td:before { 
-                position: absolute;
-                left: 10px;
-                width: 35%; 
-                font-weight: bold;
-                color: #2e7d32;
-                content: attr(data-label); /* Pulls from HTML attribute */
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
             }
 
-            .td-input { width: 100% !important; box-sizing: border-box; }
-            .action-buttons { justify-content: flex-end; padding: 5px 0; }
+            td {
+                border: none;
+                border-bottom: 1px solid #eee;
+                position: relative;
+                padding-left: 40%;
+                /* Space for label */
+                min-height: 40px;
+            }
+
+            /* Labels for mobile card fields */
+            td:before {
+                position: absolute;
+                left: 10px;
+                width: 35%;
+                font-weight: bold;
+                color: #2e7d32;
+                content: attr(data-label);
+                /* Pulls from HTML attribute */
+            }
+
+            .td-input {
+                width: 100% !important;
+                box-sizing: border-box;
+            }
+
+            .action-buttons {
+                justify-content: flex-end;
+                padding: 5px 0;
+            }
         }
     </style>
 </head>
+
 <body>
     <div id="nav-placeholder"></div>
 
@@ -202,7 +246,8 @@
                     <label>Play Days</label>
                     <div id="daysPicker">
                         <label class="checkbox-label"><input type="checkbox" class="day-opt" value="Monday"> Mon</label>
-                        <label class="checkbox-label"><input type="checkbox" class="day-opt" value="Wednesday"> Wed</label>
+                        <label class="checkbox-label"><input type="checkbox" class="day-opt" value="Wednesday">
+                            Wed</label>
                         <label class="checkbox-label"><input type="checkbox" class="day-opt" value="Friday"> Fri</label>
                     </div>
                 </div>
@@ -232,7 +277,13 @@
 
     <script src="js/shared.js"></script>
     <script>
-        // ... (Keep showMsg, addGolfer, saveGolfer, deleteGolfer functions exactly as they were) ...
+
+        function showMsg(text, isError = false) {
+            const msg = document.getElementById("msg");
+            msg.textContent = text;
+            msg.style.color = isError ? "#d32f2f" : "#2e7d32";
+            setTimeout(() => { msg.textContent = ""; }, 5000);
+        }
 
         async function loadGolfers() {
             try {
@@ -244,11 +295,11 @@
 
                 golfers.forEach(g => {
                     const row = document.createElement("tr");
-                    
+
                     let daysHtml = `<div style="display: flex; gap: 8px; flex-wrap: wrap;">`;
                     weekDays.forEach(day => {
                         const checked = (g.play_days || []).includes(day) ? 'checked' : '';
-                        daysHtml += `<label style="font-size:0.8em;"><input type="checkbox" class="edit-day-${g._id}" value="${day}" ${checked}> ${day.substring(0,3)}</label>`;
+                        daysHtml += `<label style="font-size:0.8em;"><input type="checkbox" class="edit-day-${g._id}" value="${day}" ${checked}> ${day.substring(0, 3)}</label>`;
                     });
                     daysHtml += `</div>`;
 
@@ -262,7 +313,7 @@
                         <td data-label="Actions">
                             <div class="action-buttons">
                                 <button class="btn-save" onclick="saveGolfer('${g._id}')">Save</button>
-                                <button class="btn-delete" onclick="deleteGolfer('${g._id}')">Delete</button>
+                                <button class="btn-delete" onclick="deleteGolfer(event, '${g._id.toString()}')">Delete</button>
                             </div>
                         </td>
                     `;
@@ -270,8 +321,104 @@
                 });
             } catch (err) { console.error("Load failed", err); }
         }
-        // ... (Keep remaining script) ...
+
+        // Add Golfer function
+        async function addGolfer() {
+            const name = document.getElementById("newName").value.trim();
+            const tel = document.getElementById("newPhone").value.trim();
+            const email = document.getElementById("newEmail").value.trim();
+            const booking_exempt = document.getElementById("newExempt").checked;
+
+            // NEW: Get play days from checkboxes
+            const play_days = Array.from(document.querySelectorAll(".day-opt:checked"))
+                .map(cb => cb.value);
+
+            if (!name) return showMsg("Error: Name is required", true);
+
+            try {
+                const res = await fetch("/api/golfers", {
+                    method: "POST",
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, tel, email, play_days, booking_exempt })
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    showMsg(`Success: ${name} added!`);
+                    // Clear the form
+                    document.getElementById("newName").value = "";
+                    document.getElementById("newPhone").value = "";
+                    document.getElementById("newEmail").value = "";
+                    document.getElementById("newExempt").checked = false;
+
+                    // NEW: Uncheck all day boxes
+                    document.querySelectorAll(".day-opt").forEach(cb => cb.checked = false);
+
+                    loadGolfers();
+                } else {
+                    showMsg("Error: " + (data.error || "Could not add golfer"), true);
+                }
+            } catch (err) {
+                showMsg("Server connection failed", true);
+            }
+        }
+
+
+        // Save (Update) function
+        async function saveGolfer(id) {
+            const name = document.getElementById("name_" + id).value.trim();
+            const tel = document.getElementById("tel_" + id).value.trim();
+            const email = document.getElementById("email_" + id).value.trim();
+            const booking_exempt = document.getElementById("exempt_" + id).checked;
+
+            // NEW: Collect checkboxes for THIS specific row
+            const play_days = Array.from(document.querySelectorAll(`.edit-day-${id}:checked`))
+                .map(cb => cb.value);
+
+            if (!name) return alert("Name cannot be empty");
+
+            try {
+                const res = await fetch("/api/golfers/" + id, {
+                    method: "PUT",
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, tel, email, play_days, booking_exempt })
+                });
+
+                if (res.ok) {
+                    showMsg("Success: Golfer updated!");
+                    loadGolfers();
+                } else {
+                    const data = await res.json();
+                    alert("Error: " + (data.error || "Update failed"));
+                }
+            } catch (err) {
+                alert("Server error");
+            }
+        }
+
+        
+async function deleteGolfer(e, id) {
+    e.preventDefault(); // This stops the browser from trying to 'GET' or refresh
+
+    if (!confirm("Are you sure you want to remove this golfer?")) return;
+
+    try {
+        const res = await fetch(`/api/golfers/${id}/deactivate`, { 
+            method: 'PATCH' 
+        });
+
+        if (res.ok) {
+            showMsg("Golfer removed successfully", "green");
+            loadGolfers(); // Refresh the table 🔄
+        } else {
+            showMsg("Error removing golfer", "red");
+        }
+    } catch (err) {
+        console.error("Delete failed", err);
+    }
+}
         loadGolfers();
     </script>
 </body>
+
 </html>

@@ -116,7 +116,8 @@ const Golfer = mongoose.model('Golfer', new mongoose.Schema({
     play_days: [String],
     booking_count: { type: Number, default: 0 },
     last_booked: { type: Date, default: new Date("2000-01-01") },
-    booking_exempt: { type: Boolean, default: false }
+    booking_exempt: { type: Boolean, default: false },
+    active: { type: Boolean, default: true }
 }));
 
 const TeeTime = mongoose.model('TeeTime', new mongoose.Schema({
@@ -370,9 +371,11 @@ app.get('/api/tee-times', protect, async (req, res) => {
 // 7. GOLFER ROUTES
 app.get('/api/golfers', protect, async (req, res) => {
     try {
-        const golfers = await Golfer.find().sort({ name: 1 });
+        const golfers = await Golfer.find({}).sort({ name: 1 });
         res.json(golfers);
-    } catch (err) { res.status(500).json({ error: "Failed to fetch golfers" }); }
+    } catch (err) { 
+        res.status(500).json({ error: "Failed to fetch golfers" }); 
+    }
 });
 
 app.post('/api/golfers', protect, async (req, res) => {
@@ -412,7 +415,9 @@ app.put('/api/golfers/:id', protect, async (req, res) => {
     try {
         await Golfer.findByIdAndUpdate(req.params.id, req.body);
         res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: "Update failed" }); }
+    } catch (err) {
+        res.status(500).json({ error: "Update failed" });
+    }
 });
 
 app.delete('/api/golfers/:id', protect, async (req, res) => {

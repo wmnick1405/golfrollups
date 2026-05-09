@@ -141,12 +141,6 @@
             width: 80px;
         }
 
-        .btn-delete {
-            background: #d32f2f;
-            color: white;
-            width: 80px;
-        }
-
         #msg {
             min-height: 20px;
             margin-bottom: 10px;
@@ -268,6 +262,7 @@
                     <th>Email</th>
                     <th>Days</th>
                     <th>Exempt</th>
+                    <th>Deactivated</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -310,10 +305,10 @@
                         <td data-label="Email"><input type="email" class="td-input" style="width:90%" value="${g.email || ''}" id="email_${g._id}"></td>
                         <td data-label="Days">${daysHtml}</td>
                         <td data-label="Exempt"><input type="checkbox" id="exempt_${g._id}" ${g.booking_exempt ? 'checked' : ''}></td>
+                        <td data-label="Deactivated"><input type="checkbox" id="active_${g._id}" ${g.active === false ? 'checked' : ''} onchange="toggleActive('${g._id}', '${g.name.replace(/'/g, "\\'")}')"></td>
                         <td data-label="Actions">
                             <div class="action-buttons">
                                 <button class="btn-save" onclick="saveGolfer('${g._id}')">Save</button>
-                                <button class="btn-delete" onclick="deleteGolfer(event, '${g._id.toString()}')">Delete</button>
                             </div>
                         </td>
                     `;
@@ -363,6 +358,45 @@
             }
         }
 
+    async function toggleActive(id, name) {
+    const checkbox = document.getElementById("active_" + id);
+    // If checked, the user is 'Deactivated', so active status is false
+    const newActiveStatus = !checkbox.checked; 
+    
+    const actionText = newActiveStatus ? "reactivate" : "deactivate";
+    
+    if (!confirm(`Are you sure you want to ${actionText} ${name}?`)) {
+        checkbox.checked = !checkbox.checked; // Revert
+        return;
+    }
+
+    try {
+        console.log(`Sending update for ${name}: active = ${newActiveStatus}`);
+
+        const res = await fetch("/api/golfers/" + id, {
+            method: "PUT",
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                active: newActiveStatus,
+                // Only clear play_days if we are deactivating (active becoming false)
+                play_days: newActiveStatus ? undefined : [] 
+            })
+        });
+
+        if (res.ok) {
+            showMsg(`Success: ${name} ${newActiveStatus ? 'reactivated' : 'deactivated'}`);
+            loadGolfers(); 
+        } else {
+            const errData = await res.json();
+            showMsg("Error: " + errData.error, true);
+            checkbox.checked = !checkbox.checked;
+        }
+    } catch (err) {
+        console.error("Update failed:", err);
+        showMsg("Server connection failed", true);
+        checkbox.checked = !checkbox.checked;
+    }
+}
 
         // Save (Update) function
         async function saveGolfer(id) {

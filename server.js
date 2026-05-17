@@ -373,8 +373,8 @@ app.get('/api/golfers', protect, async (req, res) => {
     try {
         const golfers = await Golfer.find({}).sort({ name: 1 });
         res.json(golfers);
-    } catch (err) { 
-        res.status(500).json({ error: "Failed to fetch golfers" }); 
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch golfers" });
     }
 });
 
@@ -886,6 +886,29 @@ app.get('/api/club-calendar', async (req, res) => {
         res.json(events);
     } catch (err) {
         res.status(500).json({ error: "Failed to fetch events" });
+    }
+});
+
+// Check for specific events on a rollup date
+app.get('/api/club-calendar/check-date', protect, async (req, res) => {
+    try {
+        const { date } = req.query; // Expects "YYYY-MM-DD"
+        if (!date) return res.status(400).json({ error: "Date parameter is required" });
+
+        // Normalize range to cover the whole 24 hour day in local/UTC
+        const startOfDay = new Date(date + "T00:00:00.000Z");
+        const endOfDay = new Date(date + "T23:59:59.999Z");
+
+        // Find events overlapping with this specific day
+        const events = await ClubCalendar.find({
+            start: { $lte: endOfDay },
+            end: { $gte: startOfDay }
+        });
+
+        res.json(events);
+    } catch (err) {
+        console.error("Calendar check failed:", err);
+        res.status(500).json({ error: "Failed to check calendar" });
     }
 });
 

@@ -147,6 +147,70 @@
             float: right;
             margin-top: 2px;
         }
+
+        /* Calendar Pop-up Modal Box */
+        .calendar-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .calendar-modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .calendar-modal-header {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #c62828;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .calendar-event-item {
+            background: #fff8e1;
+            border-left: 5px solid #ffb300;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+
+        .modal-close-btn {
+            background: #2e7d32;
+            color: white;
+            border-radius: 4px;
+            padding: 8px 16px;
+            float: right;
+            margin-top: 15px;
+            cursor: pointer;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
 
@@ -196,8 +260,67 @@
         </div>
     </div>
 
+    <div id="calendarAlertModal" class="calendar-modal hidden" style="display: none;">
+        <div class="calendar-modal-content">
+            <div class="calendar-modal-header">
+                ⚠️ Club Calendar Event Warning
+            </div>
+            <p>The following club events are scheduled on this date and may conflict with your planned rollup:</p>
+            <div id="calendarModalEventsList"></div>
+            <button class="modal-close-btn" onclick="closeCalendarModal()">Acknowledge & Close</button>
+            <div style="clear: both;"></div>
+        </div>
+    </div>
+
     <script src="js/shared.js"></script>
     <script>
+
+        // Track date changes to alert the administrator immediately
+        document.getElementById('rollupDate').addEventListener('change', checkCalendarConflicts);
+
+        async function checkCalendarConflicts() {
+            const dateInput = document.getElementById('rollupDate').value;
+            if (!dateInput) return;
+
+            try {
+                const res = await fetch(`/api/club-calendar/check-date?date=${dateInput}`);
+                if (!res.ok) throw new Error("Failed to search calendar dates");
+
+                const events = await res.json();
+
+                if (events && events.length > 0) {
+                    const listContainer = document.getElementById('calendarModalEventsList');
+                    listContainer.innerHTML = ""; // Wipe older alerts
+
+                    events.forEach(ev => {
+                        const startStr = new Date(ev.start).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                        const endStr = new Date(ev.end).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+                        listContainer.innerHTML += `
+                    <div class="calendar-event-item">
+                        <strong>${ev.title}</strong><br>
+                        <span style="font-size:0.85em; color:#555;">Time: ${startStr} - ${endStr} | Location: ${ev.location || 'Main Course'}</span>
+                    </div>
+                `;
+                    });
+
+                    // Un-hide and show the pop-up modal panel
+                    const modal = document.getElementById('calendarAlertModal');
+                    modal.style.display = 'flex';
+                    modal.classList.remove('hidden');
+                }
+            } catch (err) {
+                console.error("Conflict verification process omitted:", err);
+            }
+        }
+
+        function closeCalendarModal() {
+            const modal = document.getElementById('calendarAlertModal');
+            modal.style.display = 'none';
+            modal.classList.add('hidden');
+        }
+
+
         let pool = [];   // Players not in a group
         let groups = []; // Array of Arrays [[p1, p2], [p3, p4]]
 

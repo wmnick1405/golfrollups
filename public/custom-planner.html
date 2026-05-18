@@ -231,7 +231,7 @@
                         return (sessionTime >= start && sessionTime <= end);
                     });
 
-                    const statusText = isAway ? "AWAY" : "OK";
+                    const statusText = isAway ? "AWAY" : "PLAYING";
                     const color = isAway ? "#f44336" : "#4caf50";
 
                     html += `<tr>`;
@@ -266,7 +266,7 @@
         const statusCell = rows[i].getElementsByTagName('td')[1];
         if (!statusCell) continue;
         
-        const status = statusCell.textContent; // "OK" or "AWAY"
+        const status = statusCell.textContent; // "PLAYING" or "AWAY"
         
         if (filter === 'all') {
             rows[i].style.display = "";

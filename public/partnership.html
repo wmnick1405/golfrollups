@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Partnership Tracker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-image: url('./images/IMG_0376a.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            padding: 10px;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 1100px; /* Expanded slightly to ensure one clean row */
+            margin: 20px auto;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        h2,
+        h3 {
+            color: #333;
+            margin-top: 0;
+        }
+
+        /* Search Box Layout Configuration */
+        .search-box {
+            background: #e8f5e9;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #c8e6c9;
+            margin-bottom: 25px;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: nowrap; /* Forces layout to stay unified on one line on desktop */
+            align-items: flex-end;
+        }
+
+        .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            flex: 1 1 auto; /* Dynamic sizing strategy */
+        }
+
+        .field-group label {
+            font-size: 12px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        select,
+        input[type="date"] {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 15px;
+            background: white;
+            box-sizing: border-box;
+            width: 100%;
+        }
+
+        .checkbox-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding-bottom: 12px;
+            min-width: 90px;
+        }
+
+        .checkbox-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9em;
+            cursor: pointer;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .btn-search {
+            background: #2e7d32;
+            color: white;
+            padding: 10px 24px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 15px;
+            transition: 0.2s;
+            height: 40px;
+            white-space: nowrap;
+        }
+
+        .btn-search:hover {
+            background: #1b5e20;
+        }
+
+        /* The Help/Tip Notification Note text styling block */
+        .date-hint-note {
+            font-size: 12px;
+            color: #555;
+            font-style: italic;
+            margin-top: 8px;
+            display: block;
+            background: rgba(46, 125, 50, 0.08);
+            padding: 6px 12px;
+            border-radius: 4px;
+            border-left: 3px solid #2e7d32;
+        }
+
+        /* Stats Dashboard Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 5px solid #2e7d32;
+            text-align: center;
+        }
+
+        .stat-card.highlight {
+            background: #e8f5e9;
+            border-left-color: #ff9100;
+        }
+
+        .stat-val {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2e7d32;
+            margin-top: 5px;
+        }
+
+        .stat-card.highlight .stat-val {
+            color: #ff9100;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th {
+            background-color: #2e7d32;
+            color: white;
+            padding: 12px;
+            text-align: center;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+            background: white;
+            text-align: center;
+        }
+
+        #resultsArea {
+            display: none;
+        }
+
+        /* Mobile Card Adjustments override wrapper block */
+        @media screen and (max-width: 900px) {
+            .input-row {
+                flex-wrap: wrap; /* Gracefully stacks element rows if window space is narrow */
+            }
+            .field-group {
+                flex: 1 1 40%;
+            }
+        }
+        @media screen and (max-width: 600px) {
+            .field-group {
+                flex: 1 1 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="nav-placeholder"></div>
+
+    <div class="container">
+        <h2>Partnership Analysis</h2>
+
+        <div class="search-box">
+            <div class="input-row">
+                <div class="field-group">
+                    <label>First Golfer</label>
+                    <select id="player1">
+                        <option value="">Select Golfer...</option>
+                    </select>
+                </div>
+                <div class="field-group">
+                    <label>Second Golfer</label>
+                    <select id="player2">
+                        <option value="">Select Golfer...</option>
+                    </select>
+                </div>
+                <div class="field-group">
+                    <label>From Date</label>
+                    <input type="date" id="fromDate">
+                </div>
+                <div class="field-group">
+                    <label>To Date</label>
+                    <input type="date" id="toDate">
+                </div>
+                <div class="checkbox-container">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="allDates" onchange="toggleDateInputs()"> <span>All Dates</span>
+                    </label>
+                </div>
+                <button class="btn-search" onclick="analyzePartnership()">Analyze</button>
+            </div>
+            <div class="date-hint-note">
+                <strong>Tip:</strong> Checking the "All Dates" box disables the start/end inputs and automatically runs the search across the entire database history.
+            </div>
+        </div>
+
+        <div id="resultsArea">
+            <h3>Analysis Summary</h3>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div id="p1Label">Player 1 Rollups</div>
+                    <div class="stat-val" id="p1Count">0</div>
+                </div>
+                <div class="stat-card">
+                    <div id="p2Label">Player 2 Rollups</div>
+                    <div class="stat-val" id="p2Count">0</div>
+                </div>
+                <div class="stat-card highlight">
+                    <div>Played in Same Group</div>
+                    <div class="stat-val" id="togetherCount">0</div>
+                </div>
+            </div>
+
+            <h3>Shared Group Dates</h3>
+            <table id="historyTable">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Competition / Type</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="js/shared.js"></script>
+    <script>
+        function toggleDateInputs() {
+            const allDatesChecked = document.getElementById("allDates").checked;
+            document.getElementById("fromDate").disabled = allDatesChecked;
+            document.getElementById("toDate").disabled = allDatesChecked;
+            if (allDatesChecked) {
+                document.getElementById("fromDate").value = "";
+                document.getElementById("toDate").value = "";
+            }
+        }
+
+        async function populateDropdowns() {
+            try {
+                const res = await fetch('/api/golfers');
+                const golfers = await res.json();
+
+                const p1Select = document.getElementById("player1");
+                const p2Select = document.getElementById("player2");
+
+                golfers.forEach(g => {
+                    const opt1 = document.createElement("option");
+                    opt1.value = g.name;
+                    opt1.textContent = g.name + (g.active === false ? ' (Deactivated)' : '');
+
+                    const opt2 = opt1.cloneNode(true);
+
+                    p1Select.appendChild(opt1);
+                    p2Select.appendChild(opt2);
+                });
+            } catch (err) {
+                console.error("Dropdown generation failed", err);
+            }
+        }
+
+        async function analyzePartnership() {
+            const player1 = document.getElementById("player1").value;
+            const player2 = document.getElementById("player2").value;
+            const from = document.getElementById("fromDate").value;
+            const to = document.getElementById("toDate").value;
+            const allDates = document.getElementById("allDates").checked;
+
+            if (!player1 || !player2) {
+                alert("Please pick two golfers to compare.");
+                return;
+            }
+            if (player1 === player2) {
+                alert("Please select two different golfers.");
+                return;
+            }
+
+            try {
+                const url = `/api/reports/partnership?player1=${encodeURIComponent(player1)}&player2=${encodeURIComponent(player2)}&from=${from}&to=${to}&allDates=${allDates}`;
+                const res = await fetch(url);
+                const data = await res.json();
+
+                if (!res.ok) throw new Error(data.error || "Query failed");
+
+                document.getElementById("resultsArea").style.display = "block";
+
+                document.getElementById("p1Label").textContent = `${data.player1} Total Played`;
+                document.getElementById("p2Label").textContent = `${data.player2} Total Played`;
+
+                document.getElementById("p1Count").textContent = data.player1Count;
+                document.getElementById("p2Count").textContent = data.player2Count;
+                document.getElementById("togetherCount").textContent = data.togetherInGroupCount;
+
+                const tbody = document.querySelector("#historyTable tbody");
+                tbody.innerHTML = "";
+
+                if (data.history.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="2" style="color:#777;">No shared group assignments found for this timeline profile.</td></tr>`;
+                } else {
+                    data.history.forEach(match => {
+                        const row = document.createElement("tr");
+                        row.innerHTML = `
+                            <td><strong>${match.date}</strong></td>
+                            <td>${match.competition}</td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        populateDropdowns();
+    </script>
+</body>
+
+</html>

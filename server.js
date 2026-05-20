@@ -867,6 +867,82 @@ app.get('/api/reports/player-history', protect, async (req, res) => {
     }
 });
 
+// PARTNERSHIP TRACKER ROUTE
+app.get('/api/reports/partnership', protect, async (req, res) => {
+    try {
+        const { player1, player2, from, to, allDates } = req.query;
+
+        if (!player1 || !player2) {
+            return res.status(400).json({ error: "Both player names are required." });
+        }
+
+        // Build the date filter condition
+        let dateQuery = {};
+        if (allDates !== 'true') {
+            if (from || to) {
+                dateQuery.date = {};
+                if (from) dateQuery.date.$gte = new Date(from + "T00:00:00.000Z");
+                if (to) dateQuery.date.$lte = new Date(to + "T23:59:59.999Z");
+            }
+        }
+
+        // Fetch rollups matching the date criteria
+        const rollups = await Rollup.find(dateQuery).sort({ date: -1 }).lean();
+
+        let player1Count = 0;
+        let player2Count = 0;
+        let togetherInGroupCount = 0;
+        const matches = [];
+
+        const p1 = player1.trim().toLowerCase();
+        const p2 = player2.trim().toLowerCase();
+
+        rollups.forEach(rollup => {
+            // Flatten all groups to see who attended the rollup at all
+            const allPlayers = rollup.groups.flat().map(p => p.name.trim().toLowerCase());
+            
+            const p1Attended = allPlayers.includes(p1);
+            const p2Attended = allPlayers.includes(p2);
+
+            if (p1Attended) player1Count++;
+            if (p2Attended) player2Count++;
+
+            // Check if they were placed in the EXACT SAME group
+            let playedTogetherThisDay = false;
+            rollup.groups.forEach(group => {
+                const groupNames = group.map(p => p.name.trim().toLowerCase());
+                if (groupNames.includes(p1) && groupNames.includes(p2)) {
+                    togetherInGroupCount++;
+                    playedTogetherThisDay = true;
+                }
+            });
+
+            // If they played in the same group, save the record for the list
+            if (playedTogetherThisDay) {
+                matches.push({
+                    date: new Date(rollup.date).toLocaleDateString('en-GB', {
+                        weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
+                    }),
+                    competition: rollup.competition
+                });
+            }
+        });
+
+        res.json({
+            player1,
+            player2,
+            player1Count,
+            player2Count,
+            togetherInGroupCount,
+            history: matches
+        });
+
+    } catch (err) {
+        console.error("Partnership Tracker Error:", err);
+        res.status(500).json({ error: "Failed to compile partnership data." });
+    }
+});
+
 // 10. BOOKER UPDATES
 app.post('/api/booker/:id', protect, async (req, res) => {
     try {

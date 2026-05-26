@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Playing Frequency Matrix</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-image: url('./images/IMG_0376a.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            padding: 10px;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 20px auto;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        h2, h3 {
+            color: #333;
+            margin-top: 0;
+        }
+
+        .search-box {
+            background: #e8f5e9;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #c8e6c9;
+            margin-bottom: 25px;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: nowrap;
+            align-items: flex-end;
+        }
+
+        .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            flex: 1 1 auto;
+        }
+
+        .field-group label {
+            font-size: 12px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        select, input[type="date"] {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 15px;
+            background: white;
+            box-sizing: border-box;
+            width: 100%;
+        }
+
+        .checkbox-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding-bottom: 12px;
+            min-width: 90px;
+        }
+
+        .checkbox-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9em;
+            cursor: pointer;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .btn-search {
+            background: #2e7d32;
+            color: white;
+            padding: 10px 24px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 15px;
+            transition: 0.2s;
+            height: 40px;
+            white-space: nowrap;
+        }
+
+        .btn-search:hover {
+            background: #1b5e20;
+        }
+
+        .date-hint-note {
+            font-size: 12px;
+            color: #555;
+            font-style: italic;
+            margin-top: 8px;
+            display: block;
+            background: rgba(46, 125, 50, 0.08);
+            padding: 6px 12px;
+            border-radius: 4px;
+            border-left: 3px solid #2e7d32;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th {
+            background-color: #2e7d32;
+            color: white;
+            padding: 12px;
+        }
+
+        th.align-left, td.align-left {
+            text-align: left;
+            padding-left: 20px;
+        }
+
+        th.align-center, td.align-center {
+            text-align: center;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+            background: white;
+        }
+
+        tr:hover td {
+            background-color: #f1f8e9; /* Soft highlight when hovering rows */
+        }
+
+        #resultsArea {
+            display: none;
+        }
+
+        @media screen and (max-width: 900px) {
+            .input-row {
+                flex-wrap: wrap;
+            }
+            .field-group {
+                flex: 1 1 45%;
+            }
+        }
+        @media screen and (max-width: 600px) {
+            .field-group {
+                flex: 1 1 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="nav-placeholder"></div>
+
+    <div class="container">
+        <h2>Playing Frequency Matrix</h2>
+
+        <div class="search-box">
+            <div class="input-row">
+                <div class="field-group" style="flex: 2 1 auto;">
+                    <label>Select Golfer</label>
+                    <select id="targetPlayer">
+                        <option value="">Select Golfer...</option>
+                    </select>
+                </div>
+                <div class="field-group">
+                    <label>From Date</label>
+                    <input type="date" id="fromDate">
+                </div>
+                <div class="field-group">
+                    <label>To Date</label>
+                    <input type="date" id="toDate">
+                </div>
+                <div class="checkbox-container">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="allDates" onchange="toggleDateInputs()"> <span>All Dates</span>
+                    </label>
+                </div>
+                <button class="btn-search" onclick="analyzeFrequency()">Analyze</button>
+            </div>
+            <div class="date-hint-note">
+                <strong>Tip:</strong> Checking the "All Dates" box disables the start/end inputs and automatically runs the search across the entire database history.
+            </div>
+        </div>
+
+        <div id="resultsArea">
+            <h3 id="tableHeading">Partner Pairings Breakdown</h3>
+            <table id="frequencyTable">
+                <thead>
+                    <tr>
+                        <th class="align-left" style="width: 70%;">Golfer Name</th>
+                        <th class="align-center" style="width: 30%;">Times in Same Group</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="js/shared.js"></script>
+    <script>
+        function toggleDateInputs() {
+            const allDatesChecked = document.getElementById("allDates").checked;
+            document.getElementById("fromDate").disabled = allDatesChecked;
+            document.getElementById("toDate").disabled = allDatesChecked;
+            if (allDatesChecked) {
+                document.getElementById("fromDate").value = "";
+                document.getElementById("toDate").value = "";
+            }
+        }
+
+        async function populateDropdown() {
+            try {
+                const res = await fetch('/api/golfers');
+                const golfers = await res.json();
+
+                const playerSelect = document.getElementById("targetPlayer");
+
+                golfers.forEach(g => {
+                    const opt = document.createElement("option");
+                    opt.value = g.name;
+                    opt.textContent = g.name + (g.active === false ? ' (Deactivated)' : '');
+                    playerSelect.appendChild(opt);
+                });
+            } catch (err) {
+                console.error("Dropdown generation failed", err);
+            }
+        }
+
+        async function analyzeFrequency() {
+            const player = document.getElementById("targetPlayer").value;
+            const from = document.getElementById("fromDate").value;
+            const to = document.getElementById("toDate").value;
+            const allDates = document.getElementById("allDates").checked;
+
+            if (!player) {
+                alert("Please select a golfer to analyze.");
+                return;
+            }
+
+            try {
+                const url = `/api/reports/frequency?player=${encodeURIComponent(player)}&from=${from}&to=${to}&allDates=${allDates}`;
+                const res = await fetch(url);
+                const data = await res.json();
+
+                if (!res.ok) throw new Error(data.error || "Query failed");
+
+                document.getElementById("resultsArea").style.display = "block";
+                document.getElementById("tableHeading").textContent = `Group Pairings Matrix for: ${data.targetPlayer}`;
+
+                const tbody = document.querySelector("#frequencyTable tbody");
+                tbody.innerHTML = "";
+
+                if (data.matrix.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="2" style="color:#777;" class="align-center">No group records found for this golfer in the selected time range.</td></tr>`;
+                } else {
+                    data.matrix.forEach(rowItem => {
+                        const row = document.createElement("tr");
+                        row.innerHTML = `
+                            <td class="align-left"><strong>${rowItem.name}</strong></td>
+                            <td class="align-center" style="font-weight: bold; color: #2e7d32; font-size: 1.1em;">${rowItem.count}</td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        populateDropdown();
+    </script>
+</body>
+
+</html>

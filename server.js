@@ -943,6 +943,65 @@ app.get('/api/reports/partnership', protect, async (req, res) => {
     }
 });
 
+// PLAYER FREQUENCY PARTNER ROUTE
+app.get('/api/reports/frequency', protect, async (req, res) => {
+    try {
+        const { player, from, to, allDates } = req.query;
+
+        if (!player) {
+            return res.status(400).json({ error: "Golfer name is required." });
+        }
+
+        // Build the date filter condition
+        let dateQuery = {};
+        if (allDates !== 'true') {
+            if (from || to) {
+                dateQuery.date = {};
+                if (from) dateQuery.date.$gte = new Date(from + "T00:00:00.000Z");
+                if (to) dateQuery.date.$lte = new Date(to + "T23:59:59.999Z");
+            }
+        }
+
+        // Fetch rollups matching the date criteria
+        const rollups = await Rollup.find(dateQuery).lean();
+        
+        const targetPlayer = player.trim().toLowerCase();
+        const counts = {};
+
+        rollups.forEach(rollup => {
+            rollup.groups.forEach(group => {
+                // Check if our target player was in this specific group
+                const groupNames = group.map(p => p.name.trim());
+                const groupNamesLower = groupNames.map(n => n.toLowerCase());
+
+                if (groupNamesLower.includes(targetPlayer)) {
+                    // They were in this group! Now count everyone else in the group
+                    groupNames.forEach(name => {
+                        if (name.toLowerCase() !== targetPlayer) {
+                            counts[name] = (counts[name] || 0) + 1;
+                        }
+                    });
+                }
+            });
+        });
+
+        // Convert the counts object into a sorted array (highest frequency first)
+        const matrix = Object.keys(counts).map(name => ({
+            name: name,
+            count: counts[name]
+        })).sort((a, b) => b.count - a.count);
+
+        res.json({
+            targetPlayer: player,
+            matrix: matrix
+        });
+
+    } catch (err) {
+        console.error("Frequency Tracker Error:", err);
+        res.status(500).json({ error: "Failed to compile frequency data." });
+    }
+});
+
 // 10. BOOKER UPDATES
 app.post('/api/booker/:id', protect, async (req, res) => {
     try {
@@ -1085,10 +1144,10 @@ app.get('/api/email-data', protect, async (req, res) => {
 
 app.get('/api/golfer-emails', protect, async (req, res) => {
     try {
-        // Fetch only the email field from all golfers
-        const golfers = await Golfer.find({}, 'email');
+        // Updated filter: Only fetch golfers where active is NOT false
+        const golfers = await Golfer.find({ active: { $ne: false } }, 'email');
 
-        // Filter out any golfers who don't have an email on file
+        // Filter out any entries that don't have a valid email on file
         const emailList = golfers
             .map(g => g.email)
             .filter(email => email && email.trim() !== "");

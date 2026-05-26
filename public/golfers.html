@@ -13,7 +13,6 @@
             background-attachment: fixed;
             background-repeat: no-repeat;
             padding: 10px;
-            /* Reduced for mobile */
             margin: 0;
         }
 
@@ -38,6 +37,15 @@
             padding: 20px;
             border-radius: 8px;
             border: 1px solid #c8e6c9;
+            margin-bottom: 20px;
+        }
+
+        /* Filter Box Styles */
+        .filter-box {
+            background: #f1f8e9;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #c8e6c9;
             margin-bottom: 30px;
         }
 
@@ -45,7 +53,6 @@
             display: flex;
             gap: 15px;
             flex-wrap: wrap;
-            /* Allows stacking on mobile */
             align-items: flex-end;
         }
 
@@ -54,7 +61,6 @@
             flex-direction: column;
             gap: 5px;
             flex: 1 1 200px;
-            /* Grow/Shrink, base width 200px */
         }
 
         .field-group label {
@@ -69,7 +75,6 @@
             border: 1px solid #ccc;
             border-radius: 5px;
             font-size: 16px;
-            /* 16px prevents iOS zoom on focus */
             background: white;
         }
 
@@ -107,11 +112,10 @@
             background: #2e7d32;
             color: white;
             flex: 1 1 100%;
-            /* Full width on mobile when wrapped */
             margin-top: 10px;
         }
 
-        /* Table Responsiveness */
+        /* Table Structure & Desktop Alignment */
         table {
             width: 100%;
             border-collapse: collapse;
@@ -121,18 +125,45 @@
             background-color: #2e7d32;
             color: white;
             padding: 12px;
-            text-align: left;
+            text-align: center;
+            vertical-align: middle;
         }
 
         td {
             padding: 12px;
             border-bottom: 1px solid #ddd;
             background: white;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        /* Keep names/text input columns left-aligned for standard reading layout */
+        th:nth-child(1),
+        td:nth-child(1),
+        th:nth-child(2),
+        td:nth-child(2),
+        th:nth-child(3),
+        td:nth-child(3) {
+            text-align: left;
+        }
+
+        .td-input {
+            text-align: left;
+            box-sizing: border-box;
+        }
+
+        /* Enforce native checkbox styles to stay centered */
+        input[type="checkbox"] {
+            margin: 0 auto;
+            display: inline-block;
+            transform: scale(1.1);
+            cursor: pointer;
         }
 
         .action-buttons {
             display: flex;
             gap: 8px;
+            justify-content: center;
         }
 
         .btn-save {
@@ -167,6 +198,25 @@
                 display: block;
             }
 
+            th:nth-child(1),
+            td:nth-child(1) {
+                width: 20%;
+            }
+
+            /* Name gets 20% */
+            th:nth-child(2),
+            td:nth-child(2) {
+                width: 15%;
+            }
+
+            /* Phone gets 15% */
+            th:nth-child(3),
+            td:nth-child(3) {
+                width: 35%;
+            }
+
+            /* Email gets 35% (Much wider!) */
+
             thead tr {
                 position: absolute;
                 top: -9999px;
@@ -185,12 +235,11 @@
                 border: none;
                 border-bottom: 1px solid #eee;
                 position: relative;
-                padding-left: 40%;
-                /* Space for label */
+                padding-left: 40% !important;
+                text-align: left !important;
                 min-height: 40px;
             }
 
-            /* Labels for mobile card fields */
             td:before {
                 position: absolute;
                 left: 10px;
@@ -198,12 +247,14 @@
                 font-weight: bold;
                 color: #2e7d32;
                 content: attr(data-label);
-                /* Pulls from HTML attribute */
+            }
+
+            input[type="checkbox"] {
+                margin: 0;
             }
 
             .td-input {
                 width: 100% !important;
-                box-sizing: border-box;
             }
 
             .action-buttons {
@@ -254,6 +305,27 @@
             </div>
         </div>
 
+        <div class="filter-box">
+            <h3 style="margin-bottom: 12px; font-size: 15px; color: #2e7d32;">Filter Table List</h3>
+            <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: center;">
+                <label class="checkbox-label"><input type="checkbox" id="filterDeactivated" onchange="filterTable()">
+                    Show Deactivated Only</label>
+                <label class="checkbox-label"><input type="checkbox" id="filterExempt" onchange="filterTable()"> Show
+                    Booking Exempt Only</label>
+
+                <div
+                    style="display: flex; gap: 12px; align-items: center; border-left: 2px solid #c8e6c9; padding-left: 15px;">
+                    <span style="font-size: 13px; font-weight: bold; color: #555;">Days:</span>
+                    <label class="checkbox-label"><input type="checkbox" class="filter-day" value="Monday"
+                            onchange="filterTable()"> Mon</label>
+                    <label class="checkbox-label"><input type="checkbox" class="filter-day" value="Wednesday"
+                            onchange="filterTable()"> Wed</label>
+                    <label class="checkbox-label"><input type="checkbox" class="filter-day" value="Friday"
+                            onchange="filterTable()"> Fri</label>
+                </div>
+            </div>
+        </div>
+
         <table id="golfersTable">
             <thead>
                 <tr>
@@ -272,6 +344,7 @@
 
     <script src="js/shared.js"></script>
     <script>
+        let allGolfersCache = []; // Master structural copy stored safely in runtime cache
 
         function showMsg(text, isError = false) {
             const msg = document.getElementById("msg");
@@ -283,38 +356,60 @@
         async function loadGolfers() {
             try {
                 const res = await fetch('/api/golfers');
-                const golfers = await res.json();
-                const tbody = document.querySelector("#golfersTable tbody");
-                tbody.innerHTML = "";
-                const weekDays = ["Monday", "Wednesday", "Friday"];
+                allGolfersCache = await res.json();
+                filterTable(); // Run renderer using current filter configurations
+            } catch (err) {
+                console.error("Load failed", err);
+            }
+        }
 
-                golfers.forEach(g => {
-                    const row = document.createElement("tr");
+        function filterTable() {
+            const tbody = document.querySelector("#golfersTable tbody");
+            tbody.innerHTML = "";
+            const weekDays = ["Monday", "Wednesday", "Friday"];
 
-                    let daysHtml = `<div style="display: flex; gap: 8px; flex-wrap: wrap;">`;
-                    weekDays.forEach(day => {
-                        const checked = (g.play_days || []).includes(day) ? 'checked' : '';
-                        daysHtml += `<label style="font-size:0.8em;"><input type="checkbox" class="edit-day-${g._id}" value="${day}" ${checked}> ${day.substring(0, 3)}</label>`;
-                    });
-                    daysHtml += `</div>`;
+            // Extract checkbox configurations
+            const onlyDeactivated = document.getElementById("filterDeactivated").checked;
+            const onlyExempt = document.getElementById("filterExempt").checked;
+            const activeDayFilters = Array.from(document.querySelectorAll(".filter-day:checked")).map(cb => cb.value);
 
-                    // Added data-label for mobile view
-                    row.innerHTML = `
-                        <td data-label="Name"><input type="text" class="td-input" style="width:90%" value="${g.name}" id="name_${g._id}"></td>
-                        <td data-label="Phone"><input type="text" class="td-input" style="width:90%" value="${g.tel || ''}" id="tel_${g._id}"></td>
-                        <td data-label="Email"><input type="email" class="td-input" style="width:90%" value="${g.email || ''}" id="email_${g._id}"></td>
-                        <td data-label="Days">${daysHtml}</td>
-                        <td data-label="Exempt"><input type="checkbox" id="exempt_${g._id}" ${g.booking_exempt ? 'checked' : ''}></td>
-                        <td data-label="Deactivated"><input type="checkbox" id="active_${g._id}" ${g.active === false ? 'checked' : ''} onchange="toggleActive('${g._id}', '${g.name.replace(/'/g, "\\'")}')"></td>
-                        <td data-label="Actions">
-                            <div class="action-buttons">
-                                <button class="btn-save" onclick="saveGolfer('${g._id}')">Save</button>
-                            </div>
-                        </td>
-                    `;
-                    tbody.appendChild(row);
+            // Filter master cache matching selected configurations
+            const filteredGolfers = allGolfersCache.filter(g => {
+                if (onlyDeactivated && g.active !== false) return false;
+                if (onlyExempt && !g.booking_exempt) return false;
+                if (activeDayFilters.length > 0) {
+                    const hasDayMatch = activeDayFilters.some(day => (g.play_days || []).includes(day));
+                    if (!hasDayMatch) return false;
+                }
+                return true;
+            });
+
+            // Populate table body with active filtered array items
+            filteredGolfers.forEach(g => {
+                const row = document.createElement("tr");
+
+                let daysHtml = `<div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;">`;
+                weekDays.forEach(day => {
+                    const checked = (g.play_days || []).includes(day) ? 'checked' : '';
+                    daysHtml += `<label style="font-size:0.8em; display: inline-flex; align-items: center; gap: 3px;"><input type="checkbox" class="edit-day-${g._id}" value="${day}" ${checked}> ${day.substring(0, 3)}</label>`;
                 });
-            } catch (err) { console.error("Load failed", err); }
+                daysHtml += `</div>`;
+
+                row.innerHTML = `
+                    <td data-label="Name"><input type="text" class="td-input" style="width:90%" value="${g.name}" id="name_${g._id}"></td>
+                    <td data-label="Phone"><input type="text" class="td-input" style="width:90%" value="${g.tel || ''}" id="tel_${g._id}"></td>
+                    <td data-label="Email"><input type="email" class="td-input" style="width:98%" value="${g.email || ''}" id="email_${g._id}"></td>
+                    <td data-label="Days">${daysHtml}</td>
+                    <td data-label="Exempt"><input type="checkbox" id="exempt_${g._id}" ${g.booking_exempt ? 'checked' : ''}></td>
+                    <td data-label="Deactivated"><input type="checkbox" id="active_${g._id}" ${g.active === false ? 'checked' : ''} onchange="toggleActive('${g._id}', '${g.name.replace(/'/g, "\\'")}')"></td>
+                    <td data-label="Actions">
+                        <div class="action-buttons">
+                            <button class="btn-save" onclick="saveGolfer('${g._id}')">Save</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
         }
 
         // Add Golfer function
@@ -324,9 +419,7 @@
             const email = document.getElementById("newEmail").value.trim();
             const booking_exempt = document.getElementById("newExempt").checked;
 
-            // NEW: Get play days from checkboxes
-            const play_days = Array.from(document.querySelectorAll(".day-opt:checked"))
-                .map(cb => cb.value);
+            const play_days = Array.from(document.querySelectorAll(".day-opt:checked")).map(cb => cb.value);
 
             if (!name) return showMsg("Error: Name is required", true);
 
@@ -340,13 +433,10 @@
                 const data = await res.json();
                 if (res.ok) {
                     showMsg(`Success: ${name} added!`);
-                    // Clear the form
                     document.getElementById("newName").value = "";
                     document.getElementById("newPhone").value = "";
                     document.getElementById("newEmail").value = "";
                     document.getElementById("newExempt").checked = false;
-
-                    // NEW: Uncheck all day boxes
                     document.querySelectorAll(".day-opt").forEach(cb => cb.checked = false);
 
                     loadGolfers();
@@ -358,45 +448,42 @@
             }
         }
 
-    async function toggleActive(id, name) {
-    const checkbox = document.getElementById("active_" + id);
-    // If checked, the user is 'Deactivated', so active status is false
-    const newActiveStatus = !checkbox.checked; 
-    
-    const actionText = newActiveStatus ? "reactivate" : "deactivate";
-    
-    if (!confirm(`Are you sure you want to ${actionText} ${name}?`)) {
-        checkbox.checked = !checkbox.checked; // Revert
-        return;
-    }
+        async function toggleActive(id, name) {
+            const checkbox = document.getElementById("active_" + id);
+            const newActiveStatus = !checkbox.checked;
+            const actionText = newActiveStatus ? "reactivate" : "deactivate";
 
-    try {
-        console.log(`Sending update for ${name}: active = ${newActiveStatus}`);
+            if (!confirm(`Are you sure you want to ${actionText} ${name}?`)) {
+                checkbox.checked = !checkbox.checked;
+                return;
+            }
 
-        const res = await fetch("/api/golfers/" + id, {
-            method: "PUT",
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                active: newActiveStatus,
-                // Only clear play_days if we are deactivating (active becoming false)
-                play_days: newActiveStatus ? undefined : [] 
-            })
-        });
+            try {
+                console.log(`Sending update for ${name}: active = ${newActiveStatus}`);
 
-        if (res.ok) {
-            showMsg(`Success: ${name} ${newActiveStatus ? 'reactivated' : 'deactivated'}`);
-            loadGolfers(); 
-        } else {
-            const errData = await res.json();
-            showMsg("Error: " + errData.error, true);
-            checkbox.checked = !checkbox.checked;
+                const res = await fetch("/api/golfers/" + id, {
+                    method: "PUT",
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        active: newActiveStatus,
+                        play_days: newActiveStatus ? undefined : []
+                    })
+                });
+
+                if (res.ok) {
+                    showMsg(`Success: ${name} ${newActiveStatus ? 'reactivated' : 'deactivated'}`);
+                    loadGolfers();
+                } else {
+                    const errData = await res.json();
+                    showMsg("Error: " + errData.error, true);
+                    checkbox.checked = !checkbox.checked;
+                }
+            } catch (err) {
+                console.error("Update failed:", err);
+                showMsg("Server connection failed", true);
+                checkbox.checked = !checkbox.checked;
+            }
         }
-    } catch (err) {
-        console.error("Update failed:", err);
-        showMsg("Server connection failed", true);
-        checkbox.checked = !checkbox.checked;
-    }
-}
 
         // Save (Update) function
         async function saveGolfer(id) {
@@ -405,9 +492,7 @@
             const email = document.getElementById("email_" + id).value.trim();
             const booking_exempt = document.getElementById("exempt_" + id).checked;
 
-            // NEW: Collect checkboxes for THIS specific row
-            const play_days = Array.from(document.querySelectorAll(`.edit-day-${id}:checked`))
-                .map(cb => cb.value);
+            const play_days = Array.from(document.querySelectorAll(`.edit-day-${id}:checked`)).map(cb => cb.value);
 
             if (!name) return alert("Name cannot be empty");
 
@@ -429,8 +514,6 @@
                 alert("Server error");
             }
         }
-
-        
 
         loadGolfers();
     </script>

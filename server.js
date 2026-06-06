@@ -727,6 +727,18 @@ app.get('/api/rollups/:id', protect, async (req, res) => {
     } catch (err) { res.status(404).json({ error: "Not found" }); }
 });
 
+// PUT (Update Rollup Groups & Lineups)
+app.put('/api/rollups/:id', protect, async (req, res) => {
+    try {
+        await Rollup.findByIdAndUpdate(req.params.id, req.body);
+        // Explicitly send a 200 success status code back to your Booking Sheet
+        res.status(200).json({ success: true, message: "Rollup groups saved cleanly" });
+    } catch (err) {
+        console.error("Booking Sheet save failed:", err);
+        res.status(500).json({ error: "Failed to update rollup grid setup" });
+    }
+});
+
 // DELETE a specific rollup by ID
 app.delete('/api/rollups/:id', async (req, res) => {
     try {

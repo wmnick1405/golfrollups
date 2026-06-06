@@ -4,30 +4,120 @@
 <head>
     <title>Booking Sheet</title>
     <style>
-         body {
-                font-family: Arial;
-                /* background: #f2f2f2;> */
-                background-image: url('./images/IMG_0376a.jpg');
-                background-size: 100%;
-                background-position: center;
-                background-attachment: fixed;
-                background-repeat: no-repeat;
+        body {
+            font-family: Arial;
+            background-image: url('./images/IMG_0376a.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            padding: 30px;
+            margin: 0;
+        }
 
-                padding: 30px;
-                margin: 0;
-                padding: 30px;
-            }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.96);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        h2, h3 { margin-top: 0; color: #333; }
+
+        /* Admin Controls Bar */
+        .admin-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #e8f5e9;
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: 1px solid #c8e6c9;
+            margin-bottom: 20px;
+        }
+
+        /* Base Button Structure styling (The Preferred Shape) */
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 50px; /* Perfectly pill-shaped */
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 13px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn-toggle { background: #2e7d32; color: white; }
+        .btn-toggle.active { background: #d32f2f; }
+        .btn-add-group { background: #007bff; color: white; margin-top: 15px; }
+        
+        /* Unified Row-level Buttons matching the preferred shape */
+        .btn-del { 
+            background: #d32f2f; 
+            color: white; 
+            padding: 6px 14px; 
+            border-radius: 50px; 
+            margin-left: 10px; 
+        }
+        
+        .btn-booker { 
+            background: #f0f0f0; 
+            color: #333; 
+            padding: 6px 14px; 
+            border-radius: 50px; 
+            margin-left: 5px; 
+            border: 1px solid #ccc; 
+        }
+        .btn-booker.is-booker { 
+            background: #ffe082; 
+            border-color: #ffb300; 
+        }
 
         .group {
             margin-top: 20px;
-            padding: 10px;
+            padding: 15px;
             background: #f8f8f8;
-            border-radius: 5px;
+            border-radius: 6px;
             border: 1px solid #ddd;
+            position: relative;
         }
 
-        .group b {
+        .group b.group-title {
             color: #2e7d32;
+            font-size: 1.1em;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .player-row {
+            display: flex;
+            align-items: center;
+            margin: 6px 0;
+            padding: 4px 0;
+            border-bottom: 1px dashed #eee;
+        }
+
+        .add-player-zone {
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        select {
+            padding: 8px;
+            border-radius: 50px; /* Kept smooth to compliment the buttons */
+            border: 1px solid #ccc;
+            font-size: 13px;
+            background: white;
+            padding-left: 12px;
         }
 
         .comp-header {
@@ -36,6 +126,12 @@
             margin-bottom: 10px;
             color: #333;
         }
+
+        #msg {
+            min-height: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 
@@ -43,12 +139,58 @@
 
     <div id="nav-placeholder"></div>
 
-    <h2>Booking Sheet</h2>
-    <div id="sheet"></div>
+    <div class="container">
+        <h2>Booking Sheet</h2>
+        
+        <!-- Toast Notification Area -->
+        <div id="msg"></div>
+
+        <!-- Mode Toggle Panel Bar -->
+        <div class="admin-bar">
+            <span id="modeStatus" style="font-weight: bold; color: #555;">Status: Viewing Sheet</span>
+            <button class="btn btn-toggle" id="toggleEditBtn" onclick="toggleEditMode()">Enable Editing</button>
+        </div>
+
+        <div id="sheet"></div>
+        <button class="btn btn-add-group" id="addGroupBtn" style="display: none;" onclick="addNewGroup()">+ Add New Group Row</button>
+    </div>
 
     <script src="js/shared.js"></script>
 
     <script>
+        let isEditMode = false;
+        let currentRollup = null; 
+        let activeGolfersList = []; 
+
+        function showMsg(text, isError = false) {
+            const msg = document.getElementById("msg");
+            msg.textContent = text;
+            msg.style.color = isError ? "#d32f2f" : "#2e7d32";
+            setTimeout(() => { msg.textContent = ""; }, 6000);
+        }
+
+        function toggleEditMode() {
+            isEditMode = !isEditMode;
+            const btn = document.getElementById("toggleEditBtn");
+            const status = document.getElementById("modeStatus");
+            const addGroupBtn = document.getElementById("addGroupBtn");
+
+            if (isEditMode) {
+                btn.textContent = "Disable Editing";
+                btn.classList.add("active");
+                status.textContent = "Status: EDIT MODE ACTIVE";
+                status.style.color = "#d32f2f";
+                addGroupBtn.style.display = "inline-block";
+            } else {
+                btn.textContent = "Enable Editing";
+                btn.classList.remove("active");
+                status.textContent = "Status: Viewing Sheet";
+                status.style.color = "#555";
+                addGroupBtn.style.display = "none";
+            }
+            renderSheet(); 
+        }
+
         async function loadBookingSheet() {
             const params = new URLSearchParams(window.location.search);
             const rollupId = params.get("id");
@@ -58,39 +200,178 @@
             }
 
             try {
-                const response = await fetch(`/api/rollups/${rollupId}`);
-                if (!response.ok) throw new Error("Rollup not found");
-                const rollup = await response.json();
+                const [rollupRes, golfersRes] = await Promise.all([
+                    fetch(`/api/rollups/${rollupId}`),
+                    fetch('/api/golfers') 
+                ]);
 
-                const div = document.getElementById("sheet");
+                if (!rollupRes.ok) throw new Error("Rollup not found");
+                currentRollup = await rollupRes.json();
+                activeGolfersList = await golfersRes.json();
 
-                // --- NEW HEADER LOGIC ---
-                // We use the 'competition' field from the database, defaulting to 'Social'
-                const compName = rollup.competition || "Social";
-                const dateStr = new Date(rollup.date).toDateString();
-
-                div.innerHTML = `
-                    <h3>${dateStr}</h3>
-                    <div class="comp-header">Competition: ${compName}</div>
-                    <hr>
-                `;
-
-                rollup.groups.forEach((group, i) => {
-                    const gdiv = document.createElement("div");
-                    gdiv.className = "group";
-
-                    let html = `<b>Group ${i + 1}</b><br>`;
-                    group.forEach(p => {
-                        // Bold the name and add label if they are the booker
-                        html += p.booker ? `<b>${p.name} (Booker)</b><br>` : `${p.name}<br>`;
-                    });
-
-                    gdiv.innerHTML = html;
-                    div.appendChild(gdiv);
-                });
+                renderSheet();
             } catch (err) {
                 console.error(err);
-                document.getElementById("sheet").innerHTML = "<p>Error loading rollup</p>";
+                document.getElementById("sheet").innerHTML = "<p>Error loading rollup data structures</p>";
+            }
+        }
+
+        function renderSheet() {
+            if (!currentRollup) return;
+
+            const div = document.getElementById("sheet");
+            const compName = currentRollup.competition || "Social";
+            const dateStr = new Date(currentRollup.date).toDateString();
+
+            div.innerHTML = `
+                <h3>${dateStr}</h3>
+                <div class="comp-header">Competition: ${compName}</div>
+                <hr>
+            `;
+
+            currentRollup.groups.forEach((group, gIdx) => {
+                const gdiv = document.createElement("div");
+                gdiv.className = "group";
+
+                let html = `<b class="group-title">Group ${gIdx + 1}</b>`;
+
+                group.forEach((p, pIdx) => {
+                    html += `<div class="player-row">`;
+                    
+                    if (p.booker) {
+                        html += `<span><b>${p.name} (Booker)</b></span>`;
+                    } else {
+                        html += `<span>${p.name}</span>`;
+                    }
+
+                    if (isEditMode) {
+                        html += `
+                            <button class="btn btn-booker ${p.booker ? 'is-booker' : ''}" onclick="toggleBooker(${gIdx}, ${pIdx})">Booker</button>
+                            <button class="btn btn-del" onclick="deletePlayer(${gIdx}, ${pIdx})">❌ Remove</button>
+                        `;
+                    }
+                    html += `</div>`;
+                });
+
+                if (isEditMode) {
+                    html += `
+                        <div class="add-player-zone">
+                            <select id="select_${gIdx}">
+                                <option value="">-- Choose Player to Add --</option>
+                                ${activeGolfersList.map(g => `<option value="${g._id}|${g.name}">${g.name}</option>`).join('')}
+                            </select>
+                            <button class="btn btn-toggle" style="padding: 6px 14px;" onclick="addPlayerToGroup(${gIdx})">+ Add</button>
+                        </div>
+                    `;
+                }
+
+                gdiv.innerHTML = html;
+                div.appendChild(gdiv);
+            });
+        }
+
+        async function addPlayerToGroup(gIdx) {
+            const select = document.getElementById(`select_${gIdx}`);
+            if (!select.value) return alert("Please select a player first.");
+
+            const [golferId, golferName] = select.value.split('|');
+            
+            let foundConflictRollupId = null;
+            let foundGroupIndex = -1;
+            let foundPlayerIndex = -1;
+
+            try {
+                const targetIsoDate = currentRollup.date.split('T')[0];
+                const checkRes = await fetch(`/api/rollups/find?date=${targetIsoDate}`);
+                
+                if (checkRes.ok) {
+                    const activeDayRollup = await checkRes.json();
+                    
+                    activeDayRollup.groups.forEach((group, crossGIdx) => {
+                        group.forEach((p, crossPIdx) => {
+                            if (p.golfer_id === golferId) {
+                                foundConflictRollupId = activeDayRollup._id;
+                                foundGroupIndex = crossGIdx;
+                                foundPlayerIndex = crossPIdx;
+                            }
+                        });
+                    });
+                }
+            } catch (crawlErr) {
+                console.log("No conflicting matches found on system calendar timeline context logs.");
+            }
+
+            if (foundConflictRollupId) {
+                const proceed = confirm(`Warning: ${golferName} is already assigned to a group on this day. Do you want to remove them from their old slot and move them here?`);
+                if (!proceed) return;
+
+                try {
+                    const conflictRes = await fetch(`/api/rollups/${foundConflictRollupId}`);
+                    const matchRollupObj = await conflictRes.json();
+
+                    matchRollupObj.groups[foundGroupIndex].splice(foundPlayerIndex, 1);
+
+                    const patchRes = await fetch(`/api/rollups/${foundConflictRollupId}`, {
+                        method: "PUT",
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ groups: matchRollupObj.groups })
+                    });
+
+                    if (patchRes.ok) {
+                        showMsg(`Notice: Removed ${golferName} from their previous group slot assignment.`);
+                        if (foundConflictRollupId === currentRollup._id) {
+                            currentRollup.groups = matchRollupObj.groups;
+                        }
+                    }
+                } catch (err) {
+                    console.error("Conflict resolution database tracking cleanup failed", err);
+                }
+            }
+
+            currentRollup.groups[gIdx].push({
+                golfer_id: golferId,
+                name: golferName,
+                booker: false
+            });
+
+            await saveRollupState();
+        }
+
+        async function deletePlayer(gIdx, pIdx) {
+            const pName = currentRollup.groups[gIdx][pIdx].name;
+            if (!confirm(`Are you sure you want to remove ${pName} from Group ${gIdx + 1}?`)) return;
+
+            currentRollup.groups[gIdx].splice(pIdx, 1);
+            showMsg(`Success: Removed ${pName} from slot position assignment layout.`);
+            await saveRollupState();
+        }
+
+        async function toggleBooker(gIdx, pIdx) {
+            currentRollup.groups[gIdx][pIdx].booker = !currentRollup.groups[gIdx][pIdx].booker;
+            await saveRollupState();
+        }
+
+        function addNewGroup() {
+            currentRollup.groups.push([]); 
+            renderSheet();
+        }
+
+        async function saveRollupState() {
+            try {
+                const res = await fetch(`/api/rollups/${currentRollup._id}`, {
+                    method: "PUT",
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ groups: currentRollup.groups })
+                });
+
+                if (res.ok) {
+                    renderSheet(); 
+                } else {
+                    alert("Database syncing execution failure occurred.");
+                }
+            } catch (err) {
+                console.error("Save error:", err);
+                alert("Server connection failed during backup save pipeline.");
             }
         }
 

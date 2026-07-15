@@ -17,7 +17,7 @@
         }
 
         .container {
-            max-width: 1100px;
+            max-width: 1300px; /* Expanded from 1100px to accommodate more columns natively */
             margin: 20px auto;
             background: rgba(255, 255, 255, 0.95);
             padding: 20px;
@@ -60,7 +60,7 @@
             display: flex;
             flex-direction: column;
             gap: 5px;
-            flex: 1 1 200px;
+            flex: 1 1 180px;
         }
 
         .field-group label {
@@ -74,7 +74,7 @@
             padding: 10px;
             border: 1px solid #ccc;
             border-radius: 5px;
-            font-size: 16px;
+            font-size: 15px;
             background: white;
         }
 
@@ -96,6 +96,7 @@
             gap: 5px;
             font-size: 0.85em;
             cursor: pointer;
+            white-space: nowrap; /* Prevents text breaking on small screens */
         }
 
         /* Buttons */
@@ -119,37 +120,47 @@
         table {
             width: 100%;
             border-collapse: collapse;
+            table-layout: auto;
         }
 
         th {
             background-color: #2e7d32;
             color: white;
-            padding: 12px;
+            padding: 12px 8px;
             text-align: center;
             vertical-align: middle;
+            font-size: 14px;
         }
 
         td {
-            padding: 12px;
+            padding: 10px 6px;
             border-bottom: 1px solid #ddd;
             background: white;
             text-align: center;
             vertical-align: middle;
         }
 
-        /* Keep names/text input columns left-aligned for standard reading layout */
-        th:nth-child(1),
-        td:nth-child(1),
-        th:nth-child(2),
-        td:nth-child(2),
-        th:nth-child(3),
-        td:nth-child(3) {
-            text-align: left;
-        }
+        /* Realigned layout distribution weights to prevent compressed inputs */
+        th:nth-child(1), td:nth-child(1) { text-align: left; width: 22%; } /* Name */
+        th:nth-child(2), td:nth-child(2) { text-align: left; width: 15%; } /* Phone */
+        th:nth-child(3), td:nth-child(3) { text-align: left; width: 25%; } /* Email */
+        th:nth-child(4), td:nth-child(4) { text-align: center; width: 14%; } /* Days checkboxes */
+        th:nth-child(5), td:nth-child(5) { text-align: center; width: 6%; }  /* Exempt toggle */
+        th:nth-child(6), td:nth-child(6) { text-align: center; width: 6%; }  /* Reminders toggle */
+        th:nth-child(7), td:nth-child(7) { text-align: center; width: 6%; }  /* Deactivated toggle */
+        th:nth-child(8), td:nth-child(8) { text-align: center; width: 6%; }  /* Actions button */
 
         .td-input {
-            text-align: left;
+            width: 100%;
             box-sizing: border-box;
+            padding: 6px 8px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+        }
+        
+        .td-input:focus {
+            border-color: #2e7d32;
+            outline: none;
         }
 
         /* Enforce native checkbox styles to stay centered */
@@ -169,7 +180,9 @@
         .btn-save {
             background: #2e7d32;
             color: white;
-            width: 80px;
+            width: 70px;
+            padding: 6px 12px !important;
+            font-size: 12px;
         }
 
         #msg {
@@ -178,7 +191,7 @@
         }
 
         /* MOBILE STYLES */
-        @media screen and (max-width: 768px) {
+        @media screen and (max-width: 900px) {
             body {
                 padding: 5px;
             }
@@ -188,34 +201,9 @@
                 margin: 10px auto;
             }
 
-            /* Turn Table into Cards */
-            table,
-            thead,
-            tbody,
-            th,
-            td,
-            tr {
+            table, thead, tbody, th, td, tr {
                 display: block;
             }
-
-            th:nth-child(1),
-            td:nth-child(1) {
-                width: 20%;
-            }
-
-            /* Name gets 20% */
-            th:nth-child(2),
-            td:nth-child(2) {
-                width: 15%;
-            }
-
-            /* Phone gets 15% */
-            th:nth-child(3),
-            td:nth-child(3) {
-                width: 35%;
-            }
-
-            /* Email gets 35% (Much wider!) */
 
             thead tr {
                 position: absolute;
@@ -238,6 +226,7 @@
                 padding-left: 40% !important;
                 text-align: left !important;
                 min-height: 40px;
+                width: 100% !important;
             }
 
             td:before {
@@ -291,8 +280,7 @@
                     <label>Play Days</label>
                     <div id="daysPicker">
                         <label class="checkbox-label"><input type="checkbox" class="day-opt" value="Monday"> Mon</label>
-                        <label class="checkbox-label"><input type="checkbox" class="day-opt" value="Wednesday">
-                            Wed</label>
+                        <label class="checkbox-label"><input type="checkbox" class="day-opt" value="Wednesday"> Wed</label>
                         <label class="checkbox-label"><input type="checkbox" class="day-opt" value="Friday"> Fri</label>
                     </div>
                 </div>
@@ -308,20 +296,15 @@
         <div class="filter-box">
             <h3 style="margin-bottom: 12px; font-size: 15px; color: #2e7d32;">Filter Table List</h3>
             <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: center;">
-                <label class="checkbox-label"><input type="checkbox" id="filterDeactivated" onchange="filterTable()">
-                    Show Deactivated Only</label>
-                <label class="checkbox-label"><input type="checkbox" id="filterExempt" onchange="filterTable()"> Show
-                    Booking Exempt Only</label>
+                <label class="checkbox-label"><input type="checkbox" id="filterDeactivated" onchange="filterTable()"> Show Deactivated Only</label>
+                <label class="checkbox-label"><input type="checkbox" id="filterExempt" onchange="filterTable()"> Show Booking Exempt Only</label>
+                <label class="checkbox-label"><input type="checkbox" id="filterReminders" onchange="filterTable()"> Show Reminder Opt-In Only</label>
 
-                <div
-                    style="display: flex; gap: 12px; align-items: center; border-left: 2px solid #c8e6c9; padding-left: 15px;">
+                <div style="display: flex; gap: 12px; align-items: center; border-left: 2px solid #c8e6c9; padding-left: 15px;">
                     <span style="font-size: 13px; font-weight: bold; color: #555;">Days:</span>
-                    <label class="checkbox-label"><input type="checkbox" class="filter-day" value="Monday"
-                            onchange="filterTable()"> Mon</label>
-                    <label class="checkbox-label"><input type="checkbox" class="filter-day" value="Wednesday"
-                            onchange="filterTable()"> Wed</label>
-                    <label class="checkbox-label"><input type="checkbox" class="filter-day" value="Friday"
-                            onchange="filterTable()"> Fri</label>
+                    <label class="checkbox-label"><input type="checkbox" class="filter-day" value="Monday" onchange="filterTable()"> Mon</label>
+                    <label class="checkbox-label"><input type="checkbox" class="filter-day" value="Wednesday" onchange="filterTable()"> Wed</label>
+                    <label class="checkbox-label"><input type="checkbox" class="filter-day" value="Friday" onchange="filterTable()"> Fri</label>
                 </div>
             </div>
         </div>
@@ -332,8 +315,9 @@
                     <th>Name</th>
                     <th>Phone</th>
                     <th>Email</th>
-                    <th>Days</th>
-                    <th>Exempt</th>
+                    <th>Play Days</th>
+                    <th>Booking Exempt</th>
+                    <th>Booking Reminders</th>
                     <th>Deactivated</th>
                     <th>Actions</th>
                 </tr>
@@ -344,7 +328,7 @@
 
     <script src="js/shared.js"></script>
     <script>
-        let allGolfersCache = []; // Master structural copy stored safely in runtime cache
+        let allGolfersCache = []; 
 
         function showMsg(text, isError = false) {
             const msg = document.getElementById("msg");
@@ -357,7 +341,7 @@
             try {
                 const res = await fetch('/api/golfers');
                 allGolfersCache = await res.json();
-                filterTable(); // Run renderer using current filter configurations
+                filterTable(); 
             } catch (err) {
                 console.error("Load failed", err);
             }
@@ -371,12 +355,14 @@
             // Extract checkbox configurations
             const onlyDeactivated = document.getElementById("filterDeactivated").checked;
             const onlyExempt = document.getElementById("filterExempt").checked;
+            const onlyReminders = document.getElementById("filterReminders").checked; // NEW EXTRACTOR
             const activeDayFilters = Array.from(document.querySelectorAll(".filter-day:checked")).map(cb => cb.value);
 
             // Filter master cache matching selected configurations
             const filteredGolfers = allGolfersCache.filter(g => {
                 if (onlyDeactivated && g.active !== false) return false;
                 if (onlyExempt && !g.booking_exempt) return false;
+                if (onlyReminders && !g.reminders_opt_in) return false;
                 if (activeDayFilters.length > 0) {
                     const hasDayMatch = activeDayFilters.some(day => (g.play_days || []).includes(day));
                     if (!hasDayMatch) return false;
@@ -396,11 +382,12 @@
                 daysHtml += `</div>`;
 
                 row.innerHTML = `
-                    <td data-label="Name"><input type="text" class="td-input" style="width:90%" value="${g.name}" id="name_${g._id}"></td>
-                    <td data-label="Phone"><input type="text" class="td-input" style="width:90%" value="${g.tel || ''}" id="tel_${g._id}"></td>
-                    <td data-label="Email"><input type="email" class="td-input" style="width:98%" value="${g.email || ''}" id="email_${g._id}"></td>
+                    <td data-label="Name"><input type="text" class="td-input" value="${g.name}" id="name_${g._id}"></td>
+                    <td data-label="Phone"><input type="text" class="td-input" value="${g.tel || ''}" id="tel_${g._id}"></td>
+                    <td data-label="Email"><input type="email" class="td-input" value="${g.email || ''}" id="email_${g._id}"></td>
                     <td data-label="Days">${daysHtml}</td>
                     <td data-label="Exempt"><input type="checkbox" id="exempt_${g._id}" ${g.booking_exempt ? 'checked' : ''}></td>
+                    <td data-label="Reminders"><input type="checkbox" id="reminders_${g._id}" ${g.reminders_opt_in ? 'checked' : ''}></td>
                     <td data-label="Deactivated"><input type="checkbox" id="active_${g._id}" ${g.active === false ? 'checked' : ''} onchange="toggleActive('${g._id}', '${g.name.replace(/'/g, "\\'")}')"></td>
                     <td data-label="Actions">
                         <div class="action-buttons">
@@ -412,7 +399,6 @@
             });
         }
 
-        // Add Golfer function
         async function addGolfer() {
             const name = document.getElementById("newName").value.trim();
             const tel = document.getElementById("newPhone").value.trim();
@@ -485,12 +471,12 @@
             }
         }
 
-        // Save (Update) function
         async function saveGolfer(id) {
             const name = document.getElementById("name_" + id).value.trim();
             const tel = document.getElementById("tel_" + id).value.trim();
             const email = document.getElementById("email_" + id).value.trim();
             const booking_exempt = document.getElementById("exempt_" + id).checked;
+            const reminders_opt_in = document.getElementById("reminders_" + id).checked;
 
             const play_days = Array.from(document.querySelectorAll(`.edit-day-${id}:checked`)).map(cb => cb.value);
 
@@ -500,18 +486,18 @@
                 const res = await fetch("/api/golfers/" + id, {
                     method: "PUT",
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, tel, email, play_days, booking_exempt })
+                    body: JSON.stringify({ name, tel, email, play_days, booking_exempt, reminders_opt_in })
                 });
 
                 if (res.ok) {
-                    showMsg("Success: Golfer updated!");
+                    showToast("Success: Golfer updated!");
                     loadGolfers();
                 } else {
                     const data = await res.json();
-                    alert("Error: " + (data.error || "Update failed"));
+                    showToast("Error: " + (data.error || "Update failed"), true);
                 }
             } catch (err) {
-                alert("Server error");
+                showToast("Server error", true);
             }
         }
 

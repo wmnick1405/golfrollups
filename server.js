@@ -50,7 +50,7 @@ const protect = (req, res, next) => {
 mongoose.connect(process.env.MONGO_URI)
     .then(() => {
         const host = mongoose.connection.host;
-        console.log(`Connected to: ${host}`); // This will tell the truth!
+        console.log(`Connected to: ${host}`); 
         if (host.includes('mongodb.net')) {
             console.log("Cloud status: ONLINE (Atlas)");
         } else {
@@ -109,6 +109,7 @@ userSchema.pre('save', async function () {
 const User = mongoose.model('User', userSchema);
 
 // --- GOLF SCHEMAS ---
+// --- GOLFER ROUTES SCHEMA (REWRITTEN CLEANLY) ---
 const Golfer = mongoose.model('Golfer', new mongoose.Schema({
     name: { type: String, required: true },
     tel: String,
@@ -117,7 +118,8 @@ const Golfer = mongoose.model('Golfer', new mongoose.Schema({
     booking_count: { type: Number, default: 0 },
     last_booked: { type: Date, default: new Date("2000-01-01") },
     booking_exempt: { type: Boolean, default: false },
-    active: { type: Boolean, default: true }
+    active: { type: Boolean, default: true },
+    reminders_opt_in: { type: Boolean, default: false }
 }));
 
 const TeeTime = mongoose.model('TeeTime', new mongoose.Schema({
@@ -1171,6 +1173,119 @@ app.get('/api/golfer-emails', protect, async (req, res) => {
 });
 
 //END OF ROUTES
+
+// =========================================================================
+// AUTOMATED 24-HOUR BOOKING REMINDER DAEMON ENGINE (DRY-RUN TEST MODE)
+// =========================================================================
+const cron = require('node-cron');
+
+// Schedule tasks to run every single day at exactly 08:00 AM
+cron.schedule('0 8 * * *', async () => {
+    console.log('\n==================================================================');
+    console.log('[DRY-RUN TEST] Triggering daily 8am booking sheet checklist scan...');
+    console.log(`Current Run Time: ${new Date().toLocaleString('en-GB')}`);
+    console.log('==================================================================');
+    
+    try {
+        // Calculate the date timestamp exactly 7 calendar days away from "today"
+        const targetDate = new Date();
+        targetDate.setDate(targetDate.getDate() + 7);
+        
+        // Normalize time ranges to isolate the targeted day's 24-hour window boundaries
+        const startOfTargetDay = new Date(targetDate).setHours(0, 0, 0, 0);
+        const endOfTargetDay = new Date(targetDate).setHours(23, 59, 59, 999);
+
+        const targetDateObject = new Date(startOfTargetDay);
+        console.log(`[Scheduler] Searching for rollups on target date: ${targetDateObject.toDateString()}`);
+
+        // Fetch rollup sheets assigned exactly to that future calendar milestone
+        const targetRollup = await Rollup.findOne({
+            date: { $gte: startOfTargetDay, $lte: endOfTargetDay }
+        }).lean();
+
+        if (!targetRollup) {
+            console.log(`[Scheduler] Result: No rollups found scheduled for 7 days out. Test complete.`);
+            console.log('==================================================================\n');
+            return;
+        }
+
+        const compName = targetRollup.competition || "Social";
+        const dateString = targetDateObject.toLocaleDateString('en-GB', {
+            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+        });
+
+        console.log(`[Scheduler] Found Rollup! Competition: "${compName}" | Total Groups: ${targetRollup.groups.length}`);
+
+        // Loop over the scheduled flights to identify their booking supervisors
+        for (let i = 0; i < targetRollup.groups.length; i++) {
+            const group = targetRollup.groups[i];
+            console.log(`\nChecking Group ${i + 1}...`);
+            
+            if (group.length === 0) {
+                console.log(` -> Group ${i + 1} is empty. Skipping.`);
+                continue;
+            }
+
+            // The target profile requires evaluating the specific designated booker object element properties
+            const bookerProfile = group.find(p => p.booker === true) || group[0]; 
+
+            if (!bookerProfile || !bookerProfile.golfer_id) {
+                console.log(` -> Could not establish a valid group leader object structure for Group ${i + 1}. Skipping.`);
+                continue;
+            }
+
+            // Cross-reference data tracks from your master Roster records to check notification rules
+            const golferRecord = await Golfer.findById(bookerProfile.golfer_id).lean();
+
+            if (!golferRecord) {
+                console.log(` -> Target booker "${bookerProfile.name}" has an ID mismatch or was deleted from the database master roster. Skipping.`);
+                continue;
+            }
+
+            // Compile player names array profile map list for printing logs
+            const lineupNames = group.map(p => p.name).join(', ');
+
+            // Print the structural evaluation metrics cleanly to your terminal window
+            console.log(` -> Candidate Name:  ${golferRecord.name}`);
+            console.log(` -> Email Configured: ${golferRecord.email || 'NONE'}`);
+            console.log(` -> Opted-In Status: ${golferRecord.reminders_opt_in === true ? 'YES (TRUE)' : 'NO (FALSE)'}`);
+            console.log(` -> Group Lineup:    [${lineupNames}]`);
+
+            // Check rules configuration checklist conditions
+            if (!golferRecord.email) {
+                console.log(` ❌ AUDIT CRITERIA FAILED: Cannot email ${golferRecord.name} because their email profile is blank.`);
+                continue;
+            }
+
+            if (golferRecord.reminders_opt_in !== true) {
+                console.log(` ❌ AUDIT CRITERIA FAILED: ${golferRecord.name} meets the layout profile criteria but has NOT opted-in to notifications.`);
+                continue;
+            }
+
+            // SUCCESS TRAIL LOG
+            console.log(`    MATCH CONFIRMED!`);
+            console.log(`    [EMAIL WILL SEND TO]: ${golferRecord.email}`);
+            console.log(`    [SUBJECT LINE]: 🏌️ Golf Roll up Booking Reminder: Group ${i + 1}`);
+            console.log(`    [MESSAGE DRAFT BODY PREVIEW]:`);
+            console.log(`    --------------------------------------------------------------`);
+            console.log(`    Hello ${golferRecord.name},`);
+            console.log(`    You are designated as the Booker for Group ${i + 1} on the upcoming Rollup sheet.`);
+            console.log(`    • Match Date: ${dateString}`);
+            console.log(`    • Play Type / Competition: ${compName}`);
+            console.log(`    • Your Assigned Group Lineup: ${lineupNames}`);
+            console.log(`    This is a friendly reminder that you are scheduled to carry out thebooking for this group tomorrow morning.`);
+            console.log(`    --------------------------------------------------------------`);
+        }
+
+        console.log('\n==================================================================');
+        console.log('[DRY-RUN TEST] Log analysis completed successfully.');
+        console.log('==================================================================\n');
+
+    } catch (daemonErr) {
+        console.error("\n[CRITICAL ERROR] Automated Reminder Dry-Run Scan failure occurred:", daemonErr);
+        console.log('==================================================================\n');
+    }
+});
 
 // START THE SERVER
 

@@ -85,9 +85,9 @@ const userSchema = new mongoose.Schema({
     otpExpires: Date
 });
 
-// This function checks if a password meets our security requirements
+// Password strength validation function
 function isPasswordRobust(password) {
-    const regex = /^(?=.*[0-9])(?=.*[!@#$%^&*])[a-zA-Z0-9!@#$%^&*]{8,}$/;
+    const regex = /^(?=.*[0-9])(?=.*[!@#$%^&*\-_])[a-zA-Z0-9!@#$%^&*\-_]{8,}$/;
     return regex.test(password);
 }
 
@@ -1182,6 +1182,7 @@ const cron = require('node-cron');
 // Schedule tasks to run every single day at exactly 08:00 AM
 cron.schedule('0 8 * * *', async () => {
     console.log('\n==================================================================');
+    // Change this header log to "LIVE SCAN" when going active
     console.log('[DRY-RUN TEST] Triggering daily 8am booking sheet checklist scan...');
     console.log(`Current Run Time: ${new Date().toLocaleString('en-GB')}`);
     console.log('==================================================================');
@@ -1264,7 +1265,9 @@ cron.schedule('0 8 * * *', async () => {
 
             // SUCCESS TRAIL LOG
             console.log(`    MATCH CONFIRMED!`);
-            console.log(`    [EMAIL WILL SEND TO]: ${golferRecord.email}`);
+            
+            // Toggle these labels below depending on dry run vs live status
+            console.log(`    [EMAIL WOULD SEND TO]: ${golferRecord.email}`); 
             console.log(`    [SUBJECT LINE]: 🏌️ Golf Roll up Booking Reminder: Group ${i + 1}`);
             console.log(`    [MESSAGE DRAFT BODY PREVIEW]:`);
             console.log(`    --------------------------------------------------------------`);
@@ -1273,8 +1276,35 @@ cron.schedule('0 8 * * *', async () => {
             console.log(`    • Match Date: ${dateString}`);
             console.log(`    • Play Type / Competition: ${compName}`);
             console.log(`    • Your Assigned Group Lineup: ${lineupNames}`);
-            console.log(`    This is a friendly reminder that you are scheduled to carry out thebooking for this group tomorrow morning.`);
+            console.log(`    This is a friendly reminder that you are scheduled to carry out the booking for this group tomorrow morning.`);
             console.log(`    --------------------------------------------------------------`);
+
+            // =========================================================================
+            // ACTIVE EMAIL DISPATCH PIPELINE
+            // =========================================================================
+            const reminderMailOptions = {
+                from: 'wmnick1405@gmail.com',
+                to: golferRecord.email,
+                subject: `🏌️ Golf Roll up Booking Reminder: Group ${i + 1}`,
+                text: `Hello ${golferRecord.name},\n\n` +
+                      `You are designated as the Booker for Group ${i + 1} on the upcoming Rollup sheet.\n\n` +
+                      `• Match Date: ${dateString}\n` +
+                      `• Play Type / Competition: ${compName}\n` +
+                      `• Your Assigned Group Lineup: ${lineupNames}\n\n` +
+                      `This is a friendly reminder that you are scheduled to carry out the booking for this group tomorrow morning.\n\n` +
+                      `Regards,\nNick Osborne`
+            };
+
+            try {
+                // --- TO GO LIVE: Uncomment the line below ---
+                // await transporter.sendMail(reminderMailOptions);
+                // console.log(`    🚀 [LIVE DISPATCH] Email successfully sent to ${golferRecord.email}`);
+                
+                // --- TO GO LIVE: Comment out or delete this test dry-run log below ---
+                console.log(`    ℹ️ [DRY RUN ACTIVE] Email transmission bypassed (transporter.sendMail remains commented out).`);
+            } catch (mailError) {
+                console.error(`    ❌ [MAIL ERROR] Failed to send email to ${golferRecord.email}:`, mailError);
+            }
         }
 
         console.log('\n==================================================================');
@@ -1286,7 +1316,6 @@ cron.schedule('0 8 * * *', async () => {
         console.log('==================================================================\n');
     }
 });
-
 // START THE SERVER
 
 const PORT = process.env.PORT || 3000;

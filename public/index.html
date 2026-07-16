@@ -1,353 +1,486 @@
 <!DOCTYPE html>
-<! This is the main landing page for the Golf Rollup Manager. It serves as a central hub for admins to access all the
+<!-- This is the main landing page for the Golf Rollup Manager. It serves as a central hub for admins to access all the
     different features of the system. From here, admins can navigate to pages for managing golfers, updating
     availability, generating rollups, viewing history, and generating reports. The page also includes a login overlay
     that requires authentication before accessing the main content. Once logged in, admins can also see the last
-    database backup date and create new user>
-    <html>
+    database backup date and create new user -->
+<html>
 
-    <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Golf Rollup Manager</title>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Golf Rollup Manager</title>
 
-        <style>
-            body {
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                padding: 20px;
-                background-color: #f4f7f6;
-                color: #333;
-            }
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            background-color: #f4f7f6;
+            color: #333;
+        }
 
-            .intro {
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                color: black;
-                padding-bottom: 10px;
-            }
+        .intro {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: black;
+            padding-bottom: 10px;
+        }
 
-            .container {
-                max-width: 1400px;
-                margin: 0 auto;
-            }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
 
-            .header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 20px;
-            }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
 
-            /* Dashboard Grid */
-            .grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-                gap: 20px;
-            }
+        /* Dashboard Grid */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
 
-            .card {
-                background: rgb(196, 238, 196);
-                padding: 10px;
-                border-radius: 12px;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-                display: flex;
-                flex-direction: column;
-                transition: transform 0.2s;
-            }
+        .card {
+            background: rgb(196, 238, 196);
+            padding: 10px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s;
+        }
 
-            .card:hover {
-                transform: translateY(-3px);
-            }
+        .card:hover {
+            transform: translateY(-3px);
+        }
 
-            .card h3 {
-                margin-top: 0;
-                color: #2c3e50;
-                border-bottom: 2px solid #f4f7f6;
-                padding-bottom: 5px;
-            }
+        .card h3 {
+            margin-top: 0;
+            color: #2c3e50;
+            border-bottom: 2px solid #f4f7f6;
+            padding-bottom: 5px;
+        }
 
-            .card p {
-                font-size: 0.9em;
-                color: #666;
-                flex-grow: 1;
-            }
+        .card p {
+            font-size: 0.9em;
+            color: #666;
+            flex-grow: 1;
+        }
 
-            .btn {
-                display: inline-block;
-                padding: 10px 15px;
-                background-color: #007bff;
-                color: white;
-                text-decoration: none;
-                border-radius: 6px;
-                text-align: center;
-                font-weight: bold;
-                margin-top: 15px;
-            }
+        .btn {
+            display: inline-block;
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: bold;
+            margin-top: 15px;
+            cursor: pointer;
+            border: none;
+        }
 
-            .btn-green {
-                background-color: #28a745;
-            }
+        .btn-green {
+            background-color: #28a745;
+        }
 
-            .btn-alt {
-                background-color: #6c757d;
-            }
+        .btn-alt {
+            background-color: #6c757d;
+        }
 
-            .footer {
-                margin-top: 40px;
-                text-align: center;
-                font-size: 0.8em;
-                color: #888;
-            }
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 0.8em;
+            color: #888;
+        }
 
-            #logout-btn {
-                background: #d32f2f;
-                color: white;
-                border: none;
-                padding: 8px 15px;
-                border-radius: 12px;
-                cursor: pointer;
-                font-size: 2em;
-                font-weight: bold;
+        #logout-btn {
+            background: #d32f2f;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 2em;
+            font-weight: bold;
+        }
 
-            }
-        </style>
-    </head>
+        /* Modal Styles for Change Password */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+        }
 
-    <body>
-        <div id="login-overlay"
-            style="position:fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:9999; display:flex; justify-content:center; align-items:center;">
-            <div
-                style="border:1px solid #ccc; padding:30px; border-radius:12px; text-align: center; width: 320px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
-                <img src="https://clubv1.blob.core.windows.net/clubcrests/06c7bacd-8e49-48a4-8ee4-e369f10e5a30_crest.png"
-                    alt="Club Logo" style="max-height: 80px; display: block; margin: 0 auto 20px auto;">
-                <h2>Golf Rollup Login</h2>
+        .modal-content {
+            background-color: white;
+            padding: 25px;
+            border-radius: 12px;
+            width: 350px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            position: relative;
+        }
 
-                <input type="text" id="username" placeholder="Email Address" required
+        .modal-content h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+
+        .modal-input {
+            display: block;
+            width: 90%;
+            margin: 10px auto;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #aaa;
+        }
+
+        .close-modal:hover {
+            color: black;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="login-overlay"
+        style="position:fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:9999; display:flex; justify-content:center; align-items:center;">
+        <div
+            style="border:1px solid #ccc; padding:30px; border-radius:12px; text-align: center; width: 320px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+            <img src="https://clubv1.blob.core.windows.net/clubcrests/06c7bacd-8e49-48a4-8ee4-e369f10e5a30_crest.png"
+                alt="Club Logo" style="max-height: 80px; display: block; margin: 0 auto 20px auto;">
+            <h2>Golf Rollup Login</h2>
+
+            <input type="text" id="username" placeholder="Email Address" required
+                style="display:block; width:90%; margin: 0 auto 10px auto; padding: 10px; border-radius: 6px; border: 1px solid #ccc;">
+
+            <div id="password-area">
+                <input type="password" id="password" placeholder="Password"
                     style="display:block; width:90%; margin: 0 auto 10px auto; padding: 10px; border-radius: 6px; border: 1px solid #ccc;">
-
-                <div id="password-area">
-                    <input type="password" id="password" placeholder="Password"
-                        style="display:block; width:90%; margin: 0 auto 10px auto; padding: 10px; border-radius: 6px; border: 1px solid #ccc;">
-                    <button onclick="handleLogin('password')"
-                        style="width:90%; padding: 10px; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 6px; font-weight: bold;">Login
-                        with Password</button>
-                    <p style="margin: 15px 0 5px 0; font-size: 0.8em; color: #666;">-- OR --</p>
-                    <button onclick="requestOtp()"
-                        style="width:90%; padding: 8px; cursor: pointer; background: #eee; border: 1px solid #ccc; border-radius: 6px;">Email
-                        me a 6-digit code</button>
-                </div>
-
-                <div id="otp-area" style="display:none;">
-                    <p style="font-size: 0.85em; color: #1565c0;">Check your email for the code.</p>
-                    <input type="text" id="otp" placeholder="6-Digit Code" maxlength="6"
-                        style="display:block; width:90%; margin: 0 auto 10px auto; padding: 10px; border-radius: 6px; border: 1px solid #ccc; text-align: center; letter-spacing: 5px; font-weight: bold;">
-                    <button onclick="handleLogin('otp')"
-                        style="width:90%; padding: 10px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 6px; font-weight: bold;">Verify
-                        & Login</button>
-                    <br>
-                    <button onclick="toggleLoginMethod('password')"
-                        style="background:none; border:none; color:blue; text-decoration:underline; font-size:0.8em; margin-top:10px; cursor:pointer;">Back
-                        to password</button>
-                </div>
-
-                <div id="login-msg" style="margin-top: 15px; color: red; font-size: 0.9em;"></div>
+                <button onclick="handleLogin('password')"
+                    style="width:90%; padding: 10px; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 6px; font-weight: bold;">Login
+                    with Password</button>
+                <p style="margin: 15px 0 5px 0; font-size: 0.8em; color: #666;">-- OR --</p>
+                <button onclick="requestOtp()"
+                    style="width:90%; padding: 8px; cursor: pointer; background: #eee; border: 1px solid #ccc; border-radius: 6px;">Email
+                    me a 6-digit code</button>
             </div>
+
+            <div id="otp-area" style="display:none;">
+                <p style="font-size: 0.85em; color: #1565c0;">Check your email for the code.</p>
+                <input type="text" id="otp" placeholder="6-Digit Code" maxlength="6"
+                    style="display:block; width:90%; margin: 0 auto 10px auto; padding: 10px; border-radius: 6px; border: 1px solid #ccc; text-align: center; letter-spacing: 5px; font-weight: bold;">
+                <button onclick="handleLogin('otp')"
+                    style="width:90%; padding: 10px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 6px; font-weight: bold;">Verify
+                    & Login</button>
+                <br>
+                <button onclick="toggleLoginMethod('password')"
+                    style="background:none; border:none; color:blue; text-decoration:underline; font-size:0.8em; margin-top:10px; cursor:pointer;">Back
+                    to password</button>
+            </div>
+
+            <div id="login-msg" style="margin-top: 15px; color: red; font-size: 0.9em;"></div>
+        </div>
+    </div>
+
+  <!-- CHANGE PASSWORD MODAL -->
+    <div id="password-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="togglePasswordModal(false)">&times;</span>
+            <h3>Change Your Password</h3>
+            <p style="font-size: 11px; color: #666; margin-bottom: 15px;">Must be at least 8 characters long and include a number and a special character (!@#$%^&*).</p>
+            
+            <input type="password" id="new-password-input" class="modal-input" placeholder="New Password">
+            <input type="password" id="confirm-password-input" class="modal-input" placeholder="Confirm Password">
+            
+            <button onclick="submitPasswordChange()" class="btn btn-green" style="width: 100%; margin-top: 10px;">Update Password</button>
+            <div id="password-msg" style="margin-top: 15px; text-align: center; font-size: 0.9em; font-weight: bold;"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>Admin Dashboard</h1>
+            <span id="current-date" style="font-weight: bold; color: #007bff;"></span>
         </div>
 
-        <div class="container">
-            <div class="header">
-                <h1>Admin Dashboard</h1>
-                <span id="current-date" style="font-weight: bold; color: #007bff;"></span>
+        <div class="intro">
+            <p>This website is for administrative use only. The back end is a mongodb database, which is backed up
+                each
+                night and kept for 31 days. Contact for site and database is Nick Osborne</p>
+        </div>
+
+
+        <div class="grid">
+            <div class="card">
+                <h3>Golfer Details</h3>
+                <p>Add new members, update contact details, or manage playing preferences.</p>
+                <a href="golfers.html" class="btn btn-green">Manage Members</a>
             </div>
 
-            <div class="intro">
-                <p>This website is for administrative use only. The back end is a mongodb database, which is backed up
-                    each
-                    night and kept for 31 days. Contact for site and database is Nick Osborne</p>
+            <div class="card">
+                <h3>Absences and Extra Days</h3>
+                <p>Log holiday dates, medical leave, or indefinite absences for players. Also add extra play days
+                    and remove "Indefinite" status.</p>
+                <a href="golfer-status.html" class="btn btn-green">Log Absence</a>
             </div>
 
+            <div class="card">
+                <h3>Availability Report</h3>
+                <p>Generate the 24-session unavailability matrix. Suitable for cut and paste into emails.</p>
+                <a href="planner.html" class="btn btn-green">Go to Matrix</a>
+            </div>
 
-            <div class="grid">
-                <div class="card">
-                    <h3>Golfer Details</h3>
-                    <p>Add new members, update contact details, or manage playing preferences.</p>
-                    <a href="golfers.html" class="btn btn-green">Manage Members</a>
-                </div>
+            <div class="card">
+                <h3>Custom Planner</h3>
+                <p>Generate a tailored availability report for an individual golfer over a chosen number of
+                    sessions.</p>
+                <a href="custom-planner.html" class="btn btn-green">Custom Planner</a>
+            </div>
 
-                <div class="card">
-                    <h3>Absences and Extra Days</h3>
-                    <p>Log holiday dates, medical leave, or indefinite absences for players. Also add extra play days
-                        and remove "Indefinite" status.</p>
-                    <a href="golfer-status.html" class="btn btn-green">Log Absence</a>
-                </div>
+            <div class="card">
+                <h3>Competition Management</h3>
+                <p>Manage upcoming competitions, including dates and descriptions.</p>
+                <a href="competitions.html" class="btn btn-green">Manage Competitions</a>
+            </div>
 
-                <div class="card">
-                    <h3>Availability Report</h3>
-                    <p>Generate the 24-session unavailability matrix. Suitable for cut and paste into emails.</p>
-                    <a href="planner.html" class="btn btn-green">Go to Matrix</a>
-                </div>
+            <div class="card">
+                <h3>Rollup Generation</h3>
+                <p>Run the rollup algorithm to create balanced groups for the next session.</p>
+                <a href="rollup.html" class="btn btn-green">Generate Rollup</a>
+            </div>
 
-                <div class="card">
-                    <h3>Custom Planner</h3>
-                    <p>Generate a tailored availability report for an individual golfer over a chosen number of
-                        sessions.</p>
-                    <a href="custom-planner.html" class="btn btn-green">Custom Planner</a>
-                </div>
+            <div class="card">
+                <h3>Historical Roll up Data</h3>
+                <p>Review past rollup groupings and availability patterns by date.
+                    You can also edit past rollups to correct any errors or update golfer availability after the fact.
+                </p>
+                <a href="history.html" class="btn btn-green">View History</a>
+            </div>
 
-                <div class="card">
-                    <h3>Competition Management</h3>
-                    <p>Manage upcoming competitions, including dates and descriptions.</p>
-                    <a href="competitions.html" class="btn btn-green">Manage Competitions</a>
-                </div>
+            <div class="card">
+                <h3>Rollup Email Generator</h3>
+                <p>
+                    Create a email proforma containing roll up groupings for up to 3 dates and an unavailability
+                    table covering 24 sessions for a chosen date. A free text field is also included.
+                    Copy and paste the generated content into your email client to send out to members.
+                </p>
+                <a href="email-generator.html" class="btn btn-green">Generate Email Table</a>
+            </div>
 
-                <div class="card">
-                    <h3>Rollup Generation</h3>
-                    <p>Run the rollup algorithm to create balanced groups for the next session.</p>
-                    <a href="rollup.html" class="btn btn-green">Generate Rollup</a>
-                </div>
+            <div class="card">
+                <h3>Participation Report</h3>
+                <p>Compare golfer participation against their bookings to identify trends.</p>
+                <a href="participation-report.html" class="btn btn-green">Participation Report</a>
+            </div>
 
-                <div class="card">
-                    <h3>Historical Roll up Data</h3>
-                    <p>Review past rollup groupings and availability patterns by date.
-                        You can also edit past rollups to correct any errors or update golfer availability after the fact.
-                    </p>
-                    <a href="history.html" class="btn btn-green">View History</a>
-                </div>
+            <div class="card">
+                <h3>Indefinite Absences</h3>
+                <p>View and edit golfers who are indefinitely unavailable.</p>
+                <a href="indefinite_unavailable_golfers.html" class="btn btn-green">Indefinite Absences</a>
+            </div>
 
-                <div class="card">
-                    <h3>Rollup Email Generator</h3>
-                    <p>
-                        Create a email proforma containing roll up groupings for up to 3 dates and an unavailability
-                        table covering 24 sessions for a chosen date. A free text field is also included.
-                        Copy and paste the generated content into your email client to send out to members.
-                    </p>
-                    <a href="email-generator.html" class="btn btn-green">Generate Email Table</a>
-                </div>
+            <div class="card">
+                <h3>Partnership Insights</h3>
+                <p>Analyse who has played with whom.</p>
+                <a href="partnership.html" class="btn btn-green">Partnership Insights</a>
+            </div>
 
-                <div class="card">
-                    <h3>Participation Report</h3>
-                    <p>Compare golfer participation against their bookings to identify trends.</p>
-                    <a href="participation-report.html" class="btn btn-green">Participation Report</a>
-                </div>
+            <div class="card">
+                <h3>Player Frequency Report</h3>
+                <p>Analyse how often players have been grouped together over a custom date range.</p>
+                <a href="frequency.html" class="btn btn-green">Player Frequency Report</a>
+            </div>
 
-                    <div class="card">
-                        <h3>Indefinite Absences</h3>
-                        <p>View and edit golfers who are indefinitely unavailable.</p>
-                        <a href="indefinite_unavailable_golfers.html" class="btn btn-green">Indefinite Absences</a>
-                    </div>
+            <div class="card">
+                <h3>Club Diary</h3>
+                <p>View upcoming club events, competitions, and important dates in the calendar.</p>
+                <a href="calendar.html" class="btn btn-green">Club Calendar</a>
+            </div>
 
-                    <div class="card">
-                        <h3>Partnership Insights</h3>
-                        <p>Analyse who has played with whom.</p>
-                        <a href="partnership.html" class="btn btn-green">Partnership Insights</a>
-                    </div>
+            <div class="card">
+                <h3>Create/Delete Admin User</h3>
+                <p>Generate a new admin user with full privileges or delete an existing one.</p>
+                <a href="create-user.html" class="btn btn-green">Create/Delete Admin</a>
+            </div>
 
-                    <div class="card">
-                        <h3>Player Frequency Report</h3>
-                        <p>Analyse how often players have been grouped together over a custom date range.</p>
-                        <a href="frequency.html" class="btn btn-green">Player Frequency Report</a>
-                    </div>
+            <!-- CHANGE PASSWORD FOR THE ACTIVE CURRENT USER -->
+            <div class="card">
+                <h3>Change Your Password</h3>
+                <p>Update the password for the account you are currently logged in with. Enforces length, number, and special character rules.</p>
+                <button onclick="togglePasswordModal(true)" class="btn btn-green">Change Password</button>
+            </div>
 
-                <div class="card">
-                    <h3>Club Diary</h3>
-                    <p>View upcoming club events, competitions, and important dates in the calendar.</p>
-                    <a href="calendar.html" class="btn btn-green">Club Calendar</a>
-                </div>
+            <button id="logout-btn" onclick="handleLogout()">Logout</button>
+        </div>
+    </div>
 
-                <div class="card">
-                    <h3>Create/Delete Admin User</h3>
-                    <p>Generate a new admin user with full privileges or delete an existing one.</p>
-                    <a href="create-user.html" class="btn btn-green">Create/Delete Admin</a>
-                </div>
+    <script>
+        // When the page opens, check if we are already logged in
+        // Check auth on load
+        window.onload = async () => {
+            const overlay = document.getElementById('login-overlay');
+            try {
+                const response = await fetch('/api/check-auth');
+                const data = await response.json();
+                if (data.loggedIn) {
+                    overlay.style.display = 'none';
+                } else {
+                    overlay.style.display = 'flex';
+                }
+            } catch (err) {
+                overlay.style.display = 'flex';
+            }
+        };
 
-                <button id="logout-btn" onclick="handleLogout()">Logout</button>
+        const msg = document.getElementById('login-msg');
 
+        function toggleLoginMethod(method) {
+            document.getElementById('password-area').style.display = (method === 'password') ? 'block' : 'none';
+            document.getElementById('otp-area').style.display = (method === 'otp') ? 'block' : 'none';
+            msg.innerText = "";
+        }
 
-                <script>
-                    // When the page opens, check if we are already logged in
-                    // Check auth on load
-                    window.onload = async () => {
-                        const overlay = document.getElementById('login-overlay');
-                        try {
-                            const response = await fetch('/api/check-auth');
-                            const data = await response.json();
-                            if (data.loggedIn) {
-                                overlay.style.display = 'none';
-                            } else {
-                                overlay.style.display = 'flex';
-                            }
-                        } catch (err) {
-                            overlay.style.display = 'flex';
-                        }
-                    };
+        async function requestOtp() {
+            const email = document.getElementById('username').value;
+            if (!email || !email.includes('@')) return alert("Please enter a valid email address first.");
 
-                    const msg = document.getElementById('login-msg');
+            msg.style.color = "blue";
+            msg.innerText = "Sending code...";
 
-                    function toggleLoginMethod(method) {
-                        document.getElementById('password-area').style.display = (method === 'password') ? 'block' : 'none';
-                        document.getElementById('otp-area').style.display = (method === 'otp') ? 'block' : 'none';
-                        msg.innerText = "";
-                    }
+            try {
+                const res = await fetch('/api/auth/request-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
 
-                    async function requestOtp() {
-                        const email = document.getElementById('username').value;
-                        if (!email || !email.includes('@')) return alert("Please enter a valid email address first.");
+                if (res.ok) {
+                    toggleLoginMethod('otp');
+                } else {
+                    const data = await res.json();
+                    msg.style.color = "red";
+                    msg.innerText = data.error || "Failed to send code.";
+                }
+            } catch (err) {
+                msg.innerText = "Server error.";
+            }
+        }
 
-                        msg.style.color = "blue";
-                        msg.innerText = "Sending code...";
+        async function handleLogin(method) {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const otp = document.getElementById('otp').value;
 
-                        try {
-                            const res = await fetch('/api/auth/request-otp', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ email })
-                            });
+            const payload = { username };
+            if (method === 'password') payload.password = password;
+            if (method === 'otp') payload.otp = otp;
 
-                            if (res.ok) {
-                                toggleLoginMethod('otp');
-                            } else {
-                                const data = await res.json();
-                                msg.style.color = "red";
-                                msg.innerText = data.error || "Failed to send code.";
-                            }
-                        } catch (err) {
-                            msg.innerText = "Server error.";
-                        }
-                    }
+            try {
+                // NOTE: Ensure your server route matches "/api/login"
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
 
-                    async function handleLogin(method) {
-                        const username = document.getElementById('username').value;
-                        const password = document.getElementById('password').value;
-                        const otp = document.getElementById('otp').value;
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    const data = await response.json();
+                    msg.style.color = "red";
+                    msg.innerText = data.error || "Login failed.";
+                }
+            } catch (err) {
+                msg.innerText = "Connection error.";
+            }
+        }
 
-                        const payload = { username };
-                        if (method === 'password') payload.password = password;
-                        if (method === 'otp') payload.otp = otp;
+        // This triggers the app.post('/api/logout') route in server.js
+        async function handleLogout() {
+            const response = await fetch('/api/logout', { method: 'POST' });
+            if (response.ok) window.location.reload();
+        }
 
-                        try {
-                            // NOTE: Ensure your server route matches "/api/login"
-                            const response = await fetch('/api/login', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(payload)
-                            });
+        // NEW PASSWORD MODAL HELPERS
+        function togglePasswordModal(show) {
+            const modal = document.getElementById('password-modal');
+            const statusMsg = document.getElementById('password-msg');
+            modal.style.display = show ? 'flex' : 'none';
+            
+            if (show) {
+                document.getElementById('new-password-input').value = "";
+                document.getElementById('confirm-password-input').value = "";
+                statusMsg.innerText = "";
+            }
+        }
 
-                            if (response.ok) {
-                                window.location.reload();
-                            } else {
-                                const data = await response.json();
-                                msg.style.color = "red";
-                                msg.innerText = data.error || "Login failed.";
-                            }
-                        } catch (err) {
-                            msg.innerText = "Connection error.";
-                        }
-                    }
+        async function submitPasswordChange() {
+            const newPassword = document.getElementById('new-password-input').value;
+            const confirmPassword = document.getElementById('confirm-password-input').value;
+            const statusMsg = document.getElementById('password-msg');
 
-                    // This triggers the app.post('/api/logout') route in server.js
-                    async function handleLogout() {
-                        const response = await fetch('/api/logout', { method: 'POST' });
-                        if (response.ok) window.location.reload();
-                    }
-                </script>
-    </body>
+            statusMsg.innerText = "";
 
-    </html>
+            if (!newPassword) {
+                statusMsg.style.color = "red";
+                statusMsg.innerText = "Please enter a password.";
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                statusMsg.style.color = "red";
+                statusMsg.innerText = "Passwords do not match.";
+                return;
+            }
+
+            statusMsg.style.color = "blue";
+            statusMsg.innerText = "Processing change...";
+
+            try {
+                const res = await fetch("/api/admin/change-password", {
+                    method: "POST",
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ newPassword })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    statusMsg.style.color = "green";
+                    statusMsg.innerText = "Success: Password updated!";
+                    setTimeout(() => togglePasswordModal(false), 2000);
+                } else {
+                    statusMsg.style.color = "red";
+                    statusMsg.innerText = data.error || "Password change failed.";
+                }
+            } catch (err) {
+                statusMsg.style.color = "red";
+                statusMsg.innerText = "Server connection failed.";
+            }
+        }
+    </script>
+</body>
+
+</html>

@@ -1182,8 +1182,7 @@ const cron = require('node-cron');
 // Schedule tasks to run every single day at exactly 08:00 AM
 cron.schedule('0 8 * * *', async () => {
     console.log('\n==================================================================');
-    // Change this header log to "LIVE SCAN" when going active
-    console.log('[DRY-RUN TEST] Triggering daily 8am booking sheet checklist scan...');
+    console.log('[LIVE SCAN] Triggering daily 8am booking sheet checklist scan...');
     console.log(`Current Run Time: ${new Date().toLocaleString('en-GB')}`);
     console.log('==================================================================');
     
@@ -1217,7 +1216,7 @@ cron.schedule('0 8 * * *', async () => {
 
         console.log(`[Scheduler] Found Rollup! Competition: "${compName}" | Total Groups: ${targetRollup.groups.length}`);
 
-        // Loop over the scheduled flights to identify their booking supervisors
+        // Loop over the scheduled groups to identify their booking supervisors
         for (let i = 0; i < targetRollup.groups.length; i++) {
             const group = targetRollup.groups[i];
             console.log(`\nChecking Group ${i + 1}...`);
@@ -1287,28 +1286,29 @@ cron.schedule('0 8 * * *', async () => {
                 to: golferRecord.email,
                 subject: `🏌️ Golf Roll up Booking Reminder: Group ${i + 1}`,
                 text: `Hello ${golferRecord.name},\n\n` +
-                      `You are designated as the Booker for Group ${i + 1} on the upcoming Rollup sheet.\n\n` +
+                      `You are designated as the booker for Group ${i + 1} on the upcoming Rollup sheet.\n\n` +
                       `• Match Date: ${dateString}\n` +
                       `• Play Type / Competition: ${compName}\n` +
                       `• Your Assigned Group Lineup: ${lineupNames}\n\n` +
                       `This is a friendly reminder that you are scheduled to carry out the booking for this group tomorrow morning.\n\n` +
-                      `Regards,\nNick Osborne`
+                      `Regards,\nNick Osborne` +
+                        `\n\n[This is an automated reminder. Please do not reply to this email.]`
             };
 
             try {
                 // --- TO GO LIVE: Uncomment the line below ---
-                // await transporter.sendMail(reminderMailOptions);
-                // console.log(`    🚀 [LIVE DISPATCH] Email successfully sent to ${golferRecord.email}`);
+                await transporter.sendMail(reminderMailOptions);
+                console.log(`    🚀 [LIVE DISPATCH] Email successfully sent to ${golferRecord.email}`);
                 
                 // --- TO GO LIVE: Comment out or delete this test dry-run log below ---
-                console.log(`    ℹ️ [DRY RUN ACTIVE] Email transmission bypassed (transporter.sendMail remains commented out).`);
+                //console.log(`    ℹ️ [DRY RUN ACTIVE] Email transmission bypassed (transporter.sendMail remains commented out).`);
             } catch (mailError) {
                 console.error(`    ❌ [MAIL ERROR] Failed to send email to ${golferRecord.email}:`, mailError);
             }
         }
 
         console.log('\n==================================================================');
-        console.log('[DRY-RUN TEST] Log analysis completed successfully.');
+        console.log('[LIVE SCAN] Log analysis completed successfully.');
         console.log('==================================================================\n');
 
     } catch (daemonErr) {

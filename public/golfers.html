@@ -4,6 +4,11 @@
 <head>
     <title>Golfers Admin</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <!-- jsPDF Libraries for Client-Side PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
     <style>
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
@@ -17,7 +22,7 @@
         }
 
         .container {
-            max-width: 1300px; /* Expanded from 1100px to accommodate more columns natively */
+            max-width: 1300px;
             margin: 20px auto;
             background: rgba(255, 255, 255, 0.95);
             padding: 20px;
@@ -96,7 +101,7 @@
             gap: 5px;
             font-size: 0.85em;
             cursor: pointer;
-            white-space: nowrap; /* Prevents text breaking on small screens */
+            white-space: nowrap;
         }
 
         /* Buttons */
@@ -114,6 +119,21 @@
             color: white;
             flex: 1 1 100%;
             margin-top: 10px;
+        }
+
+        .btn-pdf {
+            background: #1565c0;
+            color: white;
+            padding: 8px 16px !important;
+            font-size: 13px;
+            border-radius: 6px !important;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-pdf:hover {
+            background: #0d47a1;
         }
 
         /* Table Structure & Desktop Alignment */
@@ -140,15 +160,14 @@
             vertical-align: middle;
         }
 
-        /* Realigned layout distribution weights to prevent compressed inputs */
-        th:nth-child(1), td:nth-child(1) { text-align: left; width: 22%; } /* Name */
-        th:nth-child(2), td:nth-child(2) { text-align: left; width: 15%; } /* Phone */
-        th:nth-child(3), td:nth-child(3) { text-align: left; width: 25%; } /* Email */
-        th:nth-child(4), td:nth-child(4) { text-align: center; width: 14%; } /* Days checkboxes */
-        th:nth-child(5), td:nth-child(5) { text-align: center; width: 6%; }  /* Exempt toggle */
-        th:nth-child(6), td:nth-child(6) { text-align: center; width: 6%; }  /* Reminders toggle */
-        th:nth-child(7), td:nth-child(7) { text-align: center; width: 6%; }  /* Deactivated toggle */
-        th:nth-child(8), td:nth-child(8) { text-align: center; width: 6%; }  /* Actions button */
+        th:nth-child(1), td:nth-child(1) { text-align: left; width: 22%; }
+        th:nth-child(2), td:nth-child(2) { text-align: left; width: 15%; }
+        th:nth-child(3), td:nth-child(3) { text-align: left; width: 25%; }
+        th:nth-child(4), td:nth-child(4) { text-align: center; width: 14%; }
+        th:nth-child(5), td:nth-child(5) { text-align: center; width: 6%; }
+        th:nth-child(6), td:nth-child(6) { text-align: center; width: 6%; }
+        th:nth-child(7), td:nth-child(7) { text-align: center; width: 6%; }
+        th:nth-child(8), td:nth-child(8) { text-align: center; width: 6%; }
 
         .td-input {
             width: 100%;
@@ -163,7 +182,6 @@
             outline: none;
         }
 
-        /* Enforce native checkbox styles to stay centered */
         input[type="checkbox"] {
             margin: 0 auto;
             display: inline-block;
@@ -294,7 +312,11 @@
         </div>
 
         <div class="filter-box">
-            <h3 style="margin-bottom: 12px; font-size: 15px; color: #2e7d32;">Filter Table List</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                <h3 style="margin: 0; font-size: 15px; color: #2e7d32;">Filter Table List</h3>
+                <button class="btn-pdf" onclick="generatePDF()">📄 Export PDF Roster</button>
+            </div>
+            
             <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: center;">
                 <label class="checkbox-label"><input type="checkbox" id="filterDeactivated" onchange="filterTable()"> Show Deactivated Only</label>
                 <label class="checkbox-label"><input type="checkbox" id="filterExempt" onchange="filterTable()"> Show Booking Exempt Only</label>
@@ -329,12 +351,17 @@
     <script src="js/shared.js"></script>
     <script>
         let allGolfersCache = []; 
+        let currentlyFilteredGolfers = [];
 
         function showMsg(text, isError = false) {
             const msg = document.getElementById("msg");
             msg.textContent = text;
             msg.style.color = isError ? "#d32f2f" : "#2e7d32";
             setTimeout(() => { msg.textContent = ""; }, 5000);
+        }
+
+        function showToast(text, isError = false) {
+            showMsg(text, isError);
         }
 
         async function loadGolfers() {
@@ -352,14 +379,12 @@
             tbody.innerHTML = "";
             const weekDays = ["Monday", "Wednesday", "Friday"];
 
-            // Extract checkbox configurations
             const onlyDeactivated = document.getElementById("filterDeactivated").checked;
             const onlyExempt = document.getElementById("filterExempt").checked;
-            const onlyReminders = document.getElementById("filterReminders").checked; // NEW EXTRACTOR
+            const onlyReminders = document.getElementById("filterReminders").checked;
             const activeDayFilters = Array.from(document.querySelectorAll(".filter-day:checked")).map(cb => cb.value);
 
-            // Filter master cache matching selected configurations
-            const filteredGolfers = allGolfersCache.filter(g => {
+            currentlyFilteredGolfers = allGolfersCache.filter(g => {
                 if (onlyDeactivated && g.active !== false) return false;
                 if (onlyExempt && !g.booking_exempt) return false;
                 if (onlyReminders && !g.reminders_opt_in) return false;
@@ -370,8 +395,7 @@
                 return true;
             });
 
-            // Populate table body with active filtered array items
-            filteredGolfers.forEach(g => {
+            currentlyFilteredGolfers.forEach(g => {
                 const row = document.createElement("tr");
 
                 let daysHtml = `<div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;">`;
@@ -407,7 +431,7 @@
 
             const play_days = Array.from(document.querySelectorAll(".day-opt:checked")).map(cb => cb.value);
 
-            if (!name) return showMsg("Error: Name is required", true);
+            if (!name) return showToast("Error: Name is required", true);
 
             try {
                 const res = await fetch("/api/golfers", {
@@ -418,7 +442,7 @@
 
                 const data = await res.json();
                 if (res.ok) {
-                    showMsg(`Success: ${name} added!`);
+                    showToast(`Success: ${name} added!`);
                     document.getElementById("newName").value = "";
                     document.getElementById("newPhone").value = "";
                     document.getElementById("newEmail").value = "";
@@ -427,10 +451,10 @@
 
                     loadGolfers();
                 } else {
-                    showMsg("Error: " + (data.error || "Could not add golfer"), true);
+                    showToast("Error: " + (data.error || "Could not add golfer"), true);
                 }
             } catch (err) {
-                showMsg("Server connection failed", true);
+                showToast("Server connection failed", true);
             }
         }
 
@@ -445,8 +469,6 @@
             }
 
             try {
-                console.log(`Sending update for ${name}: active = ${newActiveStatus}`);
-
                 const res = await fetch("/api/golfers/" + id, {
                     method: "PUT",
                     headers: { 'Content-Type': 'application/json' },
@@ -457,16 +479,16 @@
                 });
 
                 if (res.ok) {
-                    showMsg(`Success: ${name} ${newActiveStatus ? 'reactivated' : 'deactivated'}`);
+                    showToast(`Success: ${name} ${newActiveStatus ? 'reactivated' : 'deactivated'}`);
                     loadGolfers();
                 } else {
                     const errData = await res.json();
-                    showMsg("Error: " + errData.error, true);
+                    showToast("Error: " + errData.error, true);
                     checkbox.checked = !checkbox.checked;
                 }
             } catch (err) {
                 console.error("Update failed:", err);
-                showMsg("Server connection failed", true);
+                showToast("Server connection failed", true);
                 checkbox.checked = !checkbox.checked;
             }
         }
@@ -480,7 +502,7 @@
 
             const play_days = Array.from(document.querySelectorAll(`.edit-day-${id}:checked`)).map(cb => cb.value);
 
-            if (!name) return alert("Name cannot be empty");
+            if (!name) return showToast("Error: Name cannot be empty", true);
 
             try {
                 const res = await fetch("/api/golfers/" + id, {
@@ -498,6 +520,78 @@
                 }
             } catch (err) {
                 showToast("Server error", true);
+            }
+        }
+
+        // PDF GENERATION ROUTINE (FILTERED TO EXCLUDE DEACTIVATED GOLFERS)
+        function generatePDF() {
+            try {
+                // Filter out deactivated golfers from export list
+                const activeExportList = currentlyFilteredGolfers.filter(g => g.active !== false);
+
+                if (!activeExportList || activeExportList.length === 0) {
+                    showToast("Error: No active golfers available to export", true);
+                    return;
+                }
+
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+                // Header Title
+                doc.setFontSize(18);
+                doc.setTextColor(46, 125, 50); // Dark Green
+                doc.text("Golfers Contact Directory", 14, 18);
+
+                // Date Subtitle
+                const todayStr = new Date().toLocaleDateString('en-GB', {
+                    day: 'numeric', month: 'long', year: 'numeric'
+                });
+                doc.setFontSize(10);
+                doc.setTextColor(100, 100, 100);
+                doc.text(`Generated on: ${todayStr} (${activeExportList.length} Active Members Listed)`, 14, 25);
+
+                // Extract current DOM input values to capture unsaved text entries accurately
+                const tableRows = activeExportList.map(g => {
+                    const currentName = document.getElementById(`name_${g._id}`)?.value || g.name || '';
+                    const currentTel = document.getElementById(`tel_${g._id}`)?.value || g.tel || 'N/A';
+                    const currentEmail = document.getElementById(`email_${g._id}`)?.value || g.email || 'N/A';
+                    return [currentName, currentEmail, currentTel];
+                });
+
+                // Generate Styled AutoTable
+                doc.autoTable({
+                    startY: 30,
+                    head: [['Name', 'Email Address', 'Telephone Number']],
+                    body: tableRows,
+                    theme: 'striped',
+                    headStyles: {
+                        fillColor: [46, 125, 50],
+                        textColor: [255, 255, 255],
+                        fontStyle: 'bold',
+                        fontSize: 11
+                    },
+                    bodyStyles: {
+                        fontSize: 10,
+                        textColor: [50, 50, 50]
+                    },
+                    columnStyles: {
+                        0: { cellWidth: 55 },
+                        1: { cellWidth: 80 },
+                        2: { cellWidth: 45 }
+                    },
+                    alternateRowStyles: {
+                        fillColor: [241, 248, 233]
+                    }
+                });
+
+                // Save PDF to client disk
+                const filename = `Golfers_Directory_${new Date().toISOString().split('T')[0]}.pdf`;
+                doc.save(filename);
+
+                showToast("Success: PDF roster created and downloaded!");
+            } catch (err) {
+                console.error("PDF Export Error:", err);
+                showToast("Error: Failed to create PDF roster", true);
             }
         }
 

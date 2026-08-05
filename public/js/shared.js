@@ -95,3 +95,79 @@ async function handleLogout() {
     await fetch('/api/logout', { method: 'POST' });
     window.location.href = 'index.html';
 }
+
+// --- ENROLLED GOLFERS PDF GENERATION FUNCTION ---
+async function generateGolfersDirectoryPDF(showToastFn = alert) {
+    try {
+        const res = await fetch('/api/golfers');
+        if (!res.ok) throw new Error("Failed to fetch golfers list");
+        
+        const golfers = await res.json();
+        
+        // Filter out deactivated golfers
+        const activeGolfers = golfers.filter(g => g.active !== false);
+
+        if (!activeGolfers || activeGolfers.length === 0) {
+            showToastFn("Error: No active golfers available to export", true);
+            return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+        // Header Title
+        doc.setFontSize(18);
+        doc.setTextColor(46, 125, 50); // Dark Green
+        doc.text("Golfers Contact Directory", 14, 18);
+
+        // Subtitle Date
+        const todayStr = new Date().toLocaleDateString('en-GB', {
+            day: 'numeric', month: 'long', year: 'numeric'
+        });
+        doc.setFontSize(10);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Generated on: ${todayStr} (${activeGolfers.length} Active Members Listed)`, 14, 25);
+
+        // Prepare table row data
+        const tableRows = activeGolfers.map(g => [
+            g.name || '',
+            g.email || 'N/A',
+            g.tel || 'N/A'
+        ]);
+
+        // Generate Styled AutoTable
+        doc.autoTable({
+            startY: 30,
+            head: [['Name', 'Email Address', 'Telephone Number']],
+            body: tableRows,
+            theme: 'striped',
+            headStyles: {
+                fillColor: [46, 125, 50],
+                textColor: [255, 255, 255],
+                fontStyle: 'bold',
+                fontSize: 11
+            },
+            bodyStyles: {
+                fontSize: 10,
+                textColor: [50, 50, 50]
+            },
+            columnStyles: {
+                0: { cellWidth: 55 },
+                1: { cellWidth: 80 },
+                2: { cellWidth: 45 }
+            },
+            alternateRowStyles: {
+                fillColor: [241, 248, 233]
+            }
+        });
+
+        // Trigger PDF Download
+        const filename = `Golfers_Directory_${new Date().toISOString().split('T')[0]}.pdf`;
+        doc.save(filename);
+
+        showToastFn("Success: PDF roster created and downloaded!");
+    } catch (err) {
+        console.error("PDF Export Error:", err);
+        showToastFn("Error: Failed to create PDF roster", true);
+    }
+}

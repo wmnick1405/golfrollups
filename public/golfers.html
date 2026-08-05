@@ -314,7 +314,7 @@
         <div class="filter-box">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
                 <h3 style="margin: 0; font-size: 15px; color: #2e7d32;">Filter Table List</h3>
-                <button class="btn-pdf" onclick="generatePDF()">📄 Export PDF Roster</button>
+                <button class="btn-pdf" onclick="generateGolfersDirectoryPDF(showToast)">📄 Export PDF Roster</button>
             </div>
             
             <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: center;">
@@ -348,7 +348,7 @@
         </table>
     </div>
 
-    <script src="js/shared.js"></script>
+    <script src="./js/shared.js?v=1.0"></script>
     <script>
         let allGolfersCache = []; 
         let currentlyFilteredGolfers = [];
@@ -520,78 +520,6 @@
                 }
             } catch (err) {
                 showToast("Server error", true);
-            }
-        }
-
-        // PDF GENERATION ROUTINE (FILTERED TO EXCLUDE DEACTIVATED GOLFERS)
-        function generatePDF() {
-            try {
-                // Filter out deactivated golfers from export list
-                const activeExportList = currentlyFilteredGolfers.filter(g => g.active !== false);
-
-                if (!activeExportList || activeExportList.length === 0) {
-                    showToast("Error: No active golfers available to export", true);
-                    return;
-                }
-
-                const { jsPDF } = window.jspdf;
-                const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-
-                // Header Title
-                doc.setFontSize(18);
-                doc.setTextColor(46, 125, 50); // Dark Green
-                doc.text("Golfers Contact Directory", 14, 18);
-
-                // Date Subtitle
-                const todayStr = new Date().toLocaleDateString('en-GB', {
-                    day: 'numeric', month: 'long', year: 'numeric'
-                });
-                doc.setFontSize(10);
-                doc.setTextColor(100, 100, 100);
-                doc.text(`Generated on: ${todayStr} (${activeExportList.length} Active Members Listed)`, 14, 25);
-
-                // Extract current DOM input values to capture unsaved text entries accurately
-                const tableRows = activeExportList.map(g => {
-                    const currentName = document.getElementById(`name_${g._id}`)?.value || g.name || '';
-                    const currentTel = document.getElementById(`tel_${g._id}`)?.value || g.tel || 'N/A';
-                    const currentEmail = document.getElementById(`email_${g._id}`)?.value || g.email || 'N/A';
-                    return [currentName, currentEmail, currentTel];
-                });
-
-                // Generate Styled AutoTable
-                doc.autoTable({
-                    startY: 30,
-                    head: [['Name', 'Email Address', 'Telephone Number']],
-                    body: tableRows,
-                    theme: 'striped',
-                    headStyles: {
-                        fillColor: [46, 125, 50],
-                        textColor: [255, 255, 255],
-                        fontStyle: 'bold',
-                        fontSize: 11
-                    },
-                    bodyStyles: {
-                        fontSize: 10,
-                        textColor: [50, 50, 50]
-                    },
-                    columnStyles: {
-                        0: { cellWidth: 55 },
-                        1: { cellWidth: 80 },
-                        2: { cellWidth: 45 }
-                    },
-                    alternateRowStyles: {
-                        fillColor: [241, 248, 233]
-                    }
-                });
-
-                // Save PDF to client disk
-                const filename = `Golfers_Directory_${new Date().toISOString().split('T')[0]}.pdf`;
-                doc.save(filename);
-
-                showToast("Success: PDF roster created and downloaded!");
-            } catch (err) {
-                console.error("PDF Export Error:", err);
-                showToast("Error: Failed to create PDF roster", true);
             }
         }
 

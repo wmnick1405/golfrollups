@@ -172,6 +172,26 @@ const transporter = nodemailer.createTransport({
     }
 });
 
+// Reusable Email Dispatcher Helper
+async function sendGolferNotification({ golfer_id, subject, bodyText }) {
+    const golfer = await Golfer.findById(golfer_id);
+    if (!golfer || !golfer.email) {
+        console.log(`[Email Skipped] Golfer ${golfer_id} has no valid email on file.`);
+        return { success: false, reason: 'No email on file' };
+    }
+
+    const mailOptions = {
+        from: 'wmnick1405@gmail.com',
+        to: golfer.email,
+        subject: subject,
+        text: `Hello ${golfer.name},\n\n${bodyText}\n\nRegards,\nNick Osborne`
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`[Email Sent] Successfully notified ${golfer.name} (${golfer.email})`);
+    return { success: true };
+}
+
 // 5. AUTHENTICATION ROUTES
 app.post('/login', async (req, res) => {
     try {
@@ -625,10 +645,29 @@ app.post('/api/unavailable/send-summary', protect, async (req, res) => {
 // API to save extra availability
 app.post('/api/extra-availabilities', protect, async (req, res) => {
     try {
-        const record = new ExtraAvailability(req.body);
+        const { golfer_id, date, note } = req.body;
+
+        if (!golfer_id || !date) {
+            return res.status(400).json({ error: "Golfer ID and Date are required." });
+        }
+
+        // Strip time component to avoid timezone shifts
+        const cleanDate = new Date(date + "T00:00:00.000Z");
+
+        const record = new ExtraAvailability({
+            golfer_id: new mongoose.Types.ObjectId(golfer_id),
+            date: cleanDate,
+            note: note || ''
+        });
+
         await record.save();
+        console.log(`[Success] Saved extra play date for golfer ${golfer_id} on ${date}`);
         res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: "Save failed" }); }
+
+    } catch (err) {
+        console.error("Save Extra Availability Error:", err);
+        res.status(500).json({ error: "Save failed", message: err.message });
+    }
 });
 
 // API to get extra availability for a golfer
@@ -673,6 +712,28 @@ app.get('/api/extra-availabilities', protect, async (req, res) => {
 app.delete('/api/extra-availabilities/:id', protect, async (req, res) => {
     await ExtraAvailability.findByIdAndDelete(req.params.id);
     res.json({ success: true });
+});
+
+// Endpoint to send summary email for extra play days
+app.post('/api/extra-availabilities/send-summary', protect, async (req, res) => {
+    try {
+        const { golfer_id, dates } = req.body;
+        
+        // Format dates into a bulleted list
+        const dateList = dates.map(d => `• ${d}`).join('\n');
+        const bodyText = `This is to confirm that extra play day(s) have been logged for you on:\n\n${dateList}`;
+
+        await sendGolferNotification({
+            golfer_id,
+            subject: 'Rollup Extra Play Day Confirmation',
+            bodyText
+        });
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error("Extra Play Email Error:", err);
+        res.status(500).json({ error: "Failed to send extra play email." });
+    }
 });
 
 // 9. ROLLUP & PARTICIPATION REPORT ROUTES

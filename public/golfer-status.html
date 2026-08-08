@@ -72,6 +72,14 @@
             margin-bottom: 15px;
         }
 
+        .pending-box {
+            background: #fff3cd; 
+            padding: 15px; 
+            border: 1px solid #ffeeba; 
+            border-radius: 8px; 
+            margin-bottom: 20px;
+        }
+
         select, input {
             padding: 10px;
             margin: 5px 0;
@@ -147,6 +155,7 @@
         </div>
 
         <div id="mainDashboard" class="status-container hidden">
+            <!-- COLUMN 1: UNAVAILABILITY -->
             <div class="column">
                 <div class="quick-add">
                     <h3>Add New Unavailability</h3>
@@ -169,10 +178,10 @@
                     This golfer is currently marked as Indefinitely Unavailable.
                 </div>
 
-                <div id="pendingEmailArea" class="hidden" style="background: #fff3cd; padding: 15px; border: 1px solid #ffeeba; border-radius: 8px; margin-bottom: 20px;">
-                    <p><strong>Pending Confirmation:</strong> <span id="pendingCount">0</span> record(s).</p>
+                <div id="pendingEmailArea" class="pending-box hidden">
+                    <p><strong>Pending Absence Email:</strong> <span id="pendingCount">0</span> record(s).</p>
                     <button onclick="sendSummaryEmail()" style="background: #28a745; width: 100%; margin-bottom: 10px;">Send Summary Email</button>
-                    <button onclick="clearPending()" style="background: #6c757d; width: 100%;">Done (No Email)</button>
+                    <button onclick="clearPending('un')" style="background: #6c757d; width: 100%;">Done (No Email)</button>
                 </div>
 
                 <div id="tableContainer">
@@ -191,6 +200,7 @@
                 </div>
             </div>
 
+            <!-- COLUMN 2: EXTRA PLAY DAYS -->
             <div class="column">
                 <div class="quick-add extra-pane">
                     <h3>Add Extra Play Date</h3>
@@ -204,6 +214,13 @@
                         <input type="text" id="extraNote" placeholder="Note (Optional)">
                     </div>
                     <button onclick="saveExtraAvailability()" style="background: #4caf50; width: 100%;">Add Extra Day</button>
+                </div>
+
+                <!-- PENDING EXTRA PLAY EMAIL BOX -->
+                <div id="pendingExtraEmailArea" class="pending-box hidden">
+                    <p><strong>Pending Extra Play Email:</strong> <span id="pendingExtraCount">0</span> record(s).</p>
+                    <button onclick="sendExtraSummaryEmail()" style="background: #28a745; width: 100%; margin-bottom: 10px;">Send Extra Days Email</button>
+                    <button onclick="clearPending('ex')" style="background: #6c757d; width: 100%;">Done (No Email)</button>
                 </div>
 
                 <div id="extraTableContainer">
@@ -224,12 +241,12 @@
         </div>
     </div>
 
-    <script src="js/shared.js"></script>
+    <script src="js/shared.js?v=1.1"></script>
+<script src="js/shared.js?v=1.1"></script>
     <script>
         // --- INITIALIZATION ---
         window.addEventListener('DOMContentLoaded', () => {
             loadGolfers();
-            // Load Navbar
             fetch('nav.html').then(r => r.text()).then(d => document.getElementById('nav-placeholder').innerHTML = d);
         });
 
@@ -256,6 +273,10 @@
             const dashboard = document.getElementById('mainDashboard');
             const daysDisplay = document.getElementById('preferredDaysDisplay');
 
+            // Reset pending queues on golfer change
+            clearPending('un');
+            clearPending('ex');
+
             if (!golferId) {
                 dashboard.classList.add('hidden');
                 daysDisplay.textContent = "";
@@ -275,6 +296,16 @@
             const resEx = await fetch(`/api/extra-availabilities/golfer/${golferId}`);
             const recordsEx = await resEx.json();
             renderExtraDays(recordsEx);
+        }
+
+        // Safe UK Date Formatter (Prevents timezone offset issues)
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const parts = dateStr.split('-');
+            if (parts.length === 3) {
+                return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
+            return new Date(dateStr).toLocaleDateString('en-GB');
         }
 
         // --- UI HELPERS ---
@@ -345,7 +376,8 @@
         }
 
         // --- DATA ACTIONS ---
-        let pendingDates = [];
+        let pendingUnavailability = [];
+        let pendingExtraDays = [];
 
         async function saveUnavailability() {
             const golfer_id = document.getElementById('golferSelect').value;
@@ -363,9 +395,8 @@
 
             if (res.ok) {
                 const dateRange = indefinite ? `${formatDate(date_from)} (Indefinite)` : `${formatDate(date_from)} to ${formatDate(date_to)}`;
-                pendingDates.push(dateRange);
+                pendingUnavailability.push(dateRange);
                 updatePendingUI();
-                showToast("Record added.");
                 fetchGolferStatus();
             }
         }
@@ -384,8 +415,14 @@
             });
 
             if (res.ok) {
+                const formattedDate = formatDate(date);
+                const formattedText = note ? `${formattedDate} (${note})` : formattedDate;
+                pendingExtraDays.push(formattedText);
+                
                 document.getElementById('extraDate').value = "";
                 document.getElementById('extraNote').value = "";
+                
+                updatePendingUI();
                 fetchGolferStatus();
             }
         }
@@ -397,36 +434,64 @@
             fetchGolferStatus();
         }
 
-        // --- EMAIL SUMMARY ---
+        // --- EMAIL SUMMARY CONTROLS ---
         function updatePendingUI() {
-            const area = document.getElementById('pendingEmailArea');
-            const count = document.getElementById('pendingCount');
-            if (pendingDates.length > 0) {
-                area.classList.remove('hidden');
-                count.textContent = pendingDates.length;
+            // Absence UI
+            const areaUn = document.getElementById('pendingEmailArea');
+            const countUn = document.getElementById('pendingCount');
+            if (pendingUnavailability.length > 0) {
+                areaUn.classList.remove('hidden');
+                countUn.textContent = pendingUnavailability.length;
             } else {
-                area.classList.add('hidden');
+                areaUn.classList.add('hidden');
+            }
+
+            // Extra Play Days UI
+            const areaEx = document.getElementById('pendingExtraEmailArea');
+            const countEx = document.getElementById('pendingExtraCount');
+            if (pendingExtraDays.length > 0) {
+                areaEx.classList.remove('hidden');
+                countEx.textContent = pendingExtraDays.length;
+            } else {
+                areaEx.classList.add('hidden');
             }
         }
 
-        function clearPending() {
-            pendingDates = [];
+        function clearPending(type) {
+            if (type === 'un') pendingUnavailability = [];
+            if (type === 'ex') pendingExtraDays = [];
             updatePendingUI();
         }
 
         async function sendSummaryEmail() {
             const golfer_id = document.getElementById('golferSelect').value;
-            if (pendingDates.length === 0) return;
+            if (pendingUnavailability.length === 0) return;
 
             const res = await fetch('/api/unavailable/send-summary', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ golfer_id, dates: pendingDates })
+                body: JSON.stringify({ golfer_id, dates: pendingUnavailability })
             });
 
             if (res.ok) {
-                showToast("Email sent!");
-                clearPending();
+                alert("Absence confirmation email sent!");
+                clearPending('un');
+            }
+        }
+
+        async function sendExtraSummaryEmail() {
+            const golfer_id = document.getElementById('golferSelect').value;
+            if (pendingExtraDays.length === 0) return;
+
+            const res = await fetch('/api/extra-availabilities/send-summary', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ golfer_id, dates: pendingExtraDays })
+            });
+
+            if (res.ok) {
+                alert("Extra play confirmation email sent!");
+                clearPending('ex');
             }
         }
     </script>

@@ -72,6 +72,14 @@
             margin-bottom: 15px;
         }
 
+        .pending-box {
+            background: #fff3cd;
+            padding: 15px;
+            border: 1px solid #ffeeba;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
         select, input {
             padding: 10px;
             margin: 5px 0;
@@ -139,7 +147,7 @@
         <div class="controls">
             <div class="form-group">
                 <label><strong>Select Golfer:</strong></label>
-                <select id="golferSelect" onchange="fetchGolferStatus()">
+                <select id="golferSelect" onchange="onGolferChange()">
                     <option value="">-- Choose a Golfer --</option>
                 </select>
             </div>
@@ -147,6 +155,7 @@
         </div>
 
         <div id="mainDashboard" class="status-container hidden">
+            <!-- COLUMN 1: UNAVAILABILITY -->
             <div class="column">
                 <div class="quick-add">
                     <h3>Add New Unavailability</h3>
@@ -169,10 +178,10 @@
                     This golfer is currently marked as Indefinitely Unavailable.
                 </div>
 
-                <div id="pendingEmailArea" class="hidden" style="background: #fff3cd; padding: 15px; border: 1px solid #ffeeba; border-radius: 8px; margin-bottom: 20px;">
-                    <p><strong>Pending Confirmation:</strong> <span id="pendingCount">0</span> record(s).</p>
+                <div id="pendingEmailArea" class="pending-box hidden">
+                    <p><strong>Pending Absence Email:</strong> <span id="pendingCount">0</span> record(s).</p>
                     <button onclick="sendSummaryEmail()" style="background: #28a745; width: 100%; margin-bottom: 10px;">Send Summary Email</button>
-                    <button onclick="clearPending()" style="background: #6c757d; width: 100%;">Done (No Email)</button>
+                    <button onclick="clearPending('un')" style="background: #6c757d; width: 100%;">Done (No Email)</button>
                 </div>
 
                 <div id="tableContainer">
@@ -191,6 +200,7 @@
                 </div>
             </div>
 
+            <!-- COLUMN 2: EXTRA PLAY DAYS -->
             <div class="column">
                 <div class="quick-add extra-pane">
                     <h3>Add Extra Play Date</h3>
@@ -204,6 +214,13 @@
                         <input type="text" id="extraNote" placeholder="Note (Optional)">
                     </div>
                     <button onclick="saveExtraAvailability()" style="background: #4caf50; width: 100%;">Add Extra Day</button>
+                </div>
+
+                <!-- PENDING EXTRA PLAY EMAIL BOX -->
+                <div id="pendingExtraEmailArea" class="pending-box hidden">
+                    <p><strong>Pending Extra Play Email:</strong> <span id="pendingExtraCount">0</span> record(s).</p>
+                    <button onclick="sendExtraSummaryEmail()" style="background: #28a745; width: 100%; margin-bottom: 10px;">Send Extra Days Email</button>
+                    <button onclick="clearPending('ex')" style="background: #6c757d; width: 100%;">Done (No Email)</button>
                 </div>
 
                 <div id="extraTableContainer">
@@ -226,14 +243,18 @@
 
     <script src="js/shared.js"></script>
     <script>
-        // --- INITIALIZATION ---
         window.addEventListener('DOMContentLoaded', () => {
             loadGolfers();
-            // Load Navbar
             fetch('nav.html').then(r => r.text()).then(d => document.getElementById('nav-placeholder').innerHTML = d);
         });
 
-        // --- CORE FUNCTIONS ---
+        function formatDateUK(dateStr) {
+            if (!dateStr) return '';
+            const parts = dateStr.split('-');
+            if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            return new Date(dateStr).toLocaleDateString('en-GB');
+        }
+
         async function loadGolfers() {
             try {
                 const res = await fetch('/api/golfers');
@@ -248,6 +269,12 @@
                     select.appendChild(opt);
                 });
             } catch (err) { console.error("Load golfers error:", err); }
+        }
+
+        function onGolferChange() {
+            clearPending('un');
+            clearPending('ex');
+            fetchGolferStatus();
         }
 
         async function fetchGolferStatus() {
@@ -266,18 +293,15 @@
             const selectedOption = select.options[select.selectedIndex];
             daysDisplay.textContent = "Preferred Days: " + (selectedOption.dataset.days || "None");
 
-            // Fetch Unavailability
             const resUn = await fetch(`/api/unavailable/golfer/${golferId}`);
             const recordsUn = await resUn.json();
             renderUnavailability(recordsUn);
 
-            // Fetch Extra Days
             const resEx = await fetch(`/api/extra-availabilities/golfer/${golferId}`);
             const recordsEx = await resEx.json();
             renderExtraDays(recordsEx);
         }
 
-        // --- UI HELPERS ---
         function toggleDateTo() {
             const isIndefinite = document.getElementById('newIndefinite').checked;
             const group = document.getElementById('dateToGroup');
@@ -298,7 +322,6 @@
             }
         }
 
-        // --- RENDER TABLES ---
         function renderUnavailability(records) {
             const tbody = document.querySelector("#datesTable tbody");
             const notice = document.getElementById('indefiniteNotice');
@@ -344,8 +367,8 @@
             });
         }
 
-        // --- DATA ACTIONS ---
         let pendingDates = [];
+        let pendingExtraDates = [];
 
         async function saveUnavailability() {
             const golfer_id = document.getElementById('golferSelect').value;
@@ -362,10 +385,9 @@
             });
 
             if (res.ok) {
-                const dateRange = indefinite ? `${formatDate(date_from)} (Indefinite)` : `${formatDate(date_from)} to ${formatDate(date_to)}`;
+                const dateRange = indefinite ? `${formatDateUK(date_from)} (Indefinite)` : `${formatDateUK(date_from)} to ${formatDateUK(date_to)}`;
                 pendingDates.push(dateRange);
                 updatePendingUI();
-                showToast("Record added.");
                 fetchGolferStatus();
             }
         }
@@ -384,8 +406,14 @@
             });
 
             if (res.ok) {
+                const formattedDate = formatDateUK(date);
+                const itemLabel = note ? `${formattedDate} (${note})` : formattedDate;
+                pendingExtraDates.push(itemLabel);
+                
                 document.getElementById('extraDate').value = "";
                 document.getElementById('extraNote').value = "";
+                
+                updatePendingUI();
                 fetchGolferStatus();
             }
         }
@@ -397,20 +425,31 @@
             fetchGolferStatus();
         }
 
-        // --- EMAIL SUMMARY ---
         function updatePendingUI() {
-            const area = document.getElementById('pendingEmailArea');
-            const count = document.getElementById('pendingCount');
+            // Absence Email Box
+            const areaUn = document.getElementById('pendingEmailArea');
+            const countUn = document.getElementById('pendingCount');
             if (pendingDates.length > 0) {
-                area.classList.remove('hidden');
-                count.textContent = pendingDates.length;
+                areaUn.classList.remove('hidden');
+                countUn.textContent = pendingDates.length;
             } else {
-                area.classList.add('hidden');
+                areaUn.classList.add('hidden');
+            }
+
+            // Extra Play Days Email Box
+            const areaEx = document.getElementById('pendingExtraEmailArea');
+            const countEx = document.getElementById('pendingExtraCount');
+            if (pendingExtraDates.length > 0) {
+                areaEx.classList.remove('hidden');
+                countEx.textContent = pendingExtraDates.length;
+            } else {
+                areaEx.classList.add('hidden');
             }
         }
 
-        function clearPending() {
-            pendingDates = [];
+        function clearPending(type = 'un') {
+            if (type === 'un') pendingDates = [];
+            if (type === 'ex') pendingExtraDates = [];
             updatePendingUI();
         }
 
@@ -425,8 +464,24 @@
             });
 
             if (res.ok) {
-                showToast("Email sent!");
-                clearPending();
+                alert("Absence confirmation email sent!");
+                clearPending('un');
+            }
+        }
+
+        async function sendExtraSummaryEmail() {
+            const golfer_id = document.getElementById('golferSelect').value;
+            if (pendingExtraDates.length === 0) return;
+
+            const res = await fetch('/api/extra-availabilities/send-summary', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ golfer_id, dates: pendingExtraDates })
+            });
+
+            if (res.ok) {
+                alert("Extra play confirmation email sent!");
+                clearPending('ex');
             }
         }
     </script>

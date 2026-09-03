@@ -7,16 +7,13 @@
     <style>
         body {
             font-family: Arial;
-            /* background: #f2f2f2;> */
             background-image: url('./images/IMG_0376a.jpg');
             background-size: 100%;
             background-position: center;
             background-attachment: fixed;
             background-repeat: no-repeat;
-
             padding: 30px;
             margin: 0;
-            padding: 30px;
         }
 
         .layout {
@@ -49,18 +46,13 @@
             border: 1px solid #01579b;
             padding: 10px 15px;
             border-radius: 50px;
-            /* Subtle rounded corners */
             cursor: grab;
-            /* Shows the "Hand" icon */
             display: block;
-            /* Makes it a full-width bar */
             width: 100%;
-            /* Fills the group box */
             box-sizing: border-box;
             font-size: 0.9em;
             user-select: none;
             text-align: left;
-            /* Easier to read in a list */
         }
 
         .player-tag:active {
@@ -88,12 +80,9 @@
             background: white;
             display: flex;
             flex-direction: column;
-            /* Stack players vertically */
             gap: 8px;
-            /* Space between player bars */
         }
 
-        /* Visual feedback when hovering over a group */
         .group-box.drag-over {
             border-color: #2e7d32;
             background: #e8f5e9;
@@ -124,23 +113,18 @@
             background: #666;
         }
 
-        /* The suggested booker (top of the list) */
         .is-top-slot {
             background: #e8f5e9 !important;
-            /* Light Green */
             border: 2px solid #2e7d32 !important;
             font-weight: bold;
         }
 
-        /* The exempt players (shouldn't be at the top) */
         .is-exempt {
             background: #ffebee !important;
-            /* Light Red/Pink */
             border: 1px dashed #d32f2f !important;
             color: #c62828;
         }
 
-        /* Small label for exempt players */
         .exempt-label {
             font-size: 0.7em;
             text-transform: uppercase;
@@ -148,7 +132,7 @@
             margin-top: 2px;
         }
 
-        /* Calendar Pop-up Modal Box */
+        /* Calendar & Event Notes Pop-up Modal Box */
         .calendar-modal {
             position: fixed;
             top: 0;
@@ -166,8 +150,10 @@
             background: white;
             padding: 25px;
             border-radius: 12px;
-            max-width: 500px;
+            max-width: 550px;
             width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
             animation: fadeIn 0.3s ease;
         }
@@ -185,6 +171,14 @@
         .calendar-event-item {
             background: #fff8e1;
             border-left: 5px solid #ffb300;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+
+        .note-event-item {
+            background: #e8f5e9;
+            border-left: 5px solid #2e7d32;
             padding: 10px;
             margin-bottom: 10px;
             border-radius: 4px;
@@ -227,11 +221,10 @@
 
         <div class="main-content">
             <h2>Generate Rollup</h2>
-            <p>First check the club calendar to see if there are any events that may affect your planned rollup events.
+            <p>First check the club calendar and event notes to see if there are any events that may affect your planned rollup events.
             </p>
-            <p>To use: select required date, type in the name of the competition if it's not a social round,click the
-                "Get
-                Available" button, then click the "Auto-Group" button. Drag
+            <p>To use: select required date, type in the name of the competition if it's not a social round, click the
+                "Get Available" button, then click the "Auto-Group" button. Drag
                 players between groups as needed. When complete, click the "Save Rollup" button.</p>
             <div class="controls">
                 <input type="date" id="rollupDate" onchange="autoCheckCompetition()">
@@ -263,9 +256,9 @@
     <div id="calendarAlertModal" class="calendar-modal hidden" style="display: none;">
         <div class="calendar-modal-content">
             <div class="calendar-modal-header">
-                ⚠️ Club Calendar Event Warning
+                ⚠️ Club Calendar & Event Notes Alert
             </div>
-            <p>The following club events are scheduled on this date and may conflict with your planned rollup:</p>
+            <p>The following events and notes coincide with this date and may affect your planned rollup:</p>
             <div id="calendarModalEventsList"></div>
             <button class="modal-close-btn" onclick="closeCalendarModal()">Acknowledge & Close</button>
             <div style="clear: both;"></div>
@@ -274,8 +267,12 @@
 
     <script src="js/shared.js"></script>
     <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            fetch('nav.html').then(r => r.text()).then(d => document.getElementById('nav-placeholder').innerHTML = d);
+            loadCompetitionDropdown();
+        });
 
-        // Track date changes to alert the administrator immediately
+        // Track date changes to alert administrator immediately of calendar conflicts and event notes
         document.getElementById('rollupDate').addEventListener('change', checkCalendarConflicts);
 
         async function checkCalendarConflicts() {
@@ -283,34 +280,59 @@
             if (!dateInput) return;
 
             try {
-                const res = await fetch(`/api/club-calendar/check-date?date=${dateInput}`);
-                if (!res.ok) throw new Error("Failed to search calendar dates");
+                // Fetch both Calendar Events and Rollup Event Notes in parallel
+                const [calRes, notesRes] = await Promise.all([
+                    fetch(`/api/club-calendar/check-date?date=${dateInput}`),
+                    fetch(`/api/rollup-notes/check-date?date=${dateInput}`)
+                ]);
 
-                const events = await res.json();
+                const events = calRes.ok ? await calRes.json() : [];
+                const notes = notesRes.ok ? await notesRes.json() : [];
 
-                if (events && events.length > 0) {
+                if ((events && events.length > 0) || (notes && notes.length > 0)) {
                     const listContainer = document.getElementById('calendarModalEventsList');
                     listContainer.innerHTML = ""; // Wipe older alerts
 
-                    events.forEach(ev => {
-                        const startStr = new Date(ev.start).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-                        const endStr = new Date(ev.end).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                    // Render Club Calendar Events
+                    if (events && events.length > 0) {
+                        listContainer.innerHTML += `<h4 style="margin: 10px 0 5px 0; color: #ff8f00;">📅 Club Diary Events</h4>`;
+                        events.forEach(ev => {
+                            const startStr = new Date(ev.start).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                            const endStr = new Date(ev.end).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
-                        listContainer.innerHTML += `
-                    <div class="calendar-event-item">
-                        <strong>${ev.title}</strong><br>
-                        <span style="font-size:0.85em; color:#555;">Time: ${startStr} - ${endStr} | Location: ${ev.location || 'Main Course'}</span>
-                    </div>
-                `;
-                    });
+                            listContainer.innerHTML += `
+                                <div class="calendar-event-item">
+                                    <strong>${ev.title}</strong><br>
+                                    <span style="font-size:0.85em; color:#555;">Time: ${startStr} - ${endStr} | Location: ${ev.location || 'Main Course'}</span>
+                                </div>
+                            `;
+                        });
+                    }
 
-                    // Un-hide and show the pop-up modal panel
+                    // Render Rollup Event Notes
+                    if (notes && notes.length > 0) {
+                        listContainer.innerHTML += `<h4 style="margin: 15px 0 5px 0; color: #2e7d32;">📌 Applicable Event Notes</h4>`;
+                        notes.forEach(n => {
+                            const fromStr = new Date(n.date_from).toLocaleDateString('en-GB');
+                            const toStr = new Date(n.date_to).toLocaleDateString('en-GB');
+
+                            listContainer.innerHTML += `
+                                <div class="note-event-item">
+                                    <strong>Requested by: ${n.requested_by}</strong> 
+                                    <span style="font-size:0.8em; color:#555; float:right;">Active: ${fromStr} to ${toStr}</span><br>
+                                    <div style="margin-top: 5px; font-size: 0.9em; color: #222;">${n.content}</div>
+                                </div>
+                            `;
+                        });
+                    }
+
+                    // Un-hide and show pop-up modal panel
                     const modal = document.getElementById('calendarAlertModal');
                     modal.style.display = 'flex';
                     modal.classList.remove('hidden');
                 }
             } catch (err) {
-                console.error("Conflict verification process omitted:", err);
+                console.error("Conflict verification process error:", err);
             }
         }
 
@@ -320,12 +342,10 @@
             modal.classList.add('hidden');
         }
 
-
         let pool = [];   // Players not in a group
         let groups = []; // Array of Arrays [[p1, p2], [p3, p4]]
 
-        // 1. FETCH DATA (Duplicate Date Check)
-        // 1. FETCH DATA (Updated to handle Absence Monitor)
+        // 1. FETCH DATA
         async function fetchAvailable() {
             const dateInput = document.getElementById("rollupDate");
             const date = dateInput.value;
@@ -359,7 +379,6 @@
                 const extraData = await resExtra.json();
 
                 // 3. Combine the data
-                // We mark extra players so we know where they came from (optional)
                 const combinedData = [
                     ...regularData,
                     ...extraData.map(p => ({ ...p, isExtra: true }))
@@ -370,8 +389,7 @@
                     return;
                 }
 
-                // --- SPLIT LOGIC ---
-                // 1. Filter out the ACTIVE players (Regular + Extra)
+                // Filter out ACTIVE players
                 pool = combinedData.filter(p => !p.isUnavailable).map(p => ({
                     golfer_id: p._id || p.golfer_id,
                     name: p.name,
@@ -380,10 +398,10 @@
                     isExtra: p.isExtra || false
                 }));
 
-                // 2. Filter out the UNAVAILABLE players
+                // Filter out UNAVAILABLE players
                 const awayPlayers = combinedData.filter(p => p.isUnavailable);
 
-                // --- UPDATE ABSENCE MONITOR UI ---
+                // Update Absence Monitor UI
                 if (awayPlayers.length > 0) {
                     absenceBox.style.display = "block";
                     absencePills.innerHTML = "";
@@ -418,11 +436,10 @@
 
                 const comps = await response.json();
 
-                // Clear existing dynamic options but keep 'Social'
                 dropdown.innerHTML = '<option value="Social">Social</option>';
 
                 comps.forEach(comp => {
-                    const val = comp['comp-name']; // Get the value using the hyphenated key
+                    const val = comp['comp-name'];
                     if (val) {
                         const option = document.createElement("option");
                         option.value = val;
@@ -435,7 +452,6 @@
             }
         }
 
-        // Auto-check the competition dropdown based on the selected date
         async function autoCheckCompetition() {
             const selectedDate = document.getElementById("rollupDate").value;
             const dropdown = document.getElementById("compName");
@@ -448,7 +464,6 @@
 
                 const comps = await response.json();
 
-                // Search for a competition where the selected date exists in its CompetitionDates array
                 const match = comps.find(c =>
                     c.CompetitionDates && c.CompetitionDates.includes(selectedDate)
                 );
@@ -456,7 +471,6 @@
                 if (match) {
                     const compValue = match['comp-name'];
 
-                    // Check if the option already exists in the dropdown
                     let optionExists = Array.from(dropdown.options).some(opt => opt.value === compValue);
 
                     if (!optionExists) {
@@ -467,7 +481,6 @@
                     }
                     dropdown.value = compValue;
                 } else {
-                    // Default to Social if no date match is found
                     dropdown.value = "Social";
                 }
             } catch (err) {
@@ -476,44 +489,35 @@
             }
         }
 
-        // 2. AUTOMATIC DISTRIBUTION (Optional starting point)
+        // 2. AUTOMATIC DISTRIBUTION
         function autoDistribute() {
             if (pool.length === 0) return alert("No players in pool to distribute.");
 
-            // 1. Shuffle the pool to keep things fair and random
             let tempPool = [...pool].sort(() => Math.random() - 0.5);
             const total = tempPool.length;
             groups = [];
 
-            // 2. The Golf Math: Determine how many 4s and 3s
             let num4s = Math.floor(total / 4);
             let remainder = total % 4;
 
-            // Logic: If we have a remainder of 1 (e.g., 9, 13 players) 
-            // or 2 (e.g., 10, 14 players), we convert 4-person groups into 3s.
             if (remainder === 1 && num4s > 0) {
-                num4s -= 2; // We turn two 4s into three 3s
+                num4s -= 2;
             } else if (remainder === 2 && num4s > 0) {
-                num4s -= 1; // We turn one 4 into two 3s
-            } else if (remainder === 3) {
-                // Remainder 3 is perfect—it just becomes its own group of 3
+                num4s -= 1;
             }
 
-            // Safety check: ensure num4s doesn't go negative for very small groups
             num4s = Math.max(0, num4s);
 
-            // 3. Create the 4-person groups
             for (let i = 0; i < num4s; i++) {
                 groups.push(tempPool.splice(0, 4));
             }
 
-            // 4. Everything else goes into 3-person groups (or the final remainder)
             while (tempPool.length > 0) {
                 let size = (tempPool.length >= 3) ? 3 : tempPool.length;
                 groups.push(tempPool.splice(0, size));
             }
 
-            pool = []; // Clear the pool as everyone is now in a group
+            pool = [];
             renderAll();
         }
 
@@ -526,7 +530,6 @@
             });
 
             groups = [];
-            // Hide the absence monitor when resetting
             document.getElementById("absenceMonitor").style.display = "none";
             renderAll();
         }
@@ -541,9 +544,8 @@
             const container = document.getElementById("playerPool");
             container.innerHTML = "";
             pool.forEach((player, idx) => {
-                const tag = createPlayerTag(player, true); // true means "isPool"
+                const tag = createPlayerTag(player, true);
 
-                // Standard drag logic
                 tag.ondragstart = (e) => {
                     e.dataTransfer.setData("fromIdx", idx);
                     e.dataTransfer.setData("fromGroup", "pool");
@@ -561,22 +563,17 @@
                 const groupDiv = document.createElement("div");
                 groupDiv.className = "group-box";
 
-                // Add your Header/Tee Time logic here if you have it
                 groupDiv.innerHTML = `<strong>Group ${gIdx + 1}</strong><hr>`;
 
-                // Set up the Group as a Drop Zone
                 groupDiv.ondragover = allowDrop;
                 groupDiv.ondrop = (e) => handleDrop(e, gIdx);
 
                 group.forEach((player, pIdx) => {
-                    // Highlight as Green ONLY if pIdx is 0
                     const isTop = (pIdx === 0);
                     const tag = createPlayerTag(player, false, isTop);
 
-                    // Update the data object so the Save function knows who is booking
                     player.booker = isTop;
 
-                    // Re-attach the drag-start listener
                     tag.ondragstart = (e) => {
                         e.dataTransfer.setData("fromIdx", pIdx);
                         e.dataTransfer.setData("fromGroup", gIdx);
@@ -595,7 +592,6 @@
             if (player.booking_exempt) span.classList.add("is-exempt");
             if (isTop && !isPool) span.classList.add("is-top-slot");
 
-            // Add a (+) if they are an extra availability player
             const extraSuffix = player.isExtra ? " (+)" : "";
             const exemptSuffix = player.booking_exempt ? " (E)" : "";
 
@@ -643,7 +639,6 @@
 
             if (!date) return alert("Select a date first");
 
-            // 1. PRE-SAVE CHECK: Check if a rollup already exists for this date
             const checkRes = await fetch(`/api/rollups/check?date=${date}`);
             const { exists } = await checkRes.json();
 
@@ -651,11 +646,9 @@
                 return alert(`A rollup for ${date} already exists! Please delete the old one in History if you wish to overwrite it.`);
             }
 
-            // 2. Filter out empty groups
             const cleanGroups = groups.filter(g => g.length > 0);
             if (cleanGroups.length === 0) return alert("No groups to save!");
 
-            // 3. Proceed with saving
             const res = await fetch("/api/rollups", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -672,13 +665,6 @@
                 alert("Error saving rollup. Please check connection.");
             }
         }
-
-        // Load competition names into the dropdown when the page loads
-        document.addEventListener("DOMContentLoaded", () => {
-            loadCompetitionDropdown();
-        });
-
-
     </script>
 </body>
 

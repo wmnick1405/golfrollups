@@ -109,7 +109,6 @@ userSchema.pre('save', async function () {
 const User = mongoose.model('User', userSchema);
 
 // --- GOLF SCHEMAS ---
-// --- GOLFER ROUTES SCHEMA (REWRITTEN CLEANLY) ---
 const Golfer = mongoose.model('Golfer', new mongoose.Schema({
     name: { type: String, required: true },
     tel: String,
@@ -141,6 +140,15 @@ const Unavailable = mongoose.model('Unavailable', new mongoose.Schema({
     date_to: Date,
     indefinite: Boolean
 }));
+
+// Notes Schema
+const RollupNote = mongoose.model('RollupNote', new mongoose.Schema({
+    created_at: { type: Date, default: Date.now },
+    requested_by: { type: String, required: true },
+    date_from: { type: Date, required: true },
+    date_to: { type: Date, required: true },
+    content: { type: String, required: true }
+}, { collection: 'rollup-notes' }));
 
 const CompetitionName = mongoose.model('CompetitionName', new mongoose.Schema({
     'comp-name': { type: String, required: true },
@@ -665,7 +673,7 @@ app.get('/api/extra-availabilities/golfer/:id', protect, async (req, res) => {
     res.json(records);
 });
 
-//
+// API to get all extra availabilities for a specific date
 app.get('/api/extra-availabilities', protect, async (req, res) => {
     try {
         const { date } = req.query; // This gets the "YYYY-MM-DD" from the fetch call
@@ -697,10 +705,100 @@ app.get('/api/extra-availabilities', protect, async (req, res) => {
     }
 });
 
-// API to delete
+// API to delete extra availability record by ID
 app.delete('/api/extra-availabilities/:id', protect, async (req, res) => {
     await ExtraAvailability.findByIdAndDelete(req.params.id);
     res.json({ success: true });
+});
+
+// CREATE a new Rollup Event Note
+app.post('/api/rollup-notes', protect, async (req, res) => {
+    try {
+        const { requested_by, date_from, date_to, content } = req.body;
+
+        if (!requested_by || !date_from || !date_to || !content) {
+            return res.status(400).json({ error: "All fields are required." });
+        }
+
+        const cleanFrom = new Date(date_from + "T00:00:00.000Z");
+        const cleanTo = new Date(date_to + "T23:59:59.999Z");
+
+        const note = new RollupNote({
+            requested_by: requested_by.trim(),
+            date_from: cleanFrom,
+            date_to: cleanTo,
+            content: content.trim()
+        });
+
+        await note.save();
+        res.json({ success: true, note });
+    } catch (err) {
+        console.error("Error creating note:", err);
+        res.status(500).json({ error: "Failed to save note." });
+    }
+});
+
+// GET active notes for a specific target date
+app.get('/api/rollup-notes/check-date', protect, async (req, res) => {
+    try {
+        const { date } = req.query; // Expects "YYYY-MM-DD"
+        if (!date) return res.status(400).json({ error: "Date is required." });
+
+        const targetDate = new Date(date + "T00:00:00.000Z");
+
+        // Find any notes where targetDate falls within [date_from, date_to]
+        const notes = await RollupNote.find({
+            date_from: { $lte: targetDate },
+            date_to: { $gte: targetDate }
+        }).sort({ created_at: -1 });
+
+        res.json(notes);
+    } catch (err) {
+        console.error("Error fetching notes for date:", err);
+        res.status(500).json({ error: "Failed to fetch notes." });
+    }
+});
+
+// GET all notes (for management / review list)
+app.get('/api/rollup-notes', protect, async (req, res) => {
+    try {
+        const notes = await RollupNote.find().sort({ date_from: -1 });
+        res.json(notes);
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch notes." });
+    }
+});
+
+// DELETE a note
+app.delete('/api/rollup-notes/:id', protect, async (req, res) => {
+    try {
+        await RollupNote.findByIdAndDelete(req.params.id);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: "Failed to delete note." });
+    }
+});
+
+// UPDATE an existing Rollup Event Note
+app.put('/api/rollup-notes/:id', protect, async (req, res) => {
+    try {
+        const { requested_by, date_from, date_to, content } = req.body;
+        
+        const cleanFrom = new Date(date_from + "T00:00:00.000Z");
+        const cleanTo = new Date(date_to + "T23:59:59.999Z");
+
+        await RollupNote.findByIdAndUpdate(req.params.id, {
+            requested_by: requested_by.trim(),
+            date_from: cleanFrom,
+            date_to: cleanTo,
+            content: content.trim()
+        });
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error("Error updating note:", err);
+        res.status(500).json({ error: "Failed to update note." });
+    }
 });
 
 // 9. ROLLUP & PARTICIPATION REPORT ROUTES

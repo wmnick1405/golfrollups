@@ -94,6 +94,10 @@
             padding: 15px;
             background: #eee;
             border-radius: 5px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
         }
 
         button {
@@ -111,6 +115,10 @@
 
         button.secondary {
             background: #666;
+        }
+
+        .btn-add-group {
+            background: #e65100;
         }
 
         .is-top-slot {
@@ -236,8 +244,9 @@
 
                 <button onclick="fetchAvailable()">1. Get Available</button>
                 <button class="secondary" onclick="autoDistribute()">2. Auto-Group (4s & 3s)</button>
+                <button class="btn-add-group" onclick="addEmptyGroup()">+ Add Group</button>
                 <button onclick="resetPool()" style="background:#d32f2f;">Reset All</button>
-                <button onclick="saveRollup()" style="float:right; background:#1565c0;">3. Save Rollup</button>
+                <button onclick="saveRollup()" style="margin-left:auto; background:#1565c0;">3. Save Rollup</button>
             </div>
 
             <div id="absenceMonitor"
@@ -344,6 +353,12 @@
 
         let pool = [];   // Players not in a group
         let groups = []; // Array of Arrays [[p1, p2], [p3, p4]]
+
+        // Add a new empty group box manually
+        function addEmptyGroup() {
+            groups.push([]);
+            renderGroups();
+        }
 
         // 1. FETCH DATA
         async function fetchAvailable() {
@@ -490,6 +505,7 @@
         }
 
         // 2. AUTOMATIC DISTRIBUTION
+        // Distribute players into groups of 4, with any remaining players forming a group of 3 if necessary.
         function autoDistribute() {
             if (pool.length === 0) return alert("No players in pool to distribute.");
 
@@ -555,6 +571,7 @@
             });
         }
 
+        // Render each group and its players
         function renderGroups() {
             const container = document.getElementById("groupsContainer");
             container.innerHTML = "";

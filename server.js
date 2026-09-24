@@ -156,6 +156,203 @@ const CompetitionName = mongoose.model('CompetitionName', new mongoose.Schema({
     'CompetitionDates': [String] // This will hold an array of date strings like ["2025-02-24", "2025-03-03"]   
 }), 'competition-names');
 
+// Schema to define competition parameters
+const competitionTemplate = mongoose.model('CompetitionTemplate', new mongoose.Schema ({
+  // Basic identification
+  name: {
+    type: String,
+    required: true
+  },
+
+  description: String,
+
+  date: {
+    type: Date,
+    required: true
+  },
+
+  // Where and what is being played
+  course: {
+    type: String,
+    required: true
+  },
+
+  holes: {
+    type: Number,
+    enum: [9, 18],
+    default: 18
+  },
+
+  tees: {
+    type: String,
+    required: true
+  },
+
+  // Competition format
+  format: {
+    type: String,
+    enum: [
+      'medal',
+      'stableford',
+      'par',
+      'match_play',
+      'four_ball',
+      'foursomes',
+      'scramble'
+    ],
+    required: true
+  },
+
+  // Handicap arrangements
+  handicap: {
+    required: {
+      type: Boolean,
+      default: true
+    },
+
+    basis: {
+      type: String,
+      enum: [
+        'handicap_index',
+        'course_handicap',
+        'playing_handicap',
+        'none'
+      ],
+      default: 'playing_handicap'
+    },
+
+    allowance: {
+      type: Number,
+      default: 100
+    },
+
+    maxHandicapIndex: {
+      type: Number,
+      default: 54
+    }
+  },
+
+  // Scoring
+  scoring: {
+    type: String,
+    enum: [
+      'gross',
+      'net',
+      'stableford',
+      'match_play'
+    ],
+    required: true
+  },
+
+  // Tie breaking
+  tieBreak: {
+    type: String,
+    enum: [
+      'countback',
+      'playoff',
+      'shared',
+      'none'
+    ],
+    default: 'countback'
+  },
+
+  countback: {
+    holes: [9, 6, 3, 1]
+  },
+
+  // Entry restrictions
+  eligibility: {
+    membersOnly: {
+      type: Boolean,
+      default: true
+    },
+
+    minimumAge: Number,
+    maximumAge: Number,
+
+    categories: [String]
+  },
+
+  maxPlayers: Number,
+
+  // Playing conditions
+  conditions: {
+    preferredLie: {
+      type: Boolean,
+      default: false
+    },
+
+    preferredLieArea: {
+      type: String,
+      enum: [
+        'fairway',
+        'closely_mown',
+        'all_grass',
+        'none'
+      ],
+      default: 'none'
+    },
+
+    localRulesApply: {
+      type: Boolean,
+      default: true
+    },
+
+    buggiesAllowed: {
+      type: Boolean,
+      default: true
+    },
+
+    caddiesAllowed: {
+      type: Boolean,
+      default: true
+    }
+  },
+
+  // Entry and score submission
+  entry: {
+    opens: Date,
+    closes: Date,
+
+    scoreSubmission: {
+      type: String,
+      enum: [
+        'paper',
+        'electronic',
+        'both'
+      ],
+      default: 'both'
+    }
+  },
+
+  // Prizes
+  prizes: [{
+    position: Number,
+    description: String
+  }],
+
+  // General notes shown to players
+  notes: String,
+
+  // Competition status
+  status: {
+    type: String,
+    enum: [
+      'draft',
+      'open',
+      'closed',
+      'completed',
+      'cancelled'
+    ],
+    default: 'draft'
+  },
+
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+}));
+
 // Extra Availability for golfers (e.g. if they can play on a day they normally don't)
 const ExtraAvailability = mongoose.model('ExtraAvailability', new mongoose.Schema({
     golfer_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Golfer', required: true },
@@ -437,7 +634,7 @@ app.delete('/api/golfers/:id', protect, async (req, res) => {
     } catch (err) { res.status(500).json({ error: "Delete failed" }); }
 });
 
-// COMPETITION NAME ROUTES
+// COMPETITION DEFINITIONS ROUTES
 app.get('/api/competition-names', protect, async (req, res) => {
     try {
         const comps = await CompetitionName.find().sort({ 'comp-name': 1 });
@@ -445,6 +642,49 @@ app.get('/api/competition-names', protect, async (req, res) => {
         res.json(comps);
     } catch (err) {
         res.status(500).json({ error: "Failed to fetch competition names" });
+    }
+});
+
+const CompetitionTemplate = mongoose.model('CompetitionTemplate');
+
+// GET all competition templates
+app.get('/api/competition-templates', protect, async (req, res) => {
+    try {
+        const templates = await CompetitionTemplate.find().sort({ createdAt: -1 });
+        res.json(templates);
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch templates" });
+    }
+});
+
+// CREATE new competition template
+app.post('/api/competition-templates', protect, async (req, res) => {
+    try {
+        const template = new CompetitionTemplate(req.body);
+        await template.save();
+        res.status(201).json({ success: true, template });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+// UPDATE existing competition template
+app.put('/api/competition-templates/:id', protect, async (req, res) => {
+    try {
+        await CompetitionTemplate.findByIdAndUpdate(req.params.id, req.body);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+// DELETE competition template
+app.delete('/api/competition-templates/:id', protect, async (req, res) => {
+    try {
+        await CompetitionTemplate.findByIdAndDelete(req.params.id);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: "Failed to delete template" });
     }
 });
 

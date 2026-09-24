@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Competition Templates - Golf Rollup Manager</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .layout {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+
+        /* Sidebar Styling */
+        .sidebar {
+            width: 320px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            flex-shrink: 0;
+        }
+
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f4f7f6;
+        }
+
+        .template-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .template-item {
+            padding: 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .template-item:hover {
+            border-color: #2e7d32;
+            background-color: #f1f8e9;
+        }
+
+        .template-item.active {
+            border-color: #2e7d32;
+            background-color: #e8f5e9;
+            font-weight: bold;
+        }
+
+        .template-item .meta {
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 4px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .badge {
+            font-size: 0.75em;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .badge-draft { background: #e0e0e0; color: #616161; }
+        .badge-open { background: #c8e6c9; color: #2e7d32; }
+        .badge-closed { background: #ffecb3; color: #ff8f00; }
+        .badge-completed { background: #bbdefb; color: #1976d2; }
+        .badge-cancelled { background: #ffcdd2; color: #c62828; }
+
+        /* Main Form Styling */
+        .main-content {
+            flex-grow: 1;
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .form-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f4f7f6;
+        }
+
+        .form-section {
+            background: #fafafa;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 18px;
+            margin-bottom: 20px;
+        }
+
+        .form-section h4 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+        }
+
+        .grid-4 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 15px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 10px;
+        }
+
+        .form-group.checkbox-group {
+            flex-direction: row;
+            align-items: center;
+            gap: 10px;
+            margin-top: 25px;
+        }
+
+        label {
+            font-size: 0.85em;
+            font-weight: bold;
+            color: #444;
+            margin-bottom: 5px;
+        }
+
+        input, select, textarea {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #2e7d32;
+            box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.2);
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 50px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        button:hover { opacity: 0.9; }
+
+        .btn-green { background-color: #2e7d32; color: white; }
+        .btn-blue { background-color: #007bff; color: white; }
+        .btn-red { background-color: #d32f2f; color: white; }
+        .btn-gray { background-color: #6c757d; color: white; }
+
+        /* Dynamic Prize List Styling */
+        .prize-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
+        /* Active Confirmation Toast */
+        #toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: none;
+            z-index: 10000;
+            transition: all 0.3s ease;
+        }
+
+        #toast.success { background-color: #2e7d32; }
+        #toast.error { background-color: #d32f2f; }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div id="nav-placeholder"></div>
+
+    <div class="container">
+        <h2>Competition Templates Management</h2>
+
+        <div class="layout">
+            <!-- SIDEBAR: TEMPLATE LIST -->
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <h3 style="margin: 0;">Templates</h3>
+                    <button class="btn-green" onclick="createNewTemplate()">+ New</button>
+                </div>
+                <ul id="templateList" class="template-list">
+                    <li>Loading templates...</li>
+                </ul>
+            </div>
+
+            <!-- MAIN CONTENT: EDIT / CREATE FORM -->
+            <div class="main-content">
+                <div class="form-header">
+                    <h3 id="formTitle">New Competition Template</h3>
+                    <div>
+                        <button type="button" class="btn-red hidden" id="deleteBtn" onclick="deleteCurrentTemplate()">Delete Template</button>
+                    </div>
+                </div>
+
+                <form id="templateForm" onsubmit="saveTemplate(event)">
+                    <input type="hidden" id="templateId">
+
+                    <!-- SECTION 1: BASIC IDENTIFICATION -->
+                    <div class="form-section">
+                        <h4>1. Basic Information</h4>
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label>Template/Competition Name *</label>
+                                <input type="text" id="name" required placeholder="e.g. Summer Medal">
+                            </div>
+                            <div class="form-group">
+                                <label>Target Date *</label>
+                                <input type="date" id="date" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea id="description" rows="2" placeholder="Brief explanation of the competition..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- SECTION 2: VENUE & FORMAT -->
+                    <div class="form-section">
+                        <h4>2. Course & Competition Format</h4>
+                        <div class="grid-3">
+                            <div class="form-group">
+                                <label>Course Name *</label>
+                                <input type="text" id="course" required placeholder="e.g. Main Championship Course">
+                            </div>
+                            <div class="form-group">
+                                <label>Holes *</label>
+                                <select id="holes">
+                                    <option value="18">18 Holes</option>
+                                    <option value="9">9 Holes</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Tees *</label>
+                                <input type="text" id="tees" required placeholder="e.g. White / Yellow / Red">
+                            </div>
+                        </div>
+                        <div class="grid-3">
+                            <div class="form-group">
+                                <label>Format *</label>
+                                <select id="format">
+                                    <option value="medal">Medal</option>
+                                    <option value="stableford">Stableford</option>
+                                    <option value="par">Par</option>
+                                    <option value="match_play">Match Play</option>
+                                    <option value="four_ball">Four Ball</option>
+                                    <option value="foursomes">Foursomes</option>
+                                    <option value="scramble">Scramble</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Scoring System *</label>
+                                <select id="scoring">
+                                    <option value="net">Net</option>
+                                    <option value="gross">Gross</option>
+                                    <option value="stableford">Stableford Points</option>
+                                    <option value="match_play">Match Play</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Tie Breaking Rule</label>
+                                <select id="tieBreak">
+                                    <option value="countback">Countback</option>
+                                    <option value="playoff">Playoff</option>
+                                    <option value="shared">Shared</option>
+                                    <option value="none">None</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SECTION 3: HANDICAP ARRANGEMENTS -->
+                    <div class="form-section">
+                        <h4>3. Handicap Rules</h4>
+                        <div class="grid-4">
+                            <div class="form-group checkbox-group">
+                                <input type="checkbox" id="handicapRequired" checked>
+                                <label for="handicapRequired">Handicap Required</label>
+                            </div>
+                            <div class="form-group">
+                                <label>Handicap Basis</label>
+                                <select id="handicapBasis">
+                                    <option value="playing_handicap">Playing Handicap</option>
+                                    <option value="course_handicap">Course Handicap</option>
+                                    <option value="handicap_index">Handicap Index</option>
+                                    <option value="none">None</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Allowance (%)</label>
+                                <input type="number" id="handicapAllowance" value="100" min="0" max="100">
+                            </div>
+                            <div class="form-group">
+                                <label>Max Handicap Index</label>
+                                <input type="number" id="maxHandicapIndex" value="54" step="0.1" min="0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SECTION 4: ELIGIBILITY & PLAYING CONDITIONS -->
+                    <div class="form-section">
+                        <h4>4. Eligibility & Playing Conditions</h4>
+                        <div class="grid-4">
+                            <div class="form-group checkbox-group">
+                                <input type="checkbox" id="membersOnly" checked>
+                                <label for="membersOnly">Members Only</label>
+                            </div>
+                            <div class="form-group">
+                                <label>Min Age</label>
+                                <input type="number" id="minimumAge" placeholder="None">
+                            </div>
+                            <div class="form-group">
+                                <label>Max Age</label>
+                                <input type="number" id="maximumAge" placeholder="None">
+                            </div>
+                            <div class="form-group">
+                                <label>Max Players</label>
+                                <input type="number" id="maxPlayers" placeholder="Unlimited">
+                            </div>
+                        </div>
+                        <div class="grid-4">
+                            <div class="form-group checkbox-group">
+                                <input type="checkbox" id="preferredLie">
+                                <label for="preferredLie">Preferred Lie</label>
+                            </div>
+                            <div class="form-group">
+                                <label>Preferred Lie Area</label>
+                                <select id="preferredLieArea">
+                                    <option value="none">None</option>
+                                    <option value="fairway">Fairway</option>
+                                    <option value="closely_mown">Closely Mown Area</option>
+                                    <option value="all_grass">All Grass</option>
+                                </select>
+                            </div>
+                            <div class="form-group checkbox-group">
+                                <input type="checkbox" id="localRulesApply" checked>
+                                <label for="localRulesApply">Local Rules Apply</label>
+                            </div>
+                            <div class="form-group checkbox-group">
+                                <input type="checkbox" id="buggiesAllowed" checked>
+                                <label for="buggiesAllowed">Buggies Allowed</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SECTION 5: ENTRY, STATUS & PRIZES -->
+                    <div class="form-section">
+                        <h4>5. Status, Entry & Prizes</h4>
+                        <div class="grid-4">
+                            <div class="form-group">
+                                <label>Status</label>
+                                <select id="status">
+                                    <option value="draft">Draft</option>
+                                    <option value="open">Open</option>
+                                    <option value="closed">Closed</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Score Submission</label>
+                                <select id="scoreSubmission">
+                                    <option value="both">Both</option>
+                                    <option value="paper">Paper Only</option>
+                                    <option value="electronic">Electronic Only</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Entry Opens</label>
+                                <input type="date" id="entryOpens">
+                            </div>
+                            <div class="form-group">
+                                <label>Entry Closes</label>
+                                <input type="date" id="entryCloses">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Prizes Breakdown</label>
+                            <div id="prizesContainer"></div>
+                            <button type="button" class="btn-gray" onclick="addPrizeRow()" style="margin-top: 5px; width: fit-content;">+ Add Prize Position</button>
+                        </div>
+
+                        <div class="form-group">
+                            <label>General Notes for Players</label>
+                            <textarea id="notes" rows="3" placeholder="Specific guidelines or instructions..."></textarea>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 20px;">
+                        <button type="submit" class="btn-green" style="font-size: 1.1em; padding: 12px 30px;">Save Competition Template</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONFIRMATION TOAST -->
+    <div id="toast"></div>
+
+    <script src="js/shared.js"></script>
+    <script>
+        let templates = [];
+        let selectedTemplateId = null;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            fetch('nav.html').then(r => r.text()).then(d => {
+                const nav = document.getElementById('nav-placeholder');
+                if(nav) nav.innerHTML = d;
+            });
+            loadTemplates();
+        });
+
+        // TOAST FEEDBACK FUNCTION
+        function showToast(message, isSuccess = true) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = isSuccess ? 'success' : 'error';
+            toast.style.display = 'block';
+
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3500);
+        }
+
+        // LOAD ALL TEMPLATES
+        async function loadTemplates() {
+            try {
+                const res = await fetch('/api/competition-templates');
+                if (!res.ok) throw new Error("Failed to load templates");
+                templates = await res.json();
+                renderTemplateList();
+            } catch (err) {
+                showToast("Could not load competition templates.", false);
+            }
+        }
+
+        // RENDER SIDEBAR LIST
+        function renderTemplateList() {
+            const list = document.getElementById('templateList');
+            list.innerHTML = '';
+
+            if (templates.length === 0) {
+                list.innerHTML = '<li style="color: #888; font-style: italic;">No templates found.</li>';
+                return;
+            }
+
+            templates.forEach(t => {
+                const li = document.createElement('li');
+                li.className = `template-item ${t._id === selectedTemplateId ? 'active' : ''}`;
+                li.onclick = () => selectTemplate(t._id);
+
+                const dateStr = t.date ? new Date(t.date).toLocaleDateString('en-GB') : 'No Date';
+                const statusBadge = `<span class="badge badge-${t.status || 'draft'}">${t.status || 'draft'}</span>`;
+
+                li.innerHTML = `
+                    <div><strong>${t.name}</strong></div>
+                    <div class="meta">
+                        <span>${t.course} (${t.format})</span>
+                        ${statusBadge}
+                    </div>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        // SELECT TEMPLATE FOR EDITING
+        function selectTemplate(id) {
+            selectedTemplateId = id;
+            renderTemplateList();
+
+            const t = templates.find(item => item._id === id);
+            if (!t) return;
+
+            document.getElementById('formTitle').textContent = `Edit Template: ${t.name}`;
+            document.getElementById('deleteBtn').classList.remove('hidden');
+
+            // Populate Fields
+            document.getElementById('templateId').value = t._id;
+            document.getElementById('name').value = t.name || '';
+            document.getElementById('date').value = t.date ? t.date.split('T')[0] : '';
+            document.getElementById('description').value = t.description || '';
+            document.getElementById('course').value = t.course || '';
+            document.getElementById('holes').value = t.holes || 18;
+            document.getElementById('tees').value = t.tees || '';
+            document.getElementById('format').value = t.format || 'medal';
+            document.getElementById('scoring').value = t.scoring || 'net';
+            document.getElementById('tieBreak').value = t.tieBreak || 'countback';
+
+            // Handicap
+            document.getElementById('handicapRequired').checked = t.handicap?.required ?? true;
+            document.getElementById('handicapBasis').value = t.handicap?.basis || 'playing_handicap';
+            document.getElementById('handicapAllowance').value = t.handicap?.allowance ?? 100;
+            document.getElementById('maxHandicapIndex').value = t.handicap?.maxHandicapIndex ?? 54;
+
+            // Eligibility & Conditions
+            document.getElementById('membersOnly').checked = t.eligibility?.membersOnly ?? true;
+            document.getElementById('minimumAge').value = t.eligibility?.minimumAge || '';
+            document.getElementById('maximumAge').value = t.eligibility?.maximumAge || '';
+            document.getElementById('maxPlayers').value = t.maxPlayers || '';
+
+            document.getElementById('preferredLie').checked = t.conditions?.preferredLie ?? false;
+            document.getElementById('preferredLieArea').value = t.conditions?.preferredLieArea || 'none';
+            document.getElementById('localRulesApply').checked = t.conditions?.localRulesApply ?? true;
+            document.getElementById('buggiesAllowed').checked = t.conditions?.buggiesAllowed ?? true;
+
+            // Status & Entry
+            document.getElementById('status').value = t.status || 'draft';
+            document.getElementById('scoreSubmission').value = t.entry?.scoreSubmission || 'both';
+            document.getElementById('entryOpens').value = t.entry?.opens ? t.entry.opens.split('T')[0] : '';
+            document.getElementById('entryCloses').value = t.entry?.closes ? t.entry.closes.split('T')[0] : '';
+            document.getElementById('notes').value = t.notes || '';
+
+            // Prizes
+            renderPrizes(t.prizes || []);
+        }
+
+        // CREATE NEW TEMPLATE FORM RESET
+        function createNewTemplate() {
+            selectedTemplateId = null;
+            renderTemplateList();
+
+            document.getElementById('formTitle').textContent = "New Competition Template";
+            document.getElementById('deleteBtn').classList.add('hidden');
+            document.getElementById('templateForm').reset();
+            document.getElementById('templateId').value = '';
+            document.getElementById('prizesContainer').innerHTML = '';
+        }
+
+        // PRIZE DYNAMIC ROWS
+        function renderPrizes(prizes) {
+            const container = document.getElementById('prizesContainer');
+            container.innerHTML = '';
+            prizes.forEach(p => addPrizeRow(p.position, p.description));
+        }
+
+        function addPrizeRow(pos = '', desc = '') {
+            const container = document.getElementById('prizesContainer');
+            const row = document.createElement('div');
+            row.className = 'prize-row';
+            row.innerHTML = `
+                <input type="number" placeholder="Pos" value="${pos}" style="width: 80px;" class="prize-pos">
+                <input type="text" placeholder="Description (e.g. £50 Voucher)" value="${desc}" style="flex-grow: 1;" class="prize-desc">
+                <button type="button" class="btn-red" onclick="this.parentElement.remove()" style="padding: 6px 12px;">X</button>
+            `;
+            container.appendChild(row);
+        }
+
+        // SAVE TEMPLATE (POST / PUT)
+        async function saveTemplate(e) {
+            e.preventDefault();
+
+            const id = document.getElementById('templateId').value;
+
+            // Extract Prizes Array
+            const prizeRows = document.querySelectorAll('.prize-row');
+            const prizes = Array.from(prizeRows).map(row => ({
+                position: Number(row.querySelector('.prize-pos').value),
+                description: row.querySelector('.prize-desc').value
+            })).filter(p => p.position > 0);
+
+            // Construct Payload matching Mongoose Schema
+            const payload = {
+                name: document.getElementById('name').value,
+                date: document.getElementById('date').value,
+                description: document.getElementById('description').value,
+                course: document.getElementById('course').value,
+                holes: Number(document.getElementById('holes').value),
+                tees: document.getElementById('tees').value,
+                format: document.getElementById('format').value,
+                scoring: document.getElementById('scoring').value,
+                tieBreak: document.getElementById('tieBreak').value,
+                countback: { holes: [9, 6, 3, 1] },
+                handicap: {
+                    required: document.getElementById('handicapRequired').checked,
+                    basis: document.getElementById('handicapBasis').value,
+                    allowance: Number(document.getElementById('handicapAllowance').value),
+                    maxHandicapIndex: Number(document.getElementById('maxHandicapIndex').value)
+                },
+                eligibility: {
+                    membersOnly: document.getElementById('membersOnly').checked,
+                    minimumAge: document.getElementById('minimumAge').value ? Number(document.getElementById('minimumAge').value) : undefined,
+                    maximumAge: document.getElementById('maximumAge').value ? Number(document.getElementById('maximumAge').value) : undefined
+                },
+                maxPlayers: document.getElementById('maxPlayers').value ? Number(document.getElementById('maxPlayers').value) : undefined,
+                conditions: {
+                    preferredLie: document.getElementById('preferredLie').checked,
+                    preferredLieArea: document.getElementById('preferredLieArea').value,
+                    localRulesApply: document.getElementById('localRulesApply').checked,
+                    buggiesAllowed: document.getElementById('buggiesAllowed').checked,
+                    caddiesAllowed: true
+                },
+                entry: {
+                    opens: document.getElementById('entryOpens').value || undefined,
+                    closes: document.getElementById('entryCloses').value || undefined,
+                    scoreSubmission: document.getElementById('scoreSubmission').value
+                },
+                status: document.getElementById('status').value,
+                notes: document.getElementById('notes').value,
+                prizes: prizes
+            };
+
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `/api/competition-templates/${id}` : '/api/competition-templates';
+
+            try {
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    showToast(id ? "Template updated successfully!" : "Template saved successfully!", true);
+                    await loadTemplates();
+                    if (!id) createNewTemplate();
+                } else {
+                    const err = await res.json();
+                    showToast(`Save failed: ${err.error || 'Server error'}`, false);
+                }
+            } catch (err) {
+                showToast("Server connection error. Changes not saved.", false);
+            }
+        }
+
+        // DELETE CURRENT TEMPLATE
+        async function deleteCurrentTemplate() {
+            if (!selectedTemplateId) return;
+            if (!confirm("Are you sure you want to delete this competition template?")) return;
+
+            try {
+                const res = await fetch(`/api/competition-templates/${selectedTemplateId}`, {
+                    method: 'DELETE'
+                });
+
+                if (res.ok) {
+                    showToast("Template deleted successfully.", true);
+                    createNewTemplate();
+                    loadTemplates();
+                } else {
+                    showToast("Failed to delete template.", false);
+                }
+            } catch (err) {
+                showToast("Error connecting to server.", false);
+            }
+        }
+    </script>
+</body>
+</html>

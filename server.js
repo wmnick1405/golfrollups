@@ -150,12 +150,6 @@ const RollupNote = mongoose.model('RollupNote', new mongoose.Schema({
     content: { type: String, required: true }
 }, { collection: 'rollup-notes' }));
 
-const CompetitionName = mongoose.model('CompetitionName', new mongoose.Schema({
-    'comp-name': { type: String, required: true },
-    'desc': { type: String, required: true },
-    'CompetitionDates': [String] // This will hold an array of date strings like ["2025-02-24", "2025-03-03"]   
-}), 'competition-names');
-
 // Schema to define competition parameters
 const competitionTemplate = mongoose.model('CompetitionTemplate', new mongoose.Schema ({
   // Basic identification
@@ -168,13 +162,14 @@ const competitionTemplate = mongoose.model('CompetitionTemplate', new mongoose.S
 
   date: {
     type: Date,
-    required: true
+    required: false
   },
 
   // Where and what is being played
   course: {
     type: String,
-    required: true
+    required: true,
+    default: "Churchill & Blakedown"
   },
 
   holes: {
@@ -185,7 +180,9 @@ const competitionTemplate = mongoose.model('CompetitionTemplate', new mongoose.S
 
   tees: {
     type: String,
-    required: true
+    required: true,
+    enum: ['white', 'yellow', 'red'],
+    default: 'yellow'
   },
 
   // Competition format
@@ -194,11 +191,12 @@ const competitionTemplate = mongoose.model('CompetitionTemplate', new mongoose.S
     enum: [
       'medal',
       'stableford',
-      'par',
       'match_play',
       'four_ball',
       'foursomes',
-      'scramble'
+      'scramble',
+      'pairs',
+      'singles'
     ],
     required: true
   },
@@ -218,7 +216,7 @@ const competitionTemplate = mongoose.model('CompetitionTemplate', new mongoose.S
         'playing_handicap',
         'none'
       ],
-      default: 'playing_handicap'
+      default: 'course_handicap'
     },
 
     allowance: {
@@ -257,7 +255,10 @@ const competitionTemplate = mongoose.model('CompetitionTemplate', new mongoose.S
   },
 
   countback: {
-    holes: [9, 6, 3, 1]
+    holes: {
+      type: [Number],
+      default: [9, 6, 3, 1]
+    }
   },
 
   // Entry restrictions

@@ -279,49 +279,54 @@
                         <div class="grid-3">
                             <div class="form-group">
                                 <label>Course Name *</label>
-                                <input type="text" id="course" required placeholder="e.g. Main Championship Course">
+                                <input type="text" id="course" value="Churchill & Blakedown" required>
                             </div>
                             <div class="form-group">
                                 <label>Holes *</label>
                                 <select id="holes">
-                                    <option value="18">18 Holes</option>
+                                    <option value="18" selected>18 Holes</option>
                                     <option value="9">9 Holes</option>
                                 </select>
                             </div>
                             <div class="form-group">
                                 <label>Tees *</label>
-                                <input type="text" id="tees" required placeholder="e.g. White / Yellow / Red">
+                                <select id="tees">
+                                    <option value="yellow" selected>yellow</option>
+                                    <option value="white">white</option>
+                                    <option value="red">red</option>
+                                    <option value="blue">blue</option>
+                                </select>
                             </div>
                         </div>
                         <div class="grid-3">
                             <div class="form-group">
                                 <label>Format *</label>
                                 <select id="format">
-                                    <option value="medal">Medal</option>
-                                    <option value="stableford">Stableford</option>
-                                    <option value="par">Par</option>
-                                    <option value="match_play">Match Play</option>
-                                    <option value="four_ball">Four Ball</option>
-                                    <option value="foursomes">Foursomes</option>
-                                    <option value="scramble">Scramble</option>
+                                    <option value="medal">medal</option>
+                                    <option value="stableford">stableford</option>
+                                    <option value="par">par</option>
+                                    <option value="match_play">match play</option>
+                                    <option value="four_ball">four ball</option>
+                                    <option value="foursomes">foursomes</option>
+                                    <option value="scramble">scramble</option>
                                 </select>
                             </div>
                             <div class="form-group">
                                 <label>Scoring System *</label>
                                 <select id="scoring">
-                                    <option value="net">Net</option>
-                                    <option value="gross">Gross</option>
-                                    <option value="stableford">Stableford Points</option>
-                                    <option value="match_play">Match Play</option>
+                                    <option value="net">net</option>
+                                    <option value="gross">gross</option>
+                                    <option value="stableford">stableford</option>
+                                    <option value="match_play">match play</option>
                                 </select>
                             </div>
                             <div class="form-group">
                                 <label>Tie Breaking Rule</label>
                                 <select id="tieBreak">
-                                    <option value="countback">Countback</option>
-                                    <option value="playoff">Playoff</option>
-                                    <option value="shared">Shared</option>
-                                    <option value="none">None</option>
+                                    <option value="countback">countback</option>
+                                    <option value="playoff">playoff</option>
+                                    <option value="shared">shared</option>
+                                    <option value="none">none</option>
                                 </select>
                             </div>
                         </div>
@@ -338,9 +343,9 @@
                             <div class="form-group">
                                 <label>Handicap Basis</label>
                                 <select id="handicapBasis">
-                                    <option value="playing_handicap">Playing Handicap</option>
-                                    <option value="course_handicap">Course Handicap</option>
-                                    <option value="handicap_index">Handicap Index</option>
+                                    <option value="playing_handicap">playing handicap</option>
+                                    <option value="course_handicap" selected>course handicap</option>
+                                    <option value="handicap_index">handicap index</option>
                                     <option value="none">None</option>
                                 </select>
                             </div>
@@ -351,6 +356,12 @@
                             <div class="form-group">
                                 <label>Max Handicap Index</label>
                                 <input type="number" id="maxHandicapIndex" value="54" step="0.1" min="0">
+                            </div>
+                            <div>
+                                <div class="form-group checkbox-group">
+                                    <input type="checkbox" id="qualifyingScore" checked>
+                                    <label for="qualifyingScore">Qualifying Score</label>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -418,8 +429,8 @@
                             <div class="form-group">
                                 <label>Score Submission</label>
                                 <select id="scoreSubmission">
-                                    <option value="both">Both</option>
-                                    <option value="paper">Paper Only</option>
+                                    <option value="both">Scorecard and Electronic</option>
+                                    <option value="paper">Scorecard Only</option>
                                     <option value="electronic">Electronic Only</option>
                                 </select>
                             </div>
@@ -538,18 +549,19 @@
             document.getElementById('name').value = t.name || '';
             document.getElementById('date').value = t.date ? t.date.split('T')[0] : '';
             document.getElementById('description').value = t.description || '';
-            document.getElementById('course').value = t.course || '';
+            document.getElementById('course').value = t.course || 'Churchill & Blakedown';
             document.getElementById('holes').value = t.holes || 18;
-            document.getElementById('tees').value = t.tees || '';
+            document.getElementById('tees').value = t.tees || 'Yellow';
             document.getElementById('format').value = t.format || 'medal';
             document.getElementById('scoring').value = t.scoring || 'net';
             document.getElementById('tieBreak').value = t.tieBreak || 'countback';
 
             // Handicap
             document.getElementById('handicapRequired').checked = t.handicap?.required ?? true;
-            document.getElementById('handicapBasis').value = t.handicap?.basis || 'playing_handicap';
+            document.getElementById('handicapBasis').value = t.handicap?.basis || 'course_handicap';
             document.getElementById('handicapAllowance').value = t.handicap?.allowance ?? 100;
             document.getElementById('maxHandicapIndex').value = t.handicap?.maxHandicapIndex ?? 54;
+            document.getElementById('qualifyingScore').checked = t.handicap?.qualifyingScore ?? true;
 
             // Eligibility & Conditions
             document.getElementById('membersOnly').checked = t.eligibility?.membersOnly ?? true;
@@ -583,6 +595,24 @@
             document.getElementById('templateForm').reset();
             document.getElementById('templateId').value = '';
             document.getElementById('prizesContainer').innerHTML = '';
+
+            // Reset Defaults
+            document.getElementById('course').value = 'Churchill & Blakedown';
+            document.getElementById('holes').value = '18';
+            document.getElementById('tees').value = 'Yellow';
+            document.getElementById('format').value = 'medal';
+            document.getElementById('scoring').value = 'net';
+            document.getElementById('tieBreak').value = 'countback';
+            document.getElementById('handicapRequired').checked = true;
+            document.getElementById('handicapBasis').value = 'course_handicap';
+            document.getElementById('handicapAllowance').value = 100;
+            document.getElementById('maxHandicapIndex').value = 54;
+            document.getElementById('qualifyingScore').checked = true;
+            document.getElementById('membersOnly').checked = true;
+            document.getElementById('localRulesApply').checked = true;
+            document.getElementById('buggiesAllowed').checked = true;
+            document.getElementById('status').value = 'draft';
+            document.getElementById('scoreSubmission').value = 'both';
         }
 
         // PRIZE DYNAMIC ROWS
@@ -609,6 +639,12 @@
             e.preventDefault();
 
             const id = document.getElementById('templateId').value;
+            const dateVal = document.getElementById('date').value;
+
+            if (!dateVal) {
+                showToast("Target Date is required.", false);
+                return;
+            }
 
             // Extract Prizes Array
             const prizeRows = document.querySelectorAll('.prize-row');
@@ -620,7 +656,7 @@
             // Construct Payload matching Mongoose Schema
             const payload = {
                 name: document.getElementById('name').value,
-                date: document.getElementById('date').value,
+                date: dateVal,
                 description: document.getElementById('description').value,
                 course: document.getElementById('course').value,
                 holes: Number(document.getElementById('holes').value),
@@ -633,7 +669,8 @@
                     required: document.getElementById('handicapRequired').checked,
                     basis: document.getElementById('handicapBasis').value,
                     allowance: Number(document.getElementById('handicapAllowance').value),
-                    maxHandicapIndex: Number(document.getElementById('maxHandicapIndex').value)
+                    maxHandicapIndex: Number(document.getElementById('maxHandicapIndex').value),
+                    qualifyingScore: document.getElementById('qualifyingScore').checked
                 },
                 eligibility: {
                     membersOnly: document.getElementById('membersOnly').checked,

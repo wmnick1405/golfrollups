@@ -651,7 +651,7 @@ const CompetitionTemplate = mongoose.model('CompetitionTemplate');
 // GET all competition templates
 app.get('/api/competition-templates', protect, async (req, res) => {
     try {
-        const templates = await CompetitionTemplate.find().sort({ createdAt: -1 });
+        const templates = await CompetitionTemplate.find().sort({ name: 1 });
         res.json(templates);
     } catch (err) {
         res.status(500).json({ error: "Failed to fetch templates" });

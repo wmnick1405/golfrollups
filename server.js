@@ -1042,6 +1042,10 @@ app.put('/api/rollup-notes/:id', protect, async (req, res) => {
     }
 });
 
+// 8. SCORECARD ROUTES
+const scorecardRoutes = require('./routes/scorecards');
+app.use('/api/scorecards', scorecardRoutes);
+
 // 9. ROLLUP & PARTICIPATION REPORT ROUTES
 // Check if a rollup already exists for a given date (to prevent duplicates)
 app.get('/api/rollups/check', async (req, res) => {

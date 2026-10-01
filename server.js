@@ -74,7 +74,7 @@ app.use('/api/rollups', require('./routes/rollups'));
 app.use('/api', require('./routes/rollups')); // Serves /api/reports/...
 app.use('/api/club-calendar', require('./routes/clubCalendar'));
 app.use('/api', require('./routes/email'));
-app.use('/api/scorecards', require('./routes/scorecards'));
+// app.use('/api/scorecards', require('./routes/scorecards'));
 
 // 4. AUTOMATED 24-HOUR BOOKING REMINDER CRON DAEMON
 cron.schedule('0 8 * * *', async () => {

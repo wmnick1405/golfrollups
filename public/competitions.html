@@ -15,12 +15,12 @@
             background: white;
             padding: 20px;
             border-radius: 8px;
-            max-width: 900px;
+            max-width: 1000px;
             margin: auto;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
 
-        /* New Search Bar Styling */
+        /* Search Bar Styling */
         .search-group {
             background: #eef2f7;
             padding: 15px;
@@ -34,7 +34,7 @@
 
         .input-group {
             display: grid;
-            grid-template-columns: 1fr 1fr auto;
+            grid-template-columns: 2fr 2fr 1fr auto;
             gap: 10px;
             margin-bottom: 20px;
         }
@@ -53,6 +53,7 @@
         }
 
         input[type="text"],
+        input[type="number"],
         input[type="search"] {
             padding: 8px;
             border: 1px solid #ccc;
@@ -92,6 +93,7 @@
         <div class="input-group">
             <input type="text" id="newName" placeholder="Competition Name">
             <input type="text" id="newDesc" placeholder="Description">
+            <input type="number" id="newEntryFee" placeholder="Entry Fee (£)" step="0.50" min="0">
             <button class="btn btn-save" onclick="addCompetition()">Add New</button>
         </div>
 
@@ -114,6 +116,7 @@
                 <tr>
                     <th>Name</th>
                     <th>Description</th>
+                    <th>Entry Fee (£)</th>
                     <th>Dates</th>
                     <th>Actions</th>
                 </tr>
@@ -147,7 +150,6 @@
                 const compName = (c['comp-name'] || "").toLowerCase();
                 const compDates = (c.CompetitionDates || []).join(" ");
 
-                // Matches name query AND matches date query
                 const matchesName = compName.includes(nameQuery);
                 const matchesDate = compDates.includes(dateQuery);
 
@@ -164,6 +166,7 @@
             data.forEach(c => {
                 const name = c['comp-name'] || "Unknown";
                 const desc = c.desc || "";
+                const entryFee = c.entryFee !== undefined ? c.entryFee : "";
                 const dates = (c.CompetitionDates || []).join('\n');
 
                 tbody.innerHTML += `<tr>
@@ -171,6 +174,9 @@
                     <td>
                         <textarea id="desc-${c._id}" rows="1" style="width: 100%; overflow: hidden; resize: none;" 
                                   oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'">${desc}</textarea>
+                    </td>
+                    <td>
+                        <input type="number" id="fee-${c._id}" value="${entryFee}" placeholder="0.00" step="0.50" min="0" style="width: 80px;">
                     </td>
                     <td>
                         <textarea id="dates-${c._id}" rows="3" style="width: 100%;">${dates}</textarea>
@@ -193,47 +199,57 @@
         async function addCompetition() {
             const name = document.getElementById('newName').value;
             const desc = document.getElementById('newDesc').value;
+            const entryFee = document.getElementById('newEntryFee').value;
+
             if (!name) return alert("Name is required");
             if (!desc) return alert("Description is required");
 
             const response = await fetch('/api/competition-names', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 'comp-name': name, 'desc': desc, 'CompetitionDates': [] })
+                body: JSON.stringify({ 
+                    'comp-name': name, 
+                    'desc': desc, 
+                    'entryFee': entryFee !== "" ? Number(entryFee) : 0,
+                    'CompetitionDates': [] 
+                })
             });
 
-            // Only show the toast if the server returns a successful status (200-299)
             if (response.ok) {
-                showToast("Competition added");
-                loadComps(); // Refresh the list
+                if (typeof showToast === 'function') showToast("Competition added");
+                document.getElementById('newName').value = '';
+                document.getElementById('newDesc').value = '';
+                document.getElementById('newEntryFee').value = '';
+                await loadComps();
             } else {
                 console.error("Failed to add competition");
                 alert("Error: Could not save the competition.");
             }
-            
-            loadComps();
-            document.getElementById('newName').value = '';
-            document.getElementById('newDesc').value = '';
         }
 
         async function updateComp(id) {
             const desc = document.getElementById(`desc-${id}`).value;
+            const entryFee = document.getElementById(`fee-${id}`).value;
             const datesRaw = document.getElementById(`dates-${id}`).value;
             const dates = datesRaw.split(/[\n,]+/).map(d => d.trim()).filter(d => d !== "");
 
             await fetch(`/api/competition-names/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ desc: desc, CompetitionDates: dates })
+                body: JSON.stringify({ 
+                    desc: desc, 
+                    entryFee: entryFee !== "" ? Number(entryFee) : 0,
+                    CompetitionDates: dates 
+                })
             });
-            showToast("Competition updated");
+            if (typeof showToast === 'function') showToast("Competition updated");
             loadComps();
         }
 
         async function deleteComp(id) {
             if (!confirm("Proceed with deletion?")) return;
             await fetch(`/api/competition-names/${id}`, { method: 'DELETE' });
-            showToast("Competition deleted");
+            if (typeof showToast === 'function') showToast("Competition deleted");
             loadComps();
         }
 

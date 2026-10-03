@@ -5,6 +5,7 @@ const Unavailable = require('../models/Unavailable');
 const transporter = require('../utils/mailer');
 const { protect } = require('../middleware/auth');
 
+// GET availability report for a specific date
 router.get('/available', protect, async (req, res) => {
     try {
         const dateStr = req.query.date;
@@ -16,7 +17,8 @@ router.get('/available', protect, async (req, res) => {
 
         const golfers = await Golfer.find({ play_days: dayName }).lean();
         const awayRecords = await Unavailable.find({
-            date_from: { $lte: targetDate },$or: [
+            date_from: { $lte: targetDate },
+            $or: [
                 { date_to: { $gte: targetDate } },
                 { indefinite: true }
             ]
@@ -43,6 +45,7 @@ router.get('/available', protect, async (req, res) => {
     }
 });
 
+// POST new unavailability record
 router.post('/unavailable', protect, async (req, res) => {
     try {
         const { date_from, date_to, indefinite, golfer_id, sendEmail } = req.body;
@@ -87,6 +90,7 @@ router.post('/unavailable', protect, async (req, res) => {
     }
 });
 
+// GET all unavailability records
 router.get('/unavailable/all', protect, async (req, res) => {
     try {
         const list = await Unavailable.find({}).populate('golfer_id').sort({ date_from: -1 });
@@ -96,16 +100,19 @@ router.get('/unavailable/all', protect, async (req, res) => {
     }
 });
 
+// GET unavailability records for a specific golfer
 router.get('/unavailable/golfer/:id', protect, async (req, res) => {
     const records = await Unavailable.find({ golfer_id: req.params.id }).sort({ date_from: 1 });
     res.json(records);
 });
 
+// GET indefinite unavailability records
 router.get('/unavailable/indefinite', protect, async (req, res) => {
     const list = await Unavailable.find({ indefinite: true }).populate('golfer_id');
     res.json(list.filter(i => i.golfer_id));
 });
 
+// DELETE an unavailability record
 router.delete('/unavailable/:id', protect, async (req, res) => {
     try {
         await Unavailable.findByIdAndDelete(req.params.id);
@@ -115,6 +122,7 @@ router.delete('/unavailable/:id', protect, async (req, res) => {
     }
 });
 
+// POST send absence summary email
 router.post('/unavailable/send-summary', protect, async (req, res) => {
     try {
         const { golfer_id, dates } = req.body;

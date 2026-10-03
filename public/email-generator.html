@@ -82,8 +82,8 @@
             <p style="font-size: 0.9em; color: #666;"><strong>Step 2:</strong> Edit your message below, then copy or export.</p>
             <div id="emailDraft" contenteditable="true"></div>
             <div style="margin-top:20px; display: flex; gap: 10px; flex-wrap: wrap;">
-                <button class="btn btn-copy" onclick="copyToClipboard()">1. Copy for Email</button>
-                <button class="btn btn-mail" onclick="openEmailClient()">2. Open Mail Client</button>
+                <button class="btn btn-copy" onclick="copyToClipboard()">Copy for Email</button>
+                <button class="btn btn-mail" onclick="openEmailClient()">Open Mail Client</button>
                 <button class="btn btn-pdf" onclick="generateGolfersDirectoryPDF(showToast)">📄 Download Contact PDF</button>
             </div>
         </div>
@@ -124,18 +124,28 @@
         }
 
         async function generateEmailContent() {
-            const ids = [document.getElementById('date1').value, document.getElementById('date2').value, document.getElementById('date3').value].filter(id => id !== "");
+            const ids = [
+                document.getElementById('date1').value, 
+                document.getElementById('date2').value, 
+                document.getElementById('date3').value
+            ].filter(id => id !== "");
+            
             const gStart = document.getElementById('gridStart').value;
 
             if (ids.length === 0) return showToast("Select at least one date.", true);
 
             try {
+                // Fetch data using fixed API endpoints
                 const [golfersRes, awayRes, extraRes] = await Promise.all([
                     fetch('/api/golfers'), 
                     fetch('/api/unavailable/all'),
-                    fetch('/api/extra-availabilities')
+                    fetch('/api/extra-availabilities/all')
                 ]);
                 
+                if (!golfersRes.ok || !awayRes.ok || !extraRes.ok) {
+                    throw new Error(`Server returned error status: Golfers (${golfersRes.status}), Away (${awayRes.status}), Extra (${extraRes.status})`);
+                }
+
                 const golfers = await golfersRes.json();
                 const awayRecords = await awayRes.json();
                 
@@ -147,7 +157,9 @@
                 let rollupData = [];
                 for (const id of ids) {
                     const response = await fetch(`/api/rollups/${id}`);
-                    rollupData.push(await response.json());
+                    if (response.ok) {
+                        rollupData.push(await response.json());
+                    }
                 }
                 rollupData.sort((a, b) => new Date(a.date) - new Date(b.date));
 
@@ -192,19 +204,25 @@
                 html += `</tr>`;
                 
                 golfers.forEach((g, idx) => {
+                    const golferIdStr = g._id.toString();
                     html += `<tr style="background-color: ${idx % 2 === 0 ? '#fff' : '#f2f2f2'};"><td style="padding: 3px; font-weight: bold;">${g.name}</td>`;
+                    
                     sessions.forEach(sDate => {
                         const sTime = sDate.getTime();
                         const dayName = dayNames[sDate.getDay()];
                         const isNormalDay = g.play_days?.includes(dayName);
-                        const isExtraDay = extraRecords.some(e => e.golfer_id === g._id && new Date(e.date).setHours(0,0,0,0) === sTime);
+                        
+                        const isExtraDay = extraRecords.some(e => {
+                            const eId = (e.golfer_id?._id || e.golfer_id || "").toString();
+                            return eId === golferIdStr && new Date(e.date).setHours(0,0,0,0) === sTime;
+                        });
 
                         if (!isNormalDay && !isExtraDay) {
                             html += `<td style="padding: 1px; background-color: #e0e0e0;"></td>`;
                         } else {
                             const isAway = awayRecords.some(rec => {
-                                const gId = rec.golfer_id?._id || rec.golfer_id;
-                                if (gId.toString() !== g._id.toString()) return false;
+                                const gId = (rec.golfer_id?._id || rec.golfer_id || "").toString();
+                                if (gId !== golferIdStr) return false;
                                 const start = new Date(rec.date_from).setHours(0,0,0,0);
                                 const end = rec.indefinite ? Infinity : new Date(rec.date_to).setHours(23,59,59,999);
                                 return sTime >= start && sTime <= end;
@@ -228,11 +246,29 @@
 
         async function openEmailClient() {
             try {
-                const res = await fetch('/api/golfer-emails');
+                const res = await fetch('/api/email/golfer-emails');
+                
+                if (!res.ok) {
+                    throw new Error(`Server returned HTTP ${res.status}`);
+                }
+
                 const emails = await res.json();
+
+                if (!Array.isArray(emails) || emails.length === 0) {
+                    showToast("No active golfer emails found.", true);
+                    return;
+                }
+
                 const subject = encodeURIComponent(document.getElementById('emailSubject').value || "Golf Update");
-                window.location.href = `mailto:${emails.join(';')}?subject=${subject}`;
-            } catch (err) { showToast("Could not fetch golfer emails.", true); }
+                
+                // Use commas (,) for modern client mailto compatibility
+                const mailtoUrl = `mailto:${emails.join(',')}?subject=${subject}`;
+                
+                window.location.href = mailtoUrl;
+            } catch (err) {
+                console.error("Email Fetch Error:", err);
+                showToast("Could not fetch golfer emails.", true);
+            }
         }
 
         function copyToClipboard() {

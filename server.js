@@ -16,6 +16,7 @@ const cron = require('node-cron');
 const User = require('./models/User');
 const Golfer = require('./models/Golfer');
 const Rollup = require('./models/Rollup');
+const CompetitionName = require('./models/Competitions');
 
 // Utilities
 const transporter = require('./utils/mailer');
@@ -54,27 +55,42 @@ mongoose.connect(process.env.MONGO_URI)
     });
 
 mongoose.connection.once('open', async () => {
-    await User.updateMany(
-        { passwordChangedAt: { $exists: false } },
-        { $set: { passwordChangedAt: new Date() } }
-    );
-    console.log("Verified all admin users have password age tracking.");
+    try {
+        // Migration 1: Admin password age tracking
+        await User.updateMany(
+            { passwordChangedAt: { $exists: false } },
+            { $set: { passwordChangedAt: new Date() } }
+        );
+        console.log("Verified all admin users have password age tracking.");
+
+        // Migration 2: Ensure all golfers have an 'active' field set to true if missing
+        const result = await Golfer.updateMany(
+            { active: { $exists: false } },
+            { $set: { active: true } }
+        );
+        if (result.modifiedCount > 0) {
+            console.log(`[Migration] Updated ${result.modifiedCount} golfers with default active: true`);
+        }
+    } catch (err) {
+        console.error("[Migration Error]:", err);
+    }
 });
 
 // 3. MOUNT ROUTE MODULES
 app.use('/api/auth', require('./routes/auth'));
-app.use('/api', require('./routes/auth')); // Maintains compatibility with /login & /api/login
+app.use('/api', require('./routes/auth')); // Compatibility for /login
 app.use('/api/golfers', require('./routes/golfers'));
 app.use('/api/tee-times', require('./routes/teeTimes'));
+app.use('/api/competition-names', require('./routes/competitions'));
 app.use('/api/competition-templates', require('./routes/competitionTemplates'));
-app.use('/api', require('./routes/availability'));
+app.use('/api', require('./routes/availability')); // Serves /api/available and /api/unavailable/all
 app.use('/api/extra-availabilities', require('./routes/extraAvailability'));
 app.use('/api/rollup-notes', require('./routes/rollupNotes'));
 app.use('/api/rollups', require('./routes/rollups'));
 app.use('/api', require('./routes/rollups')); // Serves /api/reports/...
 app.use('/api/club-calendar', require('./routes/clubCalendar'));
-app.use('/api', require('./routes/email'));
-// app.use('/api/scorecards', require('./routes/scorecards'));
+app.use('/api/email', require('./routes/email'));
+app.use('/api/score-records', require('./routes/scoreRecords'));
 
 // 4. AUTOMATED 24-HOUR BOOKING REMINDER CRON DAEMON
 cron.schedule('0 8 * * *', async () => {

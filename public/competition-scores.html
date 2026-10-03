@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Competition Overall Score Entry - Golf Rollup Manager</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 15px;
+        }
+
+        label {
+            font-size: 0.85em;
+            font-weight: bold;
+            color: #444;
+            margin-bottom: 5px;
+        }
+
+        input, select {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #2e7d32;
+            box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.2);
+        }
+
+        .score-box {
+            background: #e8f5e9;
+            border: 2px solid #2e7d32;
+            padding: 18px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 50px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        button:hover { opacity: 0.9; }
+        .btn-green { background-color: #2e7d32; color: white; width: 100%; font-size: 1.05em; }
+
+        #toast {
+            position: fixed; bottom: 30px; right: 30px; padding: 15px 25px;
+            border-radius: 8px; color: white; font-weight: bold;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: none; z-index: 10000;
+        }
+        #toast.success { background-color: #2e7d32; }
+        #toast.error { background-color: #d32f2f; }
+    </style>
+</head>
+<body>
+    <div id="nav-placeholder"></div>
+
+    <div class="container">
+        <h2>Enter Competition Score</h2>
+
+        <div class="card">
+            <form id="scoreForm" onsubmit="saveOverallScore(event)">
+                <!-- STEP 1: EVENT DETAILS -->
+                <div class="grid-3">
+                    <div class="form-group">
+                        <label>Date *</label>
+                        <input type="date" id="scoreDate" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Competition Name *</label>
+                        <select id="competitionName" required>
+                            <option value="">Loading competitions...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Score Format *</label>
+                        <select id="scoreType" required>
+                            <option value="stableford" selected>Stableford</option>
+                            <option value="net">Net</option>
+                            <option value="gross">Gross</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group" style="max-width: 220px;">
+                    <label>Number of Players *</label>
+                    <select id="playerCount" onchange="renderPlayerDropdowns()">
+                        <option value="1">1 Player</option>
+                        <option value="2">2 Players</option>
+                        <option value="3">3 Players</option>
+                        <option value="4" selected>4 Players</option>
+                    </select>
+                </div>
+
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+
+                <!-- STEP 2: PLAYER SELECTION DROPDOWNS -->
+                <h4 style="margin-top: 0; color: #2c3e50;">Select Player(s)</h4>
+                <div id="playersContainer" class="grid-2"></div>
+
+                <!-- STEP 3: OVERALL SCORE INPUT -->
+                <div class="score-box">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="overallScore" style="color: #2e7d32; font-size: 1em;">Overall Team / Group Total Score *</label>
+                        <input type="number" id="overallScore" required placeholder="Enter total score (e.g. 42 or 88)" style="font-size: 1.1em; font-weight: bold;">
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <button type="submit" class="btn-green">Save Competition Score</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast"></div>
+
+    <script>
+        // Load navigation and golfer data on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            fetch('nav.html').then(r => r.text()).then(d => document.getElementById('nav-placeholder').innerHTML = d);
+        });
+    
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            document.getElementById('scoreDate').value = new Date().toISOString().split('T')[0];
+            await loadSetupData();
+        });
+
+        function showToast(msg, isSuccess = true) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.className = isSuccess ? 'success' : 'error';
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 3500);
+        }
+
+        async function loadSetupData() {
+            try {
+                const res = await fetch('/api/score-records/setup-data');
+                if (!res.ok) throw new Error("Failed to fetch dropdown options");
+
+                const data = await res.json();
+                golferList = data.golfers || [];
+
+                // Populate Competition Names dropdown
+                const compSelect = document.getElementById('competitionName');
+                compSelect.innerHTML = '<option value="">-- Select Competition --</option>';
+                (data.competitions || []).forEach(name => {
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    opt.textContent = name;
+                    compSelect.appendChild(opt);
+                });
+
+                renderPlayerDropdowns();
+            } catch (err) {
+                showToast("Error loading setup options.", false);
+            }
+        }
+
+        function renderPlayerDropdowns() {
+            const count = parseInt(document.getElementById('playerCount').value);
+            const container = document.getElementById('playersContainer');
+            container.innerHTML = '';
+
+            let golferOptionsHtml = '<option value="">-- Select Golfer --</option>';
+            golferList.forEach(g => {
+                golferOptionsHtml += `<option value="${g._id}" data-name="${g.name}">${g.name}</option>`;
+            });
+
+            for (let i = 1; i <= count; i++) {
+                const box = document.createElement('div');
+                box.className = 'form-group';
+                box.innerHTML = `
+                    <label>Player ${i} Name *</label>
+                    <select class="golfer-select" required>
+                        ${golferOptionsHtml}
+                    </select>
+                `;
+                container.appendChild(box);
+            }
+        }
+
+        async function saveOverallScore(e) {
+            e.preventDefault();
+
+            const date = document.getElementById('scoreDate').value;
+            const competition_name = document.getElementById('competitionName').value;
+            const score_type = document.getElementById('scoreType').value;
+            const player_count = parseInt(document.getElementById('playerCount').value);
+            const overall_score = document.getElementById('overallScore').value;
+
+            const playerSelects = document.querySelectorAll('.golfer-select');
+            const players = [];
+
+            for (let i = 0; i < playerSelects.length; i++) {
+                const select = playerSelects[i];
+                const selectedOption = select.options[select.selectedIndex];
+
+                if (!select.value) {
+                    showToast("Please select all golfer names.", false);
+                    return;
+                }
+
+                players.push({
+                    golfer_id: select.value,
+                    name: selectedOption.getAttribute('data-name')
+                });
+            }
+
+            const payload = {
+                date,
+                competition_name,
+                score_type,
+                player_count,
+                players,
+                overall_score: Number(overall_score)
+            };
+
+            try {
+                const res = await fetch('/api/score-records', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    showToast("Overall competition score saved successfully!", true);
+                    document.getElementById('scoreForm').reset();
+                    document.getElementById('scoreDate').value = new Date().toISOString().split('T')[0];
+                    renderPlayerDropdowns();
+                } else {
+                    const err = await res.json();
+                    showToast(`Error: ${err.error || 'Failed to save score'}`, false);
+                }
+            } catch (err) {
+                showToast("Connection error. Could not save score.", false);
+            }
+        }
+    </script>
+</body>
+</html>

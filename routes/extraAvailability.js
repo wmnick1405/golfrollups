@@ -45,10 +45,22 @@ router.get('/golfer/:id', protect, async (req, res) => {
     res.json(records);
 });
 
+// GET all extra availabilities (for reports & email generator)
+router.get('/all', protect, async (req, res) => {
+    try {
+        const extras = await ExtraAvailability.find({}).populate('golfer_id');
+        res.json(extras);
+    } catch (err) {
+        console.error("Error in GET /api/extra-availabilities/all:", err);
+        res.status(500).json({ error: "Failed to fetch extra availabilities" });
+    }
+});
+
+// GET extra availability for a specific date
 router.get('/', protect, async (req, res) => {
     try {
         const { date } = req.query;
-        if (!date) return res.status(400).json({ error: "Date is required" });
+        if (!date) return res.status(400).json({ error: "Date parameter is required" });
 
         const targetDate = new Date(date + "T00:00:00.000Z");
         const extras = await ExtraAvailability.find({ date: targetDate }).populate('golfer_id');

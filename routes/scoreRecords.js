@@ -5,6 +5,17 @@ const ScoreRecord = require('../models/ScoreRecord');
 const Golfer = require('../models/Golfer');
 const { protect } = require('../middleware/auth');
 
+
+// GET all score records (sorted by most recent date)
+router.get('/', protect, async (req, res) => {
+    try {
+        const records = await ScoreRecord.find().sort({ date: -1 });
+        res.json(records);
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch score records" });
+    }
+});
+
 // GET helper data for dropdowns (Competition Names & Active Golfers)
 router.get('/setup-data', protect, async (req, res) => {
     try {
@@ -23,6 +34,7 @@ router.get('/setup-data', protect, async (req, res) => {
         res.status(500).json({ error: "Failed to fetch setup data" });
     }
 });
+
 
 // POST save overall competition score record
 router.post('/', protect, async (req, res) => {

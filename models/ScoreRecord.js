@@ -19,4 +19,5 @@ const scoreRecordSchema = new mongoose.Schema({
     created_at: { type: Date, default: Date.now }
 }, { collection: 'score-records' });
 
-module.exports = mongoose.model('ScoreRecord', scoreRecordSchema);
+// Use existing model if compiled, or register a new one
+module.exports = mongoose.models.ScoreRecord || mongoose.model('ScoreRecord', scoreRecordSchema);

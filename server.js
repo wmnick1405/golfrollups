@@ -77,20 +77,23 @@ mongoose.connection.once('open', async () => {
 });
 
 // 3. MOUNT ROUTE MODULES
+// MOUNT SPECIFIC PATHS FIRST
 app.use('/api/auth', require('./routes/auth'));
-app.use('/api', require('./routes/auth')); // Compatibility for /login
 app.use('/api/golfers', require('./routes/golfers'));
 app.use('/api/tee-times', require('./routes/teeTimes'));
 app.use('/api/competition-names', require('./routes/competitions'));
 app.use('/api/competition-templates', require('./routes/competitionTemplates'));
-app.use('/api', require('./routes/availability')); // Serves /api/available and /api/unavailable/all
 app.use('/api/extra-availabilities', require('./routes/extraAvailability'));
 app.use('/api/rollup-notes', require('./routes/rollupNotes'));
 app.use('/api/rollups', require('./routes/rollups'));
-app.use('/api', require('./routes/rollups')); // Serves /api/reports/...
 app.use('/api/club-calendar', require('./routes/clubCalendar'));
 app.use('/api/email', require('./routes/email'));
-app.use('/api/score-records', require('./routes/scoreRecords'));
+app.use('/api/score-records', require('./routes/scoreRecords')); // Moved up
+
+// MOUNT GENERIC / WILDCARD PATHS LAST
+app.use('/api', require('./routes/auth'));
+app.use('/api', require('./routes/availability'));
+app.use('/api', require('./routes/rollups'));
 
 // 4. AUTOMATED 24-HOUR BOOKING REMINDER CRON DAEMON
 cron.schedule('0 8 * * *', async () => {

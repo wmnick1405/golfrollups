@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Competition Score History</title>
+
+    <!-- jsPDF & AutoTable Libraries for PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        h1 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+
+        .filter-card {
+            background: #eef2f7;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border: 1px solid #d1d9e6;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            align-items: end;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-size: 0.85em;
+            font-weight: bold;
+            color: #444;
+            margin-bottom: 5px;
+        }
+
+        input,
+        select {
+            padding: 9px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            background-color: #fff;
+            box-sizing: border-box;
+        }
+
+        select[multiple] {
+            height: 85px;
+            padding: 5px;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: #2e7d32;
+            box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.2);
+        }
+
+        .button-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 50px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.2s, background-color 0.2s;
+            font-size: 0.9em;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .btn-sort {
+            background-color: #e67e22;
+            color: white;
+        }
+
+        .btn-sort.active-sort {
+            background-color: #d35400;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .btn-reset {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .btn-pdf {
+            background-color: #1565c0;
+            color: white;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 10px 12px;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        th {
+            background-color: #2e7d32;
+            color: white;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .badge-format {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: bold;
+            text-transform: uppercase;
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .badge-stableford {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .badge-net {
+            background-color: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .badge-gross {
+            background-color: #fff3e0;
+            color: #ef6c00;
+        }
+
+        .score-val {
+            font-weight: bold;
+            color: #2e7d32;
+        }
+
+        #toast-msg {
+            min-height: 20px;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="nav-placeholder"></div>
+
+    <div class="container">
+        <h1>Competition Score History</h1>
+        <div id="toast-msg"></div>
+
+        <!-- FILTER CONTROLS -->
+        <div class="filter-card">
+            <div class="filter-grid">
+                <div class="form-group">
+                    <label for="filterDateFrom">Date From:</label>
+                    <input type="date" id="filterDateFrom" onchange="applyFilters()">
+                </div>
+
+                <div class="form-group">
+                    <label for="filterDateTo">Date To:</label>
+                    <input type="date" id="filterDateTo" onchange="applyFilters()">
+                </div>
+
+                <div class="form-group">
+                    <label for="filterComp">Competition Name:</label>
+                    <select id="filterComp" onchange="applyFilters()">
+                        <option value="">All Competitions</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="filterScoreType">Scoring Format:</label>
+                    <select id="filterScoreType" onchange="applyFilters()">
+                        <option value="">All Formats</option>
+                        <option value="stableford">Stableford</option>
+                        <option value="net">Net</option>
+                        <option value="gross">Gross</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="sortBy">Sort Order:</label>
+                    <select id="sortBy" onchange="applyFilters()">
+                        <option value="date-desc">Date (Newest First)</option>
+                        <option value="score-desc">Overall Score (High to Low)</option>
+                        <option value="score-asc">Overall Score (Low to High)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="filterGolfers">Filter Golfer(s) <small>(Hold Ctrl/Cmd for multi-select)</small>:</label>
+                    <select id="filterGolfers" multiple onchange="applyFilters()">
+                    </select>
+                </div>
+            </div>
+
+            <div class="button-row">
+                <button class="btn btn-sort" id="scoreSortBtn" onclick="toggleScoreSort()">📊 Order High to Low</button>
+                <button class="btn btn-reset" onclick="resetFilters()">Reset Filters</button>
+                <button class="btn btn-pdf" onclick="generatePDF()">📄 Export PDF</button>
+            </div>
+        </div>
+
+        <!-- SCORES DISPLAY TABLE -->
+        <table id="scoresTable">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Competition</th>
+                    <th>Format</th>
+                    <th>Players</th>
+                    <th>Overall Score</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <!-- Shared JS Helpers -->
+    <script src="./js/shared.js?v=1.0"></script>
+    <script>
+        let allRecords = [];
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            await loadDropdownOptions();
+            await loadScoreRecords();
+        });
+
+        function showToast(text, isError = false) {
+            const msg = document.getElementById("toast-msg");
+            if (!msg) return alert(text);
+            msg.textContent = text;
+            msg.style.color = isError ? "#d32f2f" : "#2e7d32";
+            setTimeout(() => { msg.textContent = ""; }, 4000);
+        }
+
+        async function loadDropdownOptions() {
+            try {
+                const res = await fetch('/api/score-records/setup-data');
+                if (!res.ok) throw new Error("Failed to load options");
+
+                const data = await res.json();
+
+                // Populate Competition Dropdown
+                const compSelect = document.getElementById('filterComp');
+                (data.competitions || []).forEach(name => {
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    opt.textContent = name;
+                    compSelect.appendChild(opt);
+                });
+
+                // Populate Golfers Multi-select Dropdown
+                const golferSelect = document.getElementById('filterGolfers');
+                (data.golfers || []).forEach(g => {
+                    const opt = document.createElement('option');
+                    opt.value = g._id;
+                    opt.textContent = g.name;
+                    golferSelect.appendChild(opt);
+                });
+            } catch (err) {
+                console.error("Error loading filter dropdowns:", err);
+                showToast("Could not load dropdown options.", true);
+            }
+        }
+
+        async function loadScoreRecords() {
+            try {
+                const res = await fetch('/api/score-records');
+
+                if (res.status === 401) {
+                    showToast("Session expired. Please log in again.", true);
+                    setTimeout(() => { window.location.href = 'login.html'; }, 1500);
+                    return;
+                }
+
+                if (!res.ok) throw new Error("Failed to fetch score records");
+
+                allRecords = await res.json();
+                applyFilters();
+            } catch (err) {
+                console.error("Error loading score records:", err);
+                showToast("Failed to load score history.", true);
+            }
+        }
+
+        // Toggle Quick-Sort Button between High-to-Low and Default Date Order
+        function toggleScoreSort() {
+            const sortSelect = document.getElementById('sortBy');
+            const sortBtn = document.getElementById('scoreSortBtn');
+
+            if (sortSelect.value === 'score-desc') {
+                sortSelect.value = 'date-desc';
+                sortBtn.classList.remove('active-sort');
+                sortBtn.textContent = '📊 Order High to Low';
+            } else {
+                sortSelect.value = 'score-desc';
+                sortBtn.classList.add('active-sort');
+                sortBtn.textContent = '📊 Sorted: High to Low';
+            }
+
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const dateFrom = document.getElementById('filterDateFrom').value;
+            const dateTo = document.getElementById('filterDateTo').value;
+            const compName = document.getElementById('filterComp').value;
+            const scoreType = document.getElementById('filterScoreType').value;
+            const sortBy = document.getElementById('sortBy').value;
+
+            // Sync quick-sort button state
+            const sortBtn = document.getElementById('scoreSortBtn');
+            if (sortBy === 'score-desc') {
+                sortBtn.classList.add('active-sort');
+                sortBtn.textContent = '📊 Sorted: High to Low';
+            } else {
+                sortBtn.classList.remove('active-sort');
+                sortBtn.textContent = '📊 Order High to Low';
+            }
+
+            // Get selected golfer IDs from multi-select
+            const selectedGolferOptions = Array.from(document.getElementById('filterGolfers').selectedOptions);
+            const selectedGolferIds = selectedGolferOptions.map(opt => opt.value);
+
+            let filtered = allRecords.filter(rec => {
+                const recDate = new Date(rec.date).toISOString().split('T')[0];
+
+                if (dateFrom && recDate < dateFrom) return false;
+                if (dateTo && recDate > dateTo) return false;
+                if (compName && rec.competition_name !== compName) return false;
+                if (scoreType && rec.score_type !== scoreType) return false;
+
+                if (selectedGolferIds.length > 0) {
+                    const recGolferIds = (rec.players || []).map(p => p.golfer_id ? p.golfer_id.toString() : '');
+                    const hasMatch = selectedGolferIds.some(id => recGolferIds.includes(id));
+                    if (!hasMatch) return false;
+                }
+
+                return true;
+            });
+
+            // Apply Sorting
+            filtered.sort((a, b) => {
+                if (sortBy === 'score-desc') {
+                    return b.overall_score - a.overall_score; // Highest to Lowest
+                } else if (sortBy === 'score-asc') {
+                    return a.overall_score - b.overall_score; // Lowest to Highest
+                } else {
+                    return new Date(b.date) - new Date(a.date); // Newest Date First
+                }
+            });
+
+            renderTable(filtered);
+        }
+
+        function renderTable(data) {
+            const tbody = document.querySelector('#scoresTable tbody');
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#888;">No score records found matching selected filters.</td></tr>`;
+                return;
+            }
+
+            data.forEach(rec => {
+                const d = new Date(rec.date).toLocaleDateString('en-GB', {
+                    weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
+                });
+
+                const playerNames = (rec.players || []).map(p => p.name).join(', ');
+                const formatClass = `badge-${rec.score_type}`;
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${d}</td>
+                        <td><strong>${rec.competition_name}</strong></td>
+                        <td><span class="badge-format ${formatClass}">${rec.score_type}</span></td>
+                        <td>${playerNames}</td>
+                        <td class="score-val">${rec.overall_score}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function resetFilters() {
+            document.getElementById('filterDateFrom').value = '';
+            document.getElementById('filterDateTo').value = '';
+            document.getElementById('filterComp').value = '';
+            document.getElementById('filterScoreType').value = '';
+            document.getElementById('sortBy').value = 'date-desc';
+
+            const golferSelect = document.getElementById('filterGolfers');
+            Array.from(golferSelect.options).forEach(opt => opt.selected = false);
+
+            applyFilters();
+            showToast("Filters reset.");
+        }
+
+        function generatePDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.setFontSize(16);
+            doc.text("Competition Score History Report", 14, 15);
+
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text(`Generated on: ${new Date().toLocaleDateString('en-GB')}`, 14, 22);
+
+            doc.autoTable({
+                html: '#scoresTable',
+                startY: 28,
+                headStyles: { fillColor: [46, 125, 50] },
+                alternateRowStyles: { fillColor: [245, 245, 245] },
+                styles: { fontSize: 9, cellPadding: 3 }
+            });
+
+            doc.save(`competition_scores_${new Date().toISOString().split('T')[0]}.pdf`);
+        }
+
+        // Load navbar
+        fetch('nav.html')
+            .then(res => res.text())
+            .then(data => {
+                document.getElementById('nav-placeholder').innerHTML = data;
+            })
+            .catch(() => {});
+    </script>
+</body>
+
+</html>

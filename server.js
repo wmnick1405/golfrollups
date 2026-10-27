@@ -77,7 +77,6 @@ mongoose.connection.once('open', async () => {
 });
 
 // 3. MOUNT ROUTE MODULES
-// MOUNT SPECIFIC PATHS FIRST
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/golfers', require('./routes/golfers'));
 app.use('/api/tee-times', require('./routes/teeTimes'));
@@ -88,12 +87,12 @@ app.use('/api/rollup-notes', require('./routes/rollupNotes'));
 app.use('/api/rollups', require('./routes/rollups'));
 app.use('/api/club-calendar', require('./routes/clubCalendar'));
 app.use('/api/email', require('./routes/email'));
-app.use('/api/score-records', require('./routes/scoreRecords')); // Moved up
 
-// MOUNT GENERIC / WILDCARD PATHS LAST
-app.use('/api', require('./routes/auth'));
-app.use('/api', require('./routes/availability'));
-app.use('/api', require('./routes/rollups'));
+// Dedicated mount for score records (MUST BE ABOVE GENERIC ROUTERS)
+app.use('/api/score-records', require('./routes/scoreRecords')); 
+
+// General availability routes
+app.use('/api/availability', require('./routes/availability'));
 
 // 4. AUTOMATED 24-HOUR BOOKING REMINDER CRON DAEMON
 cron.schedule('0 8 * * *', async () => {

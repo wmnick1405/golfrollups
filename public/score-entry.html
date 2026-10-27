@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Competition Score Entry</title>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        h1 {
+            margin-top: 0;
+            color: #2c3e50;
+            border-bottom: 2px solid #eef2f7;
+            padding-bottom: 10px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            font-size: 0.85em;
+            font-weight: bold;
+            color: #444;
+            margin-bottom: 6px;
+        }
+
+        input,
+        select {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            background-color: #fff;
+            box-sizing: border-box;
+        }
+
+        .players-section {
+            background: #eef2f7;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #d1d9e6;
+            margin-bottom: 20px;
+        }
+
+        .players-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .button-row {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 50px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.95em;
+        }
+
+        .btn-save {
+            background-color: #2e7d32;
+            color: white;
+        }
+
+        .btn-clear {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        #toast-msg {
+            min-height: 20px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="nav-placeholder"></div>
+
+    <div class="container">
+        <h1>Record Competition Score</h1>
+        <div id="toast-msg"></div>
+
+        <form id="scoreForm" onsubmit="saveScore(event)">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="scoreDate">Match Date:</label>
+                    <input type="date" id="scoreDate" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="compSelect">Competition Name:</label>
+                    <select id="compSelect" required>
+                        <option value="">-- Loading Competitions... --</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="scoreType">Scoring Format:</label>
+                    <select id="scoreType" required>
+                        <option value="stableford">Stableford</option>
+                        <option value="net">Net</option>
+                        <option value="gross">Gross</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="playerCount">Number of Players in Group:</label>
+                    <select id="playerCount" onchange="renderPlayerInputs()" required>
+                        <option value="1">1 Player (Individual)</option>
+                        <option value="2">2 Players (Pairs)</option>
+                        <option value="3">3 Players (Trio)</option>
+                        <option value="4" selected>4 Players (4-Ball)</option>
+                    </select>
+                </div>
+
+                <div class="form-group full-width">
+                    <label for="overallScore">Overall Group / Team Score:</label>
+                    <input type="number" id="overallScore" placeholder="e.g. 84" step="0.01" required>
+                </div>
+            </div>
+
+            <!-- PLAYERS SELECTION -->
+            <div class="players-section">
+                <label style="display: block; margin-bottom: 10px; font-size: 0.95em; color: #2c3e50;">Select Player
+                    Lineup:</label>
+                <div id="playersContainer" class="players-grid"></div>
+            </div>
+
+            <div class="button-row">
+                <button type="button" class="btn btn-clear" onclick="resetForm()">Reset Form</button>
+                <button type="submit" class="btn btn-save">💾 Save Score Record</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Script Execution -->
+    <script>
+        let availableGolfers = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            document.getElementById('scoreDate').valueAsDate = new Date();
+            loadNav();
+            await loadSetupData();
+        });
+
+        function showToast(text, isError = false) {
+            const msg = document.getElementById("toast-msg");
+            if (!msg) return alert(text);
+            msg.textContent = text;
+            msg.style.color = isError ? "#d32f2f" : "#2e7d32";
+            setTimeout(() => { msg.textContent = ""; }, 4000);
+        }
+
+        async function loadSetupData() {
+            const compSelect = document.getElementById('compSelect');
+            try {
+                const res = await fetch('/api/score-records/setup-data');
+                if (!res.ok) throw new Error("HTTP Status " + res.status);
+
+                const data = await res.json();
+                console.log("Database Response:", data);
+
+                // 1. Populate Competitions
+                compSelect.innerHTML = '<option value="">-- Select Competition --</option>';
+                const competitions = data.competitions || [];
+
+                if (competitions.length > 0) {
+                    competitions.forEach(c => {
+                        const name = typeof c === 'string' ? c : (c['comp-name'] || c.name);
+                        if (name) {
+                            const opt = document.createElement('option');
+                            opt.value = name;
+                            opt.textContent = name;
+                            compSelect.appendChild(opt);
+                        }
+                    });
+                } else {
+                    compSelect.innerHTML = '<option value="">-- No Competitions Found in DB --</option>';
+                }
+
+                // 2. Populate Golfers
+                availableGolfers = data.golfers || [];
+                renderPlayerInputs();
+
+            } catch (err) {
+                console.error("Load Setup Data Failed:", err);
+                compSelect.innerHTML = '<option value="">-- Error Loading Competitions --</option>';
+                showToast("Could not load form data from server.", true);
+            }
+        }
+
+        function renderPlayerInputs() {
+            const count = parseInt(document.getElementById('playerCount').value, 10);
+            const container = document.getElementById('playersContainer');
+            container.innerHTML = '';
+
+            for (let i = 1; i <= count; i++) {
+                let optionsHtml = `<option value="">-- Select Golfer ${i} --</option>`;
+                if (availableGolfers.length > 0) {
+                    availableGolfers.forEach(g => {
+                        optionsHtml += `<option value="${g._id}">${g.name}</option>`;
+                    });
+                } else {
+                    optionsHtml = `<option value="">-- No Active Golfers Available --</option>`;
+                }
+
+                container.innerHTML += `
+                    <div class="form-group">
+                        <label for="player_${i}">Player ${i}:</label>
+                        <select id="player_${i}" class="player-select" required>
+                            ${optionsHtml}
+                        </select>
+                    </div>
+                `;
+            }
+        }
+
+        async function saveScore(e) {
+            e.preventDefault();
+
+            const date = document.getElementById('scoreDate').value;
+            const competition_name = document.getElementById('compSelect').value;
+            const score_type = document.getElementById('scoreType').value;
+            const player_count = parseInt(document.getElementById('playerCount').value, 10);
+            // Parse as float and cap at 2 decimal places
+            const rawScore = parseFloat(document.getElementById('overallScore').value);
+            const overall_score = Math.round(rawScore * 100) / 100;
+
+            const players = [];
+            const selectedIds = new Set();
+
+            for (let i = 1; i <= player_count; i++) {
+                const selectEl = document.getElementById(`player_${i}`);
+                const golferId = selectEl.value;
+                const golferName = selectEl.options[selectEl.selectedIndex]?.text;
+
+                if (!golferId) return showToast(`Please select Player ${i}`, true);
+                if (selectedIds.has(golferId)) return showToast(`Duplicate golfer: ${golferName}`, true);
+
+                selectedIds.add(golferId);
+                players.push({ golfer_id: golferId, name: golferName });
+            }
+
+            try {
+                const res = await fetch('/api/score-records', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date, competition_name, score_type, player_count, players, overall_score })
+                });
+
+                if (!res.ok) throw new Error("Save failed");
+                showToast("Score record saved!");
+                resetForm();
+            } catch (err) {
+                showToast("Failed to save score record.", true);
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('scoreForm').reset();
+            document.getElementById('scoreDate').valueAsDate = new Date();
+            renderPlayerInputs();
+        }
+
+        function loadNav() {
+            fetch('nav.html')
+                .then(res => res.text())
+                .then(data => { document.getElementById('nav-placeholder').innerHTML = data; })
+                .catch(() => { });
+        }
+    </script>
+</body>
+
+</html>

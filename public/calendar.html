@@ -4,6 +4,7 @@
 <head>
     <title>Club Calendar</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+        <script src="js/shared.js" defer></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -273,9 +274,6 @@
 
         loadCalendar();
 
-        fetch('nav.html')
-            .then(res => res.text())
-            .then(data => document.getElementById('nav-placeholder').innerHTML = data);
     </script>
 </body>
 

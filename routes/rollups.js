@@ -3,7 +3,7 @@ const router = express.Router();
 const Rollup = require('../models/Rollup');
 const { protect } = require('../middleware/auth');
 
-router.get('/check', async (req, res) => {
+router.get('/check', protect,async (req, res) => {
     try {
         const { date } = req.query;
         const startOfDay = new Date(date);
@@ -63,7 +63,7 @@ router.put('/:id', protect, async (req, res) => {
     }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', protect, async (req, res) => {
     try {
         await Rollup.findByIdAndDelete(req.params.id);
         res.json({ success: true, message: "Rollup deleted successfully" });

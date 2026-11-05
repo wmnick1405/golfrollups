@@ -45,29 +45,31 @@ router.get('/golfer/:id', protect, async (req, res) => {
     res.json(records);
 });
 
+// GET /api/extra-availabilities
 router.get('/', protect, async (req, res) => {
     try {
-        const { date } = req.query;
-        if (!date) return res.status(400).json({ error: "Date is required" });
+        let query = {};
 
-        const targetDate = new Date(date + "T00:00:00.000Z");
-        const extras = await ExtraAvailability.find({ date: targetDate }).populate('golfer_id');
+        // If a specific date is passed: ?date=YYYY-MM-DD
+        if (req.query.date) {
+            const targetDate = new Date(req.query.date + "T00:00:00.000Z");
+            const nextDay = new Date(targetDate);
+            nextDay.setDate(nextDay.getDate() + 1);
 
-        const report = extras.map(e => {
-            if (!e.golfer_id) return null;
-            return {
-                _id: e.golfer_id._id,
-                name: e.golfer_id.name,
-                booking_exempt: e.golfer_id.booking_exempt,
-                isExtra: true,
-                isUnavailable: false
-            };
-        }).filter(item => item !== null);
+            query.date = { $gte: targetDate, $lt: nextDay };
+        } 
+        // Optional: If a start date is passed: ?startDate=YYYY-MM-DD
+        else if (req.query.startDate) {
+            query.date = { $gte: new Date(req.query.startDate + "T00:00:00.000Z") };
+        }
 
-        res.json(report);
+        // Fetch records based on filter (or all records if no query param supplied)
+        const records = await ExtraAvailability.find(query).sort({ date: 1 }).lean();
+        res.json(records);
+
     } catch (err) {
         console.error("Error in GET /api/extra-availabilities:", err);
-        res.status(500).json({ error: "Failed to fetch extra golfers" });
+        res.status(500).json({ error: "Failed to fetch extra availabilities" });
     }
 });
 

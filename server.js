@@ -61,21 +61,30 @@ mongoose.connection.once('open', async () => {
     console.log("Verified all admin users have password age tracking.");
 });
 
-// 3. MOUNT ROUTE MODULES
+// 3. MOUNT SPECIFIC ROUTE MODULES FIRST
+// TEMPORARY DIRECT DEBUG ROUTE
+/* app.delete('/api/score-records/:id', (req, res) => {
+    console.log(`[DIRECT SERVER.JS HIT] Delete requested for ID: ${req.params.id}`);
+    res.json({ success: true, message: "Direct server.js route hit successfully!" });
+}); */
+
+app.use('/api/score-records', require('./routes/scoreRecords'));
 app.use('/api/auth', require('./routes/auth'));
-app.use('/api', require('./routes/auth')); // Maintains compatibility with /login & /api/login
 app.use('/api/golfers', require('./routes/golfers'));
 app.use('/api/tee-times', require('./routes/teeTimes'));
 app.use('/api/competition-templates', require('./routes/competitionTemplates'));
-app.use('/api', require('./routes/availability'));
 app.use('/api/extra-availabilities', require('./routes/extraAvailability'));
 app.use('/api/rollup-notes', require('./routes/rollupNotes'));
 app.use('/api/rollups', require('./routes/rollups'));
-app.use('/api', require('./routes/rollups')); // Serves /api/reports/...
 app.use('/api/club-calendar', require('./routes/clubCalendar'));
-app.use('/api', require('./routes/email'));
-// app.use('/api/scorecards', require('./routes/scorecards'));
+app.use('/api/email', require('./routes/email'));
+app.use('/api/availability', require('./routes/availability'));
 
+
+// CATCH-ALL / GENERIC COMPATIBILITY MOUNTS AT THE VERY BOTTOM
+app.use('/api', require('./routes/auth'));         // Legacy auth compatibility
+
+app.use('/api', require('./routes/rollups'));      // Generic /api/reports/... endpoints
 // 4. AUTOMATED 24-HOUR BOOKING REMINDER CRON DAEMON
 cron.schedule('0 8 * * *', async () => {
     console.log('\n==================================================================');

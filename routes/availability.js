@@ -5,6 +5,8 @@ const Unavailable = require('../models/Unavailable');
 const transporter = require('../utils/mailer');
 const { protect } = require('../middleware/auth');
 
+// 1. GET AVAILABLE GOLFER REPORT FOR A GIVEN DATE
+// Endpoint: GET /api/availability/available?date=YYYY-MM-DD
 router.get('/available', protect, async (req, res) => {
     try {
         const dateStr = req.query.date;
@@ -16,7 +18,8 @@ router.get('/available', protect, async (req, res) => {
 
         const golfers = await Golfer.find({ play_days: dayName }).lean();
         const awayRecords = await Unavailable.find({
-            date_from: { $lte: targetDate },$or: [
+            date_from: { $lte: targetDate },
+            $or: [
                 { date_to: { $gte: targetDate } },
                 { indefinite: true }
             ]
@@ -38,12 +41,47 @@ router.get('/available', protect, async (req, res) => {
 
         res.json(report);
     } catch (err) {
-        console.error("CRITICAL ERROR in /api/available:", err);
+        console.error("CRITICAL ERROR in /api/availability/available:", err);
         res.status(500).json({ error: "Internal Server Error during availability sync" });
     }
 });
 
-router.post('/unavailable', protect, async (req, res) => {
+// 2. GET ALL UNAVAILABILITY RECORDS
+// Endpoint: GET /api/availability/all
+router.get('/all', protect, async (req, res) => {
+    try {
+        const list = await Unavailable.find({}).populate('golfer_id').sort({ date_from: -1 });
+        res.json(list.filter(item => item.golfer_id));
+    } catch (err) {
+        res.status(500).json({ error: "Report data failed" });
+    }
+});
+
+// 3. GET INDEFINITE UNAVAILABILITY RECORDS
+// Endpoint: GET /api/availability/indefinite
+router.get('/indefinite', protect, async (req, res) => {
+    try {
+        const list = await Unavailable.find({ indefinite: true }).populate('golfer_id');
+        res.json(list.filter(i => i.golfer_id));
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch indefinite records" });
+    }
+});
+
+// 4. GET UNAVAILABILITY RECORDS FOR SPECIFIC GOLFER
+// Endpoint: GET /api/availability/golfer/:id
+router.get('/golfer/:id', protect, async (req, res) => {
+    try {
+        const records = await Unavailable.find({ golfer_id: req.params.id }).sort({ date_from: 1 });
+        res.json(records);
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch golfer availability" });
+    }
+});
+
+// 5. POST NEW UNAVAILABILITY RECORD
+// Endpoint: POST /api/availability
+router.post('/', protect, async (req, res) => {
     try {
         const { date_from, date_to, indefinite, golfer_id, sendEmail } = req.body;
         const cleanFrom = new Date(new Date(date_from).toISOString().split('T')[0] + "T00:00:00.000Z");
@@ -81,32 +119,15 @@ router.post('/unavailable', protect, async (req, res) => {
             }
         }
 
-        res.json({ success: true });
+        res.json({ success: true, record });
     } catch (err) {
         res.status(500).json({ error: "Failed to save record." });
     }
 });
 
-router.get('/unavailable/all', protect, async (req, res) => {
-    try {
-        const list = await Unavailable.find({}).populate('golfer_id').sort({ date_from: -1 });
-        res.json(list.filter(item => item.golfer_id));
-    } catch (err) {
-        res.status(500).json({ error: "Report data failed" });
-    }
-});
-
-router.get('/unavailable/golfer/:id', protect, async (req, res) => {
-    const records = await Unavailable.find({ golfer_id: req.params.id }).sort({ date_from: 1 });
-    res.json(records);
-});
-
-router.get('/unavailable/indefinite', protect, async (req, res) => {
-    const list = await Unavailable.find({ indefinite: true }).populate('golfer_id');
-    res.json(list.filter(i => i.golfer_id));
-});
-
-router.delete('/unavailable/:id', protect, async (req, res) => {
+// 6. DELETE UNAVAILABILITY RECORD BY ID
+// Endpoint: DELETE /api/availability/:id
+router.delete('/:id', protect, async (req, res) => {
     try {
         await Unavailable.findByIdAndDelete(req.params.id);
         res.json({ success: true });
@@ -115,7 +136,9 @@ router.delete('/unavailable/:id', protect, async (req, res) => {
     }
 });
 
-router.post('/unavailable/send-summary', protect, async (req, res) => {
+// 7. SEND ABSENCE SUMMARY EMAIL
+// Endpoint: POST /api/availability/send-summary
+router.post('/send-summary', protect, async (req, res) => {
     try {
         const { golfer_id, dates } = req.body;
         const golfer = await Golfer.findById(golfer_id);

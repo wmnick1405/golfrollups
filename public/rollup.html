@@ -386,7 +386,7 @@
 
                 // 2. Fetch Regular Availability AND Extra Availabilities in parallel
                 const [resRegular, resExtra] = await Promise.all([
-                    fetch(`/api/available?date=${date}`),
+                    fetch(`/api/availability/available?date=${date}`),
                     fetch(`/api/extra-availabilities?date=${date}`)
                 ]);
 

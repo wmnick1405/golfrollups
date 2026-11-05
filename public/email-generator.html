@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,29 +11,95 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f4f7f6; color: #333; }
-        .container { max-width: 1100px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        
-        .controls { background: #eef2f7; padding: 20px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #d1d9e6; }
-        .setup-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 15px; }
-        
-        select, input { padding: 10px; border-radius: 4px; border: 1px solid #ccc; width: 100%; box-sizing: border-box; }
-        label { font-weight: bold; font-size: 0.85em; display: block; margin-bottom: 5px; color: #444; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            background-color: #f4f7f6;
+            color: #333;
+        }
 
-        .btn { padding: 12px 24px; border: none; cursor: pointer; border-radius: 50px; font-weight: bold; margin-top: 15px; transition: opacity 0.2s; }
-        .btn:hover { opacity: 0.9; }
-        .btn-generate { background: #2e7d32; color: white; }
-        .btn-copy { background: #007bff; color: white; }
-        .btn-mail { background: #6c757d; color: white; }
-        .btn-pdf { background: #1565c0; color: white; }
-        
-        #emailDraft { 
-            margin-top: 30px; 
-            padding: 25px; 
-            border: 2px solid #007bff; 
-            background: #fff; 
-            min-height: 400px; 
-            border-radius: 8px; 
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .controls {
+            background: #eef2f7;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border: 1px solid #d1d9e6;
+        }
+
+        .setup-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        select,
+        input {
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        label {
+            font-weight: bold;
+            font-size: 0.85em;
+            display: block;
+            margin-bottom: 5px;
+            color: #444;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            cursor: pointer;
+            border-radius: 50px;
+            font-weight: bold;
+            margin-top: 15px;
+            transition: opacity 0.2s;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .btn-generate {
+            background: #2e7d32;
+            color: white;
+        }
+
+        .btn-copy {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-mail {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-pdf {
+            background: #1565c0;
+            color: white;
+        }
+
+        #emailDraft {
+            margin-top: 30px;
+            padding: 25px;
+            border: 2px solid #007bff;
+            background: #fff;
+            min-height: 400px;
+            border-radius: 8px;
             outline: none;
             overflow-x: auto;
         }
@@ -44,27 +111,34 @@
         }
     </style>
 </head>
+
 <body>
     <div id="nav-placeholder"></div>
 
     <div class="container">
         <h1>Rollup Email Generator</h1>
         <div id="toast-msg"></div>
-        
+
         <div class="controls">
             <h3>Step 1: Select Your Data</h3>
             <div class="setup-grid">
                 <div>
                     <label>Rollup Date 1:</label>
-                    <select id="date1"><option value="">-- Select Date --</option></select>
+                    <select id="date1">
+                        <option value="">-- Select Date --</option>
+                    </select>
                 </div>
                 <div>
                     <label>Rollup Date 2:</label>
-                    <select id="date2"><option value="">-- Select Date --</option></select>
+                    <select id="date2">
+                        <option value="">-- Select Date --</option>
+                    </select>
                 </div>
                 <div>
                     <label>Rollup Date 3:</label>
-                    <select id="date3"><option value="">-- Select Date --</option></select>
+                    <select id="date3">
+                        <option value="">-- Select Date --</option>
+                    </select>
                 </div>
                 <div>
                     <label>Grid Start Date:</label>
@@ -79,11 +153,12 @@
         </div>
 
         <div id="previewSection" style="display:none;">
-            <p style="font-size: 0.9em; color: #666;"><strong>Step 2:</strong> Edit your message below, then copy or export.</p>
+            <p style="font-size: 0.9em; color: #666;"><strong>Step 2:</strong> Edit your message below, then copy or
+                export.</p>
             <div id="emailDraft" contenteditable="true"></div>
             <div style="margin-top:20px; display: flex; gap: 10px; flex-wrap: wrap;">
-                <button class="btn btn-copy" onclick="copyToClipboard()">1. Copy for Email</button>
-                <button class="btn btn-mail" onclick="openEmailClient()">2. Open Mail Client</button>
+                <button class="btn btn-copy" onclick="copyToClipboard()">Copy for Email</button>
+                <button class="btn btn-mail" onclick="openEmailClient()">Open Mail Client</button>
                 <button class="btn btn-pdf" onclick="generateGolfersDirectoryPDF(showToast)">📄 Download Contact PDF</button>
             </div>
         </div>
@@ -124,18 +199,31 @@
         }
 
         async function generateEmailContent() {
-            const ids = [document.getElementById('date1').value, document.getElementById('date2').value, document.getElementById('date3').value].filter(id => id !== "");
+            const ids = [
+                document.getElementById('date1').value, 
+                document.getElementById('date2').value, 
+                document.getElementById('date3').value
+            ].filter(id => id !== "");
+            
             const gStart = document.getElementById('gridStart').value;
 
             if (ids.length === 0) return showToast("Select at least one date.", true);
 
             try {
+                const extraUrl = gStart 
+                    ? `/api/extra-availabilities?startDate=${gStart}` 
+                    : '/api/extra-availabilities';
+
                 const [golfersRes, awayRes, extraRes] = await Promise.all([
                     fetch('/api/golfers'), 
-                    fetch('/api/unavailable/all'),
-                    fetch('/api/extra-availabilities')
+                    fetch('/api/availability/all'),
+                    fetch(extraUrl)
                 ]);
-                
+
+                if (!golfersRes.ok) throw new Error(`Golfers API failed: ${golfersRes.status}`);
+                if (!awayRes.ok) throw new Error(`Availability API failed: ${awayRes.status}`);
+                if (!extraRes.ok) throw new Error(`Extra Availabilities API failed: ${extraRes.status}`);
+
                 const golfers = await golfersRes.json();
                 const awayRecords = await awayRes.json();
                 
@@ -204,7 +292,7 @@
                         } else {
                             const isAway = awayRecords.some(rec => {
                                 const gId = rec.golfer_id?._id || rec.golfer_id;
-                                if (gId.toString() !== g._id.toString()) return false;
+                                if (!gId || gId.toString() !== g._id.toString()) return false;
                                 const start = new Date(rec.date_from).setHours(0,0,0,0);
                                 const end = rec.indefinite ? Infinity : new Date(rec.date_to).setHours(23,59,59,999);
                                 return sTime >= start && sTime <= end;
@@ -220,20 +308,36 @@
 
                 document.getElementById('emailDraft').innerHTML = html;
                 document.getElementById('previewSection').style.display = 'block';
+
             } catch (err) { 
                 console.error("Generator Error:", err);
-                showToast("Generation failed. Check the console (F12) for details.", true); 
+                showToast("Generation failed. Check console for details.", true); 
             }
         }
 
         async function openEmailClient() {
-            try {
-                const res = await fetch('/api/golfer-emails');
-                const emails = await res.json();
-                const subject = encodeURIComponent(document.getElementById('emailSubject').value || "Golf Update");
-                window.location.href = `mailto:${emails.join(';')}?subject=${subject}`;
-            } catch (err) { showToast("Could not fetch golfer emails.", true); }
+    try {
+        const res = await fetch('/api/golfers');
+        if (!res.ok) throw new Error("Failed to fetch golfers list.");
+        
+        const golfers = await res.json();
+        const emails = golfers.map(g => g.email).filter(e => e && e.trim() !== "");
+
+        if (emails.length === 0) {
+            return showToast("No valid golfer email addresses found.", true);
         }
+
+        const subject = encodeURIComponent(document.getElementById('emailSubject').value || "Roll up Groups & Availability");
+        
+        // Comma (,) separator is standard across operating systems/mail clients
+        const mailtoUrl = `mailto:${emails.join(',')}?subject=${subject}`;
+        
+        window.location.href = mailtoUrl;
+    } catch (err) {
+        console.error("Mail Client Error:", err);
+        showToast("Could not fetch golfer emails.", true);
+    }
+}
 
         function copyToClipboard() {
             const el = document.getElementById('emailDraft');
@@ -245,9 +349,10 @@
         // Load navigation bar
         fetch('nav.html')
             .then(response => response.text())
-            .then(data => { 
-                document.getElementById('nav-placeholder').innerHTML = data; 
+            .then(data => {
+                document.getElementById('nav-placeholder').innerHTML = data;
             });
     </script>
 </body>
+
 </html>

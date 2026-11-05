@@ -293,13 +293,19 @@
             const selectedOption = select.options[select.selectedIndex];
             daysDisplay.textContent = "Preferred Days: " + (selectedOption.dataset.days || "None");
 
-            const resUn = await fetch(`/api/unavailable/golfer/${golferId}`);
-            const recordsUn = await resUn.json();
-            renderUnavailability(recordsUn);
+            try {
+                const resUn = await fetch(`/api/availability/golfer/${golferId}`);
+                if (!resUn.ok) throw new Error("Failed to load availability");
+                const recordsUn = await resUn.json();
+                renderUnavailability(recordsUn);
 
-            const resEx = await fetch(`/api/extra-availabilities/golfer/${golferId}`);
-            const recordsEx = await resEx.json();
-            renderExtraDays(recordsEx);
+                const resEx = await fetch(`/api/extra-availabilities/golfer/${golferId}`);
+                if (!resEx.ok) throw new Error("Failed to load extra availability");
+                const recordsEx = await resEx.json();
+                renderExtraDays(recordsEx);
+            } catch (err) {
+                console.error("Error fetching golfer status:", err);
+            }
         }
 
         function toggleDateTo() {
@@ -378,7 +384,7 @@
 
             if (!date_from) return alert("Please select a starting date");
 
-            const res = await fetch('/api/unavailable', {
+            const res = await fetch('/api/availability', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ golfer_id, date_from, date_to, indefinite, sendEmail: false })
@@ -420,13 +426,12 @@
 
         async function deleteRecord(id, type) {
             if (!confirm("Remove this record?")) return;
-            const url = type === 'un' ? `/api/unavailable/${id}` : `/api/extra-availabilities/${id}`;
+            const url = type === 'un' ? `/api/availability/${id}` : `/api/extra-availabilities/${id}`;
             await fetch(url, { method: 'DELETE' });
             fetchGolferStatus();
         }
 
         function updatePendingUI() {
-            // Absence Email Box
             const areaUn = document.getElementById('pendingEmailArea');
             const countUn = document.getElementById('pendingCount');
             if (pendingDates.length > 0) {
@@ -436,7 +441,6 @@
                 areaUn.classList.add('hidden');
             }
 
-            // Extra Play Days Email Box
             const areaEx = document.getElementById('pendingExtraEmailArea');
             const countEx = document.getElementById('pendingExtraCount');
             if (pendingExtraDates.length > 0) {
@@ -457,7 +461,7 @@
             const golfer_id = document.getElementById('golferSelect').value;
             if (pendingDates.length === 0) return;
 
-            const res = await fetch('/api/unavailable/send-summary', {
+            const res = await fetch('/api/availability/send-summary', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ golfer_id, dates: pendingDates })

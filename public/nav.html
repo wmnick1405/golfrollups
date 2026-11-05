@@ -170,14 +170,3 @@
     <button onclick="handleLogout()" class="btn-logout">Logout</button>
 </div>
 
-<script>
-    async function handleLogout() {
-        if (!confirm("Are you sure you want to log out?")) return;
-        try {
-            const res = await fetch('/api/logout', { method: 'POST' });
-            if (res.ok) window.location.href = 'login.html';
-        } catch (err) {
-            console.error("Logout error:", err);
-        }
-    }
-</script>

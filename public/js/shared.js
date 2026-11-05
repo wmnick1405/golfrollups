@@ -92,7 +92,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Shared logout function
 async function handleLogout() {
-    await fetch('/api/logout', { method: 'POST' });
+    if (!confirm("Are you sure you want to log out?")) return;
+    try {
+        await fetch('/api/logout', { method: 'POST' });
+    } catch (err) {
+        console.error("Logout error:", err);
+    }
     window.location.href = 'index.html';
 }
 

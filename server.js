@@ -26,15 +26,16 @@ const app = express();
 app.use(morgan('tiny'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
+app.set('trust proxy', 1); // Trust first proxy for secure cookies behind reverse proxies (e.g., Heroku, Nginx)
 app.use(session({
     name: 'golf_sid',
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    cookie: {
-        secure: false,
+        cookie: {
         httpOnly: true,
+        sameSite: 'lax',
+        secure: 'auto',
         maxAge: 1000 * 60 * 60 * 24
     }
 }));

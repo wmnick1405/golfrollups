@@ -55,7 +55,7 @@ router.get('/:id', protect, async (req, res) => {
 
 router.put('/:id', protect, async (req, res) => {
     try {
-        await Rollup.findByIdAndUpdate(req.params.id, req.body);
+        await Rollup.findByIdAndUpdate(req.params.id, req.body, { runValidators: true });
         res.status(200).json({ success: true, message: "Rollup groups saved cleanly" });
     } catch (err) {
         console.error("Booking Sheet save failed:", err);

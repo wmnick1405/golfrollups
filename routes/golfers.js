@@ -36,7 +36,7 @@ router.post('/', protect, async (req, res) => {
 
 router.put('/:id', protect, async (req, res) => {
     try {
-        await Golfer.findByIdAndUpdate(req.params.id, req.body);
+        await Golfer.findByIdAndUpdate(req.params.id, req.body, { runValidators: true });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: "Update failed" });
@@ -55,7 +55,11 @@ router.delete('/:id', protect, async (req, res) => {
 // Booker update
 router.post('/booker/:id', protect, async (req, res) => {
     try {
-        await Golfer.findByIdAndUpdate(req.params.id, { $inc: { booking_count: 1 }, last_booked: new Date() });
+        await Golfer.findByIdAndUpdate(
+            req.params.id,
+            { $inc: { booking_count: 1 }, last_booked: new Date() },
+            { runValidators: true }
+        );
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: "Update failed" });

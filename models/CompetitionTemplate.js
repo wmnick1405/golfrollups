@@ -20,7 +20,8 @@ const competitionTemplateSchema = new mongoose.Schema({
             default: 'course_handicap'
         },
         allowance: { type: Number, default: 100 },
-        maxHandicapIndex: { type: Number, default: 54 }
+        maxHandicapIndex: { type: Number, default: 54 },
+        qualifyingScore: { type: Boolean, default: true }
     },
     scoring: {
         type: String,

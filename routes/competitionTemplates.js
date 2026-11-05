@@ -24,7 +24,7 @@ router.post('/', protect, async (req, res) => {
 
 router.put('/:id', protect, async (req, res) => {
     try {
-        await CompetitionTemplate.findByIdAndUpdate(req.params.id, req.body);
+        await CompetitionTemplate.findByIdAndUpdate(req.params.id, req.body, { runValidators: true });
         res.json({ success: true });
     } catch (err) {
         res.status(400).json({ error: err.message });

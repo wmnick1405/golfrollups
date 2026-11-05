@@ -77,6 +77,11 @@
             color: white;
         }
 
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
         .btn:hover {
             opacity: 0.9;
         }
@@ -159,27 +164,57 @@
 
         function renderTable(data) {
             const tbody = document.querySelector('#compTable tbody');
-            tbody.innerHTML = '';
+            tbody.replaceChildren();
 
             data.forEach(c => {
-                const name = c['comp-name'] || "Unknown";
-                const desc = c.desc || "";
-                const dates = (c.CompetitionDates || []).join('\n');
+                const row = document.createElement('tr');
 
-                tbody.innerHTML += `<tr>
-                    <td>${name}</td>
-                    <td>
-                        <textarea id="desc-${c._id}" rows="1" style="width: 100%; overflow: hidden; resize: none;" 
-                                  oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'">${desc}</textarea>
-                    </td>
-                    <td>
-                        <textarea id="dates-${c._id}" rows="3" style="width: 100%;">${dates}</textarea>
-                    </td>
-                    <td>
-                        <button class="btn btn-save" onclick="updateComp('${c._id}')">Save</button>
-                        <button class="btn btn-del" onclick="deleteComp('${c._id}')">Delete</button>
-                    </td>
-                </tr>`;
+                const nameCell = document.createElement('td');
+                const nameInput = document.createElement('input');
+                nameInput.type = 'text';
+                nameInput.id = `name-${c._id}`;
+                nameInput.value = c['comp-name'] || '';
+                nameInput.required = true;
+                nameInput.setAttribute('aria-label', 'Competition name');
+                nameCell.appendChild(nameInput);
+
+                const descCell = document.createElement('td');
+                const descInput = document.createElement('textarea');
+                descInput.id = `desc-${c._id}`;
+                descInput.rows = 1;
+                descInput.value = c.desc || '';
+                descInput.style.cssText = 'width: 100%; overflow: hidden; resize: none;';
+                descInput.addEventListener('input', () => {
+                    descInput.style.height = '';
+                    descInput.style.height = `${descInput.scrollHeight}px`;
+                });
+                descCell.appendChild(descInput);
+
+                const datesCell = document.createElement('td');
+                const datesInput = document.createElement('textarea');
+                datesInput.id = `dates-${c._id}`;
+                datesInput.rows = 3;
+                datesInput.value = (c.CompetitionDates || []).join('\n');
+                datesInput.style.width = '100%';
+                datesCell.appendChild(datesInput);
+
+                const actionsCell = document.createElement('td');
+                actionsCell.className = 'action-buttons';
+                const saveButton = document.createElement('button');
+                saveButton.type = 'button';
+                saveButton.className = 'btn btn-save';
+                saveButton.textContent = 'Save';
+                saveButton.addEventListener('click', () => updateComp(c._id));
+
+                const deleteButton = document.createElement('button');
+                deleteButton.type = 'button';
+                deleteButton.className = 'btn btn-del';
+                deleteButton.textContent = 'Delete';
+                deleteButton.addEventListener('click', () => deleteComp(c._id));
+
+                actionsCell.append(saveButton, deleteButton);
+                row.append(nameCell, descCell, datesCell, actionsCell);
+                tbody.appendChild(row);
             });
 
             // Adjust textareas after render
@@ -217,17 +252,35 @@
         }
 
         async function updateComp(id) {
+            const name = document.getElementById(`name-${id}`).value.trim();
             const desc = document.getElementById(`desc-${id}`).value;
             const datesRaw = document.getElementById(`dates-${id}`).value;
             const dates = datesRaw.split(/[\n,]+/).map(d => d.trim()).filter(d => d !== "");
 
-            await fetch(`/api/competition-names/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ desc: desc, CompetitionDates: dates })
-            });
-            showToast("Competition updated");
-            loadComps();
+            if (!name) return alert("Competition name is required");
+
+            try {
+                const res = await fetch(`/api/competition-names/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        'comp-name': name,
+                        desc,
+                        CompetitionDates: dates
+                    })
+                });
+
+                if (!res.ok) {
+                    const error = await res.json();
+                    throw new Error(error.error || 'Failed to update competition');
+                }
+
+                showToast("Competition updated");
+                await loadComps();
+            } catch (err) {
+                console.error("Update Error:", err);
+                alert(err.message || "Could not update competition.");
+            }
         }
 
         async function deleteComp(id) {

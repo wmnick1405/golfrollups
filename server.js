@@ -74,6 +74,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/golfers', require('./routes/golfers'));
 app.use('/api/tee-times', require('./routes/teeTimes'));
 app.use('/api/competition-templates', require('./routes/competitionTemplates'));
+app.use('/api/competition-names', require('./routes/competitionNames'));
 app.use('/api/extra-availabilities', require('./routes/extraAvailability'));
 app.use('/api/rollup-notes', require('./routes/rollupNotes'));
 app.use('/api/rollups', require('./routes/rollups'));

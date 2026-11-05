@@ -75,7 +75,7 @@ router.put('/:id', protect, async (req, res) => {
             date_from: cleanFrom,
             date_to: cleanTo,
             content: content.trim()
-        });
+        }, { runValidators: true });
 
         res.json({ success: true });
     } catch (err) {

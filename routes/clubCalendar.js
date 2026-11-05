@@ -54,7 +54,7 @@ router.post('/sync', async (req, res) => {
                             end: ev.end,
                             location: ev.location || ''
                         },
-                        { upsert: true }
+                        { upsert: true, runValidators: true }
                     );
                 }
             }

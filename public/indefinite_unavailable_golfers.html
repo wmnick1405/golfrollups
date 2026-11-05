@@ -100,8 +100,7 @@
         <script>
             async function loadUnavailable() {
                 try {
-                    // MATCHED TO SERVER.JS: /api/unavailable/indefinite
-                    const res = await fetch('/api/unavailable/indefinite');
+                    const res = await fetch('/api/availability/indefinite');
 
                     if (!res.ok) {
                         throw new Error(`Server responded with ${res.status}`);
@@ -142,8 +141,7 @@
             async function makeAvailable(unavailabilityId) {
                 if (!confirm("Remove indefinite unavailability for this golfer?")) return;
 
-                // MATCHED TO SERVER.JS: /api/unavailable/:id
-                const res = await fetch("/api/unavailable/" + unavailabilityId, {
+                const res = await fetch("/api/availability/" + unavailabilityId, {
                     method: "DELETE"
                 });
 

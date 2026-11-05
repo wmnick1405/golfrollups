@@ -77,9 +77,9 @@
             try {
                 const [golfersRes, awayRes] = await Promise.all([
                     fetch('/api/golfers'),
-                    fetch('/api/unavailable/all')
+                    fetch('/api/availability/all')
                 ]);
-                const golfers = await golfersRes.json();
+                const golfers = (await golfersRes.json()).filter(g => g.active !== false);
                 const awayRecords = await awayRes.json();
 
                 // 1. Generate 24 sessions (M, W, F) starting from chosen date

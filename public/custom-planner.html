@@ -163,7 +163,7 @@
                 // Fetch all data in parallel
                 const [golfersRes, awayRes, extraRes] = await Promise.all([
                     fetch('/api/golfers'),
-                    fetch('/api/unavailable/all'),
+                    fetch('/api/availability/all'),
                     fetch(`/api/extra-availabilities/golfer/${golferId}`)
                 ]);
 

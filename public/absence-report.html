@@ -220,7 +220,7 @@
             async function fetchAllAbsences() {
                 try {
                     // Updated to the 'all' endpoint for full reporting
-                    const res = await fetch('/api/unavailable/all');
+                    const res = await fetch('/api/availability/all');
                     allAbsences = await res.json();
                 } catch (err) {
                     console.error("Failed to fetch report data", err);

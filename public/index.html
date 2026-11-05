@@ -119,7 +119,7 @@
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0,0,0,0.5);
+            background-color: rgba(0, 0, 0, 0.5);
             justify-content: center;
             align-items: center;
         }
@@ -129,7 +129,7 @@
             padding: 25px;
             border-radius: 12px;
             width: 350px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
             position: relative;
         }
 
@@ -204,18 +204,21 @@
         </div>
     </div>
 
-  <!-- CHANGE PASSWORD MODAL -->
+    <!-- CHANGE PASSWORD MODAL -->
     <div id="password-modal" class="modal">
         <div class="modal-content">
             <span class="close-modal" onclick="togglePasswordModal(false)">&times;</span>
             <h3>Change Your Password</h3>
-            <p style="font-size: 11px; color: #666; margin-bottom: 15px;">Must be at least 8 characters long and include a number and a special character (!@#$%^&*).</p>
-            
+            <p style="font-size: 11px; color: #666; margin-bottom: 15px;">Must be at least 8 characters long and include
+                a number and a special character (!@#$%^&*).</p>
+
             <input type="password" id="new-password-input" class="modal-input" placeholder="New Password">
             <input type="password" id="confirm-password-input" class="modal-input" placeholder="Confirm Password">
-            
-            <button onclick="submitPasswordChange()" class="btn btn-green" style="width: 100%; margin-top: 10px;">Update Password</button>
-            <div id="password-msg" style="margin-top: 15px; text-align: center; font-size: 0.9em; font-weight: bold;"></div>
+
+            <button onclick="submitPasswordChange()" class="btn btn-green" style="width: 100%; margin-top: 10px;">Update
+                Password</button>
+            <div id="password-msg" style="margin-top: 15px; text-align: center; font-size: 0.9em; font-weight: bold;">
+            </div>
         </div>
     </div>
 
@@ -261,7 +264,9 @@
 
             <div class="card">
                 <h3>Competition Templates</h3>
-                <p>Competition templates that can be used to create new competitions. This is a library of competition formats that can be used for seniors roll up. They can then be copied and adapted for individual competition needs.</p>
+                <p>Competition templates that can be used to create new competitions. This is a library of competition
+                    formats that can be used for seniors roll up. They can then be copied and adapted for individual
+                    competition needs.</p>
                 <a href="competition-templates.html" class="btn btn-green">Competition Templates</a>
             </div>
 
@@ -297,7 +302,8 @@
 
             <div class="card">
                 <h3>Rollup Event Notes</h3>
-                <p>Record, manage, and review special event notes that influence rollup schedules over specific date windows.</p>
+                <p>Record, manage, and review special event notes that influence rollup schedules over specific date
+                    windows.</p>
                 <a href="rollup-notes.html" class="btn btn-green">Manage Event Notes</a>
             </div>
 
@@ -352,7 +358,8 @@
             <!-- CHANGE PASSWORD FOR THE ACTIVE CURRENT USER -->
             <div class="card">
                 <h3>Change Your Password</h3>
-                <p>Update the password for the account you are currently logged in with. Enforces length, number, and special character rules.</p>
+                <p>Update the password for the account you are currently logged in with. Enforces length, number, and
+                    special character rules.</p>
                 <button onclick="togglePasswordModal(true)" class="btn btn-green">Change Password</button>
             </div>
 
@@ -401,7 +408,11 @@
                 });
 
                 if (res.ok) {
-                    toggleLoginMethod('otp');
+                    if (res.ok) {
+                        msg.style.color = "green";
+                        msg.innerText = "If that account exists, a code has been sent to it.";
+                        toggleLoginMethod('otp');
+                    }
                 } else {
                     const data = await res.json();
                     msg.style.color = "red";
@@ -452,7 +463,7 @@
             const modal = document.getElementById('password-modal');
             const statusMsg = document.getElementById('password-msg');
             modal.style.display = show ? 'flex' : 'none';
-            
+
             if (show) {
                 document.getElementById('new-password-input').value = "";
                 document.getElementById('confirm-password-input').value = "";

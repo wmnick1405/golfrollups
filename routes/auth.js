@@ -1,9 +1,31 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const User = require('../models/User');
 const transporter = require('../utils/mailer');
 const { protect } = require('../middleware/auth');
+
+// Simple in-memory rate limiter for OTP requests
+const otpRequestLog = new Map();
+
+function otpTooFrequent(email) {
+    const now = Date.now();
+    const windowMs = 10 * 60 * 1000; // 10 minutes
+    const maxPerWindow = 3;
+
+    const timestamps = (otpRequestLog.get(email) || [])
+        .filter(t => now - t < windowMs);
+
+    if (timestamps.length >= maxPerWindow) {
+        otpRequestLog.set(email, timestamps);
+        return true; // too many — silently
+    }
+
+    timestamps.push(now);
+    otpRequestLog.set(email, timestamps);
+    return false;
+}
 
 function isPasswordRobust(password) {
     const regex = /^(?=.*[0-9])(?=.*[!@#$%^&*\-_])[a-zA-Z0-9!@#$%^&*\-_]{8,}$/;
@@ -30,21 +52,35 @@ router.post('/login', async (req, res) => {
                 });
             }
         } else if (otp) {
-            if (user.otp !== otp || user.otpExpires < Date.now()) {
+            const valid = user.otp === otp && user.otpExpires > Date.now();
+
+            if (!valid) {
+                user.otpAttempts = (user.otpAttempts || 0) + 1;
+
+                // After 5 wrong tries, kill the code entirely
+                if (user.otpAttempts >= 5) {
+                    user.otp = undefined;
+                    user.otpExpires = undefined;
+                    user.otpAttempts = undefined;
+                }
+                await user.save();
                 return res.status(401).json({ error: "Invalid or expired code" });
             }
+
             user.otp = undefined;
             user.otpExpires = undefined;
+            user.otpAttempts = undefined;
             await user.save();
-        } else {
-            return res.status(400).json({ error: "Password or OTP required" });
         }
-
-        req.session.userId = user._id;
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: "Server error" });
+     else {
+        return res.status(400).json({ error: "Password or OTP required" });
     }
+
+    req.session.userId = user._id;
+    res.json({ success: true });
+} catch (err) {
+    res.status(500).json({ error: "Server error" });
+}
 });
 
 // Legacy /login endpoint
@@ -68,24 +104,34 @@ router.post('/login-legacy', async (req, res) => {
 
 // Request OTP
 router.post('/request-otp', async (req, res) => {
-    const { email } = req.body;
-    const user = await User.findOne({ username: email });
+    try {
+        const { email } = req.body;
 
-    if (!user) return res.status(404).json({ error: "User not found" });
+        if (email && !otpTooFrequent(email.toLowerCase())) {
+            const user = await User.findOne({ username: email });
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    user.otp = otp;
-    user.otpExpires = new Date(Date.now() + 10 * 60000);
-    await user.save();
+            if (user) {
+                const otp = crypto.randomInt(100000, 1000000).toString();
+                user.otp = otp;
+                user.otpAttempts = 0;
+                user.otpExpires = new Date(Date.now() + 10 * 60000);
+                await user.save();
 
-    await transporter.sendMail({
-        from: 'wmnick1405@gmail.com',
-        to: email,
-        subject: 'Your Login Code',
-        text: `Your code is ${otp}. It expires in 10 minutes.`
-    });
+                await transporter.sendMail({
+                    from: 'wmnick1405@gmail.com',
+                    to: email,
+                    subject: 'Your Login Code',
+                    text: `Your code is ${otp}. It expires in 10 minutes.`
+                });
+            }
+        }
 
-    res.json({ success: true });
+        // Identical response whether or not the account exists
+        res.json({ success: true });
+    } catch (err) {
+        console.error('OTP request error:', err);
+        res.status(500).json({ error: "Could not send a code right now. Please try again." });
+    }
 });
 
 // Change Password

@@ -172,6 +172,12 @@
                     <label>Email Subject Line:</label>
                     <input type="text" id="emailSubject" placeholder="e.g. Rollup Groups & Availability">
                 </div>
+                <div style="grid-column: span 3;">
+                    <label for="includeDeactivated" style="display: flex; align-items: center; gap: 8px; margin-bottom: 0;">
+                        <input type="checkbox" id="includeDeactivated" style="width: auto; margin: 0;">
+                        Include deactivated golfers in this communication
+                    </label>
+                </div>
             </div>
             <button class="btn btn-generate" onclick="generateEmailContent()">Generate Email Draft Below</button>
         </div>
@@ -194,6 +200,11 @@
         window.addEventListener('DOMContentLoaded', () => {
             loadRollupHistory();
             document.getElementById('gridStart').valueAsDate = new Date();
+            document.getElementById('includeDeactivated').addEventListener('change', () => {
+                if (document.getElementById('previewSection').style.display !== 'none') {
+                    generateEmailContent();
+                }
+            });
         });
 
         function showToast(text, isError = false) {
@@ -202,6 +213,10 @@
             msg.textContent = text;
             msg.style.color = isError ? "#d32f2f" : "#2e7d32";
             setTimeout(() => { msg.textContent = ""; }, 5000);
+        }
+
+        function shouldIncludeGolfer(golfer) {
+            return document.getElementById('includeDeactivated').checked || golfer.active !== false;
         }
 
         async function loadRollupHistory() {
@@ -248,7 +263,7 @@
                 if (!awayRes.ok) throw new Error(`Availability API failed: ${awayRes.status}`);
                 if (!extraRes.ok) throw new Error(`Extra Availabilities API failed: ${extraRes.status}`);
 
-                const golfers = await golfersRes.json();
+                const golfers = (await golfersRes.json()).filter(shouldIncludeGolfer);
                 const awayRecords = await awayRes.json();
                 
                 let extraRecords = await extraRes.json();
@@ -346,7 +361,7 @@
         
         const golfers = await res.json();
         const emails = golfers
-            .filter(g => g.active !== false)
+            .filter(shouldIncludeGolfer)
             .map(g => g.email)
             .filter(e => e && e.trim() !== "");
 

@@ -3,15 +3,12 @@
 <!-- Generate Rollup - This is the main page for generating rollup groups. -->
 
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Generate Rollup</title>
     <style>
         body {
-            font-family: Arial;
-            background-image: url('./images/IMG_0376a.jpg');
-            background-size: 100%;
-            background-position: center;
-            background-attachment: fixed;
-            background-repeat: no-repeat;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
             padding: 30px;
             margin: 0;
         }
@@ -213,7 +210,34 @@
                 transform: translateY(0);
             }
         }
+
+        @media screen and (max-width: 700px) {
+            body {
+                padding: 12px;
+            }
+
+            .layout {
+                flex-direction: column;
+            }
+
+            .sidebar,
+            .main-content {
+                box-sizing: border-box;
+                width: 100%;
+            }
+
+            .group-container {
+                grid-template-columns: minmax(0, 1fr);
+            }
+
+            .calendar-modal-content {
+                box-sizing: border-box;
+                padding: 16px;
+                width: calc(100% - 24px);
+            }
+        }
     </style>
+    <link rel="stylesheet" href="buttons.css">
 </head>
 
 <body>
@@ -245,7 +269,7 @@
                 <button onclick="fetchAvailable()">1. Get Available</button>
                 <button class="secondary" onclick="autoDistribute()">2. Auto-Group (4s & 3s)</button>
                 <button class="btn-add-group" onclick="addEmptyGroup()">+ Add Group</button>
-                <button onclick="resetPool()" style="background:#d32f2f;">Reset All</button>
+                <button class="btn-delete" onclick="resetPool()">Reset All</button>
                 <button onclick="saveRollup()" style="margin-left:auto; background:#1565c0;">3. Save Rollup</button>
             </div>
 

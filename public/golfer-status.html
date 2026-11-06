@@ -5,12 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background-image: url('./images/IMG_0376a.jpg');
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-            background-repeat: no-repeat;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
             padding: 20px;
             margin: 0;
         }
@@ -136,6 +132,7 @@
             td:last-child { border-bottom: 0; text-align: center; padding-left: 12px; }
         }
     </style>
+    <link rel="stylesheet" href="buttons.css">
 </head>
 
 <body>
@@ -180,8 +177,8 @@
 
                 <div id="pendingEmailArea" class="pending-box hidden">
                     <p><strong>Pending Absence Email:</strong> <span id="pendingCount">0</span> record(s).</p>
-                    <button onclick="sendSummaryEmail()" style="background: #28a745; width: 100%; margin-bottom: 10px;">Send Summary Email</button>
-                    <button onclick="clearPending('un')" style="background: #6c757d; width: 100%;">Done (No Email)</button>
+                    <button onclick="sendSummaryEmail()" style="width: 100%; margin-bottom: 10px;">Send Summary Email</button>
+                    <button class="btn-secondary" onclick="clearPending('un')" style="width: 100%;">Done (No Email)</button>
                 </div>
 
                 <div id="tableContainer">
@@ -213,14 +210,14 @@
                         <label>Note:</label>
                         <input type="text" id="extraNote" placeholder="Note (Optional)">
                     </div>
-                    <button onclick="saveExtraAvailability()" style="background: #4caf50; width: 100%;">Add Extra Day</button>
+                    <button onclick="saveExtraAvailability()" style="width: 100%;">Add Extra Day</button>
                 </div>
 
                 <!-- PENDING EXTRA PLAY EMAIL BOX -->
                 <div id="pendingExtraEmailArea" class="pending-box hidden">
                     <p><strong>Pending Extra Play Email:</strong> <span id="pendingExtraCount">0</span> record(s).</p>
-                    <button onclick="sendExtraSummaryEmail()" style="background: #28a745; width: 100%; margin-bottom: 10px;">Send Extra Days Email</button>
-                    <button onclick="clearPending('ex')" style="background: #6c757d; width: 100%;">Done (No Email)</button>
+                    <button onclick="sendExtraSummaryEmail()" style="width: 100%; margin-bottom: 10px;">Send Extra Days Email</button>
+                    <button class="btn-secondary" onclick="clearPending('ex')" style="width: 100%;">Done (No Email)</button>
                 </div>
 
                 <div id="extraTableContainer">
@@ -347,7 +344,7 @@
                 row.innerHTML = `
                     <td data-label="From">${fromDate}</td>
                     <td data-label="To">${toDate}</td>
-                    <td data-label=""><button style="background:#ff4444; width:100%" onclick="deleteRecord('${rec._id}', 'un')">Delete</button></td>
+                    <td data-label=""><button class="btn-delete" style="width:100%" onclick="deleteRecord('${rec._id}', 'un')">Delete</button></td>
                 `;
                 tbody.appendChild(row);
             });
@@ -367,7 +364,7 @@
                 row.innerHTML = `
                     <td data-label="Date">${dateStr}</td>
                     <td data-label="Note">${rec.note || ''}</td>
-                    <td data-label=""><button style="background:#ff4444; width:100%" onclick="deleteRecord('${rec._id}', 'ex')">Delete</button></td>
+                    <td data-label=""><button class="btn-delete" style="width:100%" onclick="deleteRecord('${rec._id}', 'ex')">Delete</button></td>
                 `;
                 tbody.appendChild(row);
             });

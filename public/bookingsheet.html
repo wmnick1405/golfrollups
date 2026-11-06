@@ -2,15 +2,12 @@
 <html>
 
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Booking Sheet</title>
     <style>
         body {
-            font-family: Arial;
-            background-image: url('./images/IMG_0376a.jpg');
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-            background-repeat: no-repeat;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
             padding: 30px;
             margin: 0;
         }
@@ -132,7 +129,31 @@
             font-weight: bold;
             margin-bottom: 10px;
         }
+
+        @media screen and (max-width: 700px) {
+            body {
+                padding: 12px;
+            }
+
+            .container {
+                box-sizing: border-box;
+                padding: 15px;
+            }
+
+            .admin-bar,
+            .add-player-zone,
+            .player-row {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .add-player-zone select {
+                flex: 1 1 100%;
+                min-width: 0;
+            }
+        }
     </style>
+    <link rel="stylesheet" href="buttons.css">
 </head>
 
 <body>

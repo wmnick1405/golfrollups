@@ -109,7 +109,31 @@
             margin-top: 10px;
             font-weight: bold;
         }
+
+        @media screen and (max-width: 700px) {
+            body {
+                padding: 12px;
+            }
+
+            .container {
+                box-sizing: border-box;
+                padding: 14px;
+            }
+
+            .setup-grid {
+                grid-template-columns: minmax(0, 1fr);
+            }
+
+            #emailDraft {
+                padding: 12px;
+            }
+
+            #emailDraft table {
+                min-width: 600px;
+            }
+        }
     </style>
+    <link rel="stylesheet" href="buttons.css">
 </head>
 
 <body>
@@ -321,7 +345,10 @@
         if (!res.ok) throw new Error("Failed to fetch golfers list.");
         
         const golfers = await res.json();
-        const emails = golfers.map(g => g.email).filter(e => e && e.trim() !== "");
+        const emails = golfers
+            .filter(g => g.active !== false)
+            .map(g => g.email)
+            .filter(e => e && e.trim() !== "");
 
         if (emails.length === 0) {
             return showToast("No valid golfer email addresses found.", true);

@@ -3,9 +3,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>24-Session Absence Viewer</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; background-color: #f8f9fa; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f4f7f6; }
         .box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         
         /* Flexbox to align everything horizontally */
@@ -40,7 +41,31 @@
         #copyBtn:hover { opacity: 0.9;}
         #plannerOutput { margin-top: 25px; }
         label { font-weight: bold; }
+
+        @media screen and (max-width: 700px) {
+            body {
+                padding: 12px;
+            }
+
+            .box {
+                padding: 14px;
+            }
+
+            .controls {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            #plannerOutput {
+                overflow-x: auto;
+            }
+
+            #emailTable {
+                min-width: 900px;
+            }
+        }
     </style>
+    <link rel="stylesheet" href="buttons.css">
 </head>
 <body>
 

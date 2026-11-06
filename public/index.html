@@ -161,6 +161,7 @@
             color: black;
         }
     </style>
+    <link rel="stylesheet" href="buttons.css">
 </head>
 
 <body>
@@ -182,7 +183,7 @@
                     style="width:90%; padding: 10px; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 6px; font-weight: bold;">Login
                     with Password</button>
                 <p style="margin: 15px 0 5px 0; font-size: 0.8em; color: #666;">-- OR --</p>
-                <button onclick="requestOtp()"
+                <button class="btn-secondary" onclick="requestOtp()"
                     style="width:90%; padding: 8px; cursor: pointer; background: #eee; border: 1px solid #ccc; border-radius: 6px;">Email
                     me a 6-digit code</button>
             </div>
@@ -195,7 +196,7 @@
                     style="width:90%; padding: 10px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 6px; font-weight: bold;">Verify
                     & Login</button>
                 <br>
-                <button onclick="toggleLoginMethod('password')"
+                <button class="btn-link" onclick="toggleLoginMethod('password')"
                     style="background:none; border:none; color:blue; text-decoration:underline; font-size:0.8em; margin-top:10px; cursor:pointer;">Back
                     to password</button>
             </div>

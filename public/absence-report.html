@@ -5,16 +5,12 @@
     <html>
 
     <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Absence Report</title>
         <style>
              body {
-                font-family: Arial;
-                /* background: #f2f2f2;> */
-                background-image: url('./images/IMG_0376a.jpg');
-                background-size: 100%;
-                background-position: center;
-                background-attachment: fixed;
-                background-repeat: no-repeat;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background-color: #f4f7f6;
 
                 padding: 30px;
                 margin: 0;
@@ -114,7 +110,38 @@
                     border: 1px solid #000;
                 }
             }
+
+                @media screen and (max-width: 700px) {
+                    body {
+                        padding: 12px;
+                    }
+
+                    .container {
+                        box-sizing: border-box;
+                        max-width: 100%;
+                        padding: 14px;
+                    }
+
+                    .controls > div {
+                        flex-direction: column;
+                        gap: 12px !important;
+                    }
+
+                    .controls > div > div {
+                        box-sizing: border-box;
+                        width: 100%;
+                    }
+
+                    #reportContent {
+                        overflow-x: auto;
+                    }
+
+                    #reportTable {
+                        min-width: 650px;
+                    }
+                }
         </style>
+        <link rel="stylesheet" href="buttons.css">
     </head>
 
     <body>

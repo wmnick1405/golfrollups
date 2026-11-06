@@ -2,16 +2,12 @@
 <html>
 <!-- Participation Report - This is the main page for viewing participation vs booking reports. -->
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Participation Report</title>
     <style>
         body {
-            font-family: Arial;
-            /* background: #f2f2f2;> */
-            background-image: url('./images/IMG_0376a.jpg');
-            background-size: 100%;
-            background-position: center;
-            background-attachment: fixed;
-            background-repeat: no-repeat;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
 
             padding: 30px;
             margin: 0;
@@ -115,6 +111,41 @@
             }
         }
 
+        @media screen and (max-width: 700px) {
+            body {
+                padding: 12px;
+            }
+
+            .container {
+                box-sizing: border-box;
+                max-width: 100%;
+                padding: 14px;
+            }
+
+            .date-filter {
+                flex-wrap: wrap;
+            }
+
+            .controls > div {
+                flex-direction: column;
+                gap: 12px !important;
+            }
+
+            .controls > div > div {
+                box-sizing: border-box;
+                width: 100%;
+                padding-top: 0 !important;
+            }
+
+            #reportContent {
+                overflow-x: auto;
+            }
+
+            #reportTable {
+                min-width: 600px;
+            }
+        }
+
         /* The Modal (background) */
         .modal {
             display: none;
@@ -150,6 +181,7 @@
             font-weight: bold;
         }
     </style>
+    <link rel="stylesheet" href="buttons.css">
 </head>
 
 <body>

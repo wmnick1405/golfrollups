@@ -40,26 +40,38 @@ router.post('/sync', async (req, res) => {
     const ICS_URL = 'https://clubv1.blob.core.windows.net/diary-events/822/bc1d725c-ddfb-4a2d-b3bc-f1dbc6eb0021.ics';
 
     try {
-        const events = await ical.async.fromURL(ICS_URL);
+        const calendar = await ical.async.fromURL(ICS_URL);
+        const events = Object.values(calendar)
+            .filter(event => event.type === 'VEVENT')
+            .map(event => ({
+                uid: event.uid,
+                title: event.summary || '',
+                start: event.start,
+                end: event.end,
+                location: event.location || ''
+            }));
 
-        for (let k in events) {
-            if (events.hasOwnProperty(k)) {
-                const ev = events[k];
-                if (ev.type === 'VEVENT') {
-                    await ClubCalendar.findOneAndUpdate(
-                        { uid: ev.uid },
-                        {
-                            title: ev.summary,
-                            start: ev.start,
-                            end: ev.end,
-                            location: ev.location || ''
-                        },
-                        { upsert: true, runValidators: true }
-                    );
-                }
-            }
+        if (events.some(event =>
+            !event.uid ||
+            !event.start ||
+            Number.isNaN(new Date(event.start).getTime()) ||
+            (event.end && Number.isNaN(new Date(event.end).getTime()))
+        )) {
+            throw new Error('Calendar feed contains an event with invalid data');
         }
-        res.json({ success: true, message: "Calendar synced successfully" });
+
+        if (events.length > 0) {
+            await ClubCalendar.bulkWrite(events.map(event => ({
+                updateOne: {
+                    filter: { uid: event.uid },
+                    update: { $set: event },
+                    upsert: true
+                }
+            })));
+        }
+
+        await ClubCalendar.deleteMany({ uid: { $nin: events.map(event => event.uid) } });
+        res.json({ success: true, message: "Calendar synced successfully", count: events.length });
     } catch (err) {
         console.error("ICS Sync Error:", err);
         res.status(500).json({ error: "Failed to fetch or parse ICS file" });

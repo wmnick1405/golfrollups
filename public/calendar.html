@@ -37,27 +37,30 @@
 
         .search-row {
             display: flex !important;
-            /* Force horizontal layout */
             flex-direction: row;
-            /* Ensure they stay side-by-side */
             align-items: stretch;
-            /* Make them the same height */
             gap: 10px;
-            /* The space between them */
             margin-bottom: 25px;
             width: 100%;
+            flex-wrap: wrap;
         }
 
         .search-input {
             flex: 1;
-            /* This makes the input grow to fill the space */
             min-width: 0;
-            /* Prevents the input from pushing the button off-screen */
             padding: 12px 20px;
             border-radius: 50px;
             border: 1px solid #ddd;
             font-size: 16px;
             outline: none;
+        }
+
+        .filter-input {
+            padding: 0 14px;
+            border: 1px solid #ddd;
+            border-radius: 50px;
+            min-height: 46px;
+            background: white;
         }
 
         .search-input:focus {
@@ -158,6 +161,11 @@
             <input type="text" id="searchInput" class="search-input" placeholder="Search events..."
                 onkeyup="fuzzySearch()">
             <button type="button" class="btn-secondary" onclick="resetSearch()">Reset</button>
+            <select id="locationFilter" class="filter-input" aria-label="Filter by location">
+                <option value="">All locations</option>
+            </select>
+            <label class="filter-input">From <input type="date" id="startDateFilter"></label>
+            <label class="filter-input">To <input type="date" id="endDateFilter"></label>
         </div>
 
         <div id="calendar-list">
@@ -166,24 +174,57 @@
     </div>
 
     <script>
-        let allEvents = []; // Global store for searching
+        let allEvents = [];
 
         async function loadCalendar() {
-            try {
-                const res = await fetch('/api/club-calendar');
-                allEvents = await res.json();
-                renderEvents(allEvents);
-            } catch (err) {
-                console.error("Load error:", err);
-            }
+            const res = await fetch('/api/club-calendar');
+            if (!res.ok) throw new Error('Failed to load saved calendar events');
+            const events = await res.json();
+            if (!Array.isArray(events)) throw new Error('Invalid calendar response');
+
+            allEvents = events;
+            updateLocationFilter();
+            applyFilters();
+        }
+
+        function updateLocationFilter() {
+            const filter = document.getElementById('locationFilter');
+            const selectedLocation = filter.value;
+            const locations = [...new Set(allEvents.map(event => event.location).filter(Boolean))]
+                .sort((a, b) => a.localeCompare(b));
+
+            filter.replaceChildren(new Option('All locations', ''));
+            locations.forEach(location => filter.add(new Option(location, location)));
+            filter.value = locations.includes(selectedLocation) ? selectedLocation : '';
+        }
+
+        function applyFilters() {
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+            const location = document.getElementById('locationFilter').value;
+            const fromDate = document.getElementById('startDateFilter').value;
+            const toDate = document.getElementById('endDateFilter').value;
+            const filteredEvents = allEvents.filter(event => {
+                const title = (event.title || '').toLowerCase();
+                const eventLocation = event.location || '';
+                const date = new Date(event.start).toISOString().slice(0, 10);
+
+                return (!query || title.includes(query) || eventLocation.toLowerCase().includes(query)) &&
+                    (!location || eventLocation === location) &&
+                    (!fromDate || date >= fromDate) &&
+                    (!toDate || date <= toDate);
+            });
+
+            renderEvents(filteredEvents);
         }
 
         function renderEvents(events) {
             const listDiv = document.getElementById('calendar-list');
-            listDiv.innerHTML = "";
+            listDiv.replaceChildren();
 
             if (events.length === 0) {
-                listDiv.innerHTML = "<p>No matches found.</p>";
+                const emptyMessage = document.createElement('p');
+                emptyMessage.textContent = allEvents.length ? 'No events match these filters.' : 'No upcoming events.';
+                listDiv.appendChild(emptyMessage);
                 return;
             }
 
@@ -194,86 +235,62 @@
 
                 const card = document.createElement('div');
                 card.className = 'event-card';
-                // Store title and location in data attributes for searching
-                card.dataset.title = event.title.toLowerCase();
-                card.dataset.location = (event.location || "").toLowerCase();
-
-                card.innerHTML = `
-                    <div class="event-info">
-                        <h4>${event.title}</h4>
-                        <div class="event-date">${startDate} ${event.location ? ' • ' + event.location : ''}</div>
-                    </div>
-                `;
+                const info = document.createElement('div');
+                info.className = 'event-info';
+                const title = document.createElement('h4');
+                title.textContent = event.title || 'Untitled event';
+                const details = document.createElement('div');
+                details.className = 'event-date';
+                details.textContent = `${startDate}${event.location ? ` • ${event.location}` : ''}`;
+                info.append(title, details);
+                card.appendChild(info);
                 listDiv.appendChild(card);
             });
         }
 
-        // Fuzzy Search Logic
         function fuzzySearch() {
-            const query = document.getElementById('searchInput').value.toLowerCase();
-            const cards = document.querySelectorAll('.event-card');
-
-            cards.forEach(card => {
-                // We look at the data-title and data-location we set during the initial render
-                const title = card.dataset.title || "";
-                const loc = card.dataset.location || "";
-
-                if (title.includes(query) || loc.includes(query)) {
-                    card.style.display = "flex"; // Show matching cards
-                } else {
-                    card.style.display = "none"; // Hide non-matching cards
-                }
-            });
+            applyFilters();
         }
 
         function resetSearch() {
-            const input = document.getElementById('searchInput');
-            input.value = ""; // Clear the text
-            fuzzySearch();    // Run the search logic to show all cards again
-            input.focus();    // Put the typing cursor back in the box
-        }
-
-        function resetSearch() {
-            const input = document.getElementById('searchInput');
-            input.value = "";
-            fuzzySearch(); // This will hide the X and show all cards
-            input.focus();
+            document.getElementById('searchInput').value = '';
+            document.getElementById('locationFilter').value = '';
+            document.getElementById('startDateFilter').value = '';
+            document.getElementById('endDateFilter').value = '';
+            applyFilters();
+            document.getElementById('searchInput').focus();
         }
 
         async function syncCalendar() {
-    const status = document.getElementById('sync-status');
-    status.textContent = "Syncing...";
-    
-    try {
-        // 1. Clear the old calendar
-        const deleteRes = await fetch('/api/club-calendar', { method: 'DELETE' });
-        
-        if (!deleteRes.ok) throw new Error("Delete failed");
+            const status = document.getElementById('sync-status');
+            status.textContent = 'Syncing...';
 
-        // 2. Run the sync
-        const syncRes = await fetch('/api/club-calendar/sync', { method: 'POST' });
-        
-        if (syncRes.ok) {
-            status.textContent = "Success!";
-            // We only need to load the calendar once at the very end
-            await loadCalendar(); 
-        } else {
-            throw new Error("Sync failed");
+            try {
+                const syncRes = await fetch('/api/club-calendar/sync', { method: 'POST' });
+                if (!syncRes.ok) throw new Error('Calendar sync failed');
+
+                await loadCalendar();
+                status.textContent = 'Updated from V1';
+            } catch (err) {
+                console.error('Calendar sync failed:', err);
+                try {
+                    await loadCalendar();
+                    status.textContent = 'Sync failed; showing saved events';
+                } catch (loadErr) {
+                    console.error('Calendar load failed:', loadErr);
+                    status.textContent = 'Unable to load calendar';
+                }
+            }
+
+            setTimeout(() => {
+                if (status.textContent !== 'Syncing...') status.textContent = '';
+            }, 5000);
         }
-    } catch (err) {
-        console.error(err);
-        status.textContent = "Error.";
-    }
 
-    // Clear the status message after 3 seconds
-    setTimeout(() => {
-        if (status.textContent !== "Syncing...") {
-            status.textContent = "";
-        }
-    }, 3000);
-}
-
-        loadCalendar();
+        document.getElementById('locationFilter').addEventListener('change', applyFilters);
+        document.getElementById('startDateFilter').addEventListener('change', applyFilters);
+        document.getElementById('endDateFilter').addEventListener('change', applyFilters);
+        syncCalendar();
 
     </script>
 </body>

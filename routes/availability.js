@@ -3,7 +3,27 @@ const router = express.Router();
 const Golfer = require('../models/Golfer');
 const Unavailable = require('../models/Unavailable');
 const transporter = require('../utils/mailer');
+const { buildAvailabilityGrid } = require('../utils/availabilityGrid');
 const { protect } = require('../middleware/auth');
+
+async function handleAvailabilityGridDownload(req, res) {
+    try {
+        const { buffer, filename, summary } = await buildAvailabilityGrid();
+        console.log(`[Grid Export] Served to user ${req.session.userId}: ` +
+            `${summary.golfers} golfers, ${summary.dates} dates (${summary.range})`);
+
+        res.setHeader('Content-Type',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.send(buffer);
+    } catch (err) {
+        console.error('CRITICAL ERROR in /api/availability-grid:', err);
+        res.status(500).json({ error: 'Failed to generate the availability grid.' });
+    }
+}
+
+// Download the availability grid as an Excel file
+router.get('/availability-grid', protect, handleAvailabilityGridDownload);
 
 // 1. GET AVAILABLE GOLFER REPORT FOR A GIVEN DATE
 // Endpoint: GET /api/availability/available?date=YYYY-MM-DD
@@ -164,3 +184,4 @@ router.post('/send-summary', protect, async (req, res) => {
 });
 
 module.exports = router;
+module.exports.handleAvailabilityGridDownload = handleAvailabilityGridDownload;

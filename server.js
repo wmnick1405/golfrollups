@@ -80,7 +80,10 @@ app.use('/api/rollup-notes', require('./routes/rollupNotes'));
 app.use('/api/rollups', require('./routes/rollups'));
 app.use('/api/club-calendar', require('./routes/clubCalendar'));
 app.use('/api/email', require('./routes/email'));
-app.use('/api/availability', require('./routes/availability'));
+
+const availabilityRoutes = require('./routes/availability');
+app.use('/api/availability', availabilityRoutes);
+app.get('/api/availability-grid', require('./middleware/auth').protect, availabilityRoutes.handleAvailabilityGridDownload);
 
 
 // CATCH-ALL / GENERIC COMPATIBILITY MOUNTS AT THE VERY BOTTOM

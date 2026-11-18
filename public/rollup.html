@@ -408,19 +408,39 @@
                     return;
                 }
 
-                // 2. Fetch Regular Availability AND Extra Availabilities in parallel
-                const [resRegular, resExtra] = await Promise.all([
+                // 2. Fetch regular availability, extra availabilities, and golfer details in parallel
+                const [resRegular, resExtra, resGolfers] = await Promise.all([
                     fetch(`/api/availability/available?date=${date}`),
-                    fetch(`/api/extra-availabilities?date=${date}`)
+                    fetch(`/api/extra-availabilities?date=${date}`),
+                    fetch('/api/golfers')
                 ]);
+
+                if (!resRegular.ok || !resExtra.ok || !resGolfers.ok) {
+                    throw new Error("Could not load player availability.");
+                }
 
                 const regularData = await resRegular.json();
                 const extraData = await resExtra.json();
+                const golfers = await resGolfers.json();
+                const golfersById = new Map(golfers.map(golfer => [String(golfer._id), golfer]));
 
                 // 3. Combine the data
                 const combinedData = [
                     ...regularData,
-                    ...extraData.map(p => ({ ...p, isExtra: true }))
+                    ...extraData.map(extra => {
+                        const golfer = golfersById.get(String(extra.golfer_id));
+                        if (!golfer) {
+                            throw new Error(`Could not find golfer for extra availability ${extra._id}.`);
+                        }
+
+                        return {
+                            ...extra,
+                            _id: golfer._id,
+                            name: golfer.name,
+                            booking_exempt: golfer.booking_exempt,
+                            isExtra: true
+                        };
+                    })
                 ];
 
                 if (combinedData.length === 0) {

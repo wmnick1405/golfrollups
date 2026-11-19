@@ -211,7 +211,7 @@
             <span class="close-modal" onclick="togglePasswordModal(false)">&times;</span>
             <h3>Change Your Password</h3>
             <p style="font-size: 11px; color: #666; margin-bottom: 15px;">Must be at least 8 characters long and include
-                a number and a special character (!@#$%^&*).</p>
+                a number and a special character (!@#$%^&*_-).</p>
 
             <input type="password" id="new-password-input" class="modal-input" placeholder="New Password">
             <input type="password" id="confirm-password-input" class="modal-input" placeholder="Confirm Password">
@@ -489,6 +489,12 @@
             if (newPassword !== confirmPassword) {
                 statusMsg.style.color = "red";
                 statusMsg.innerText = "Passwords do not match.";
+                return;
+            }
+
+            if (!/^(?=.*[0-9])(?=.*[!@#$%^&*\-_])[a-zA-Z0-9!@#$%^&*\-_]{8,}$/.test(newPassword)) {
+                statusMsg.style.color = "red";
+                statusMsg.innerText = "Password must be 8+ characters with a number and a special character (!@#$%^&*_-).";
                 return;
             }
 

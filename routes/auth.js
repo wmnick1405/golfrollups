@@ -28,6 +28,7 @@ function otpTooFrequent(email) {
 }
 
 function isPasswordRobust(password) {
+    if (typeof password !== 'string') return false;
     const regex = /^(?=.*[0-9])(?=.*[!@#$%^&*\-_])[a-zA-Z0-9!@#$%^&*\-_]{8,}$/;
     return regex.test(password);
 }
@@ -140,7 +141,7 @@ router.post('/admin/change-password', protect, async (req, res) => {
         const { newPassword } = req.body;
         if (!isPasswordRobust(newPassword)) {
             return res.status(400).json({
-                error: "Password too weak. Must be at least 8 characters long and include a number and a special character (!@#$%^&*)."
+                error: "Password too weak. Must be at least 8 characters long and include a number and a special character (!@#$%^&*_-)."
             });
         }
         const user = await User.findById(req.session.userId);
@@ -174,6 +175,11 @@ router.post('/logout', (req, res) => {
 router.post('/admin/create-user', protect, async (req, res) => {
     try {
         const { username, password } = req.body;
+        if (!isPasswordRobust(password)) {
+            return res.status(400).json({
+                error: "Password too weak. Must be at least 8 characters long and include a number and a special character (!@#$%^&*_-)."
+            });
+        }
         const existingUser = await User.findOne({ username });
         if (existingUser) {
             return res.status(400).json({ error: "This username is already taken." });

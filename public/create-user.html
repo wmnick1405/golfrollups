@@ -242,8 +242,8 @@
                 return;
             }
 
-            if (!/^(?=.*[0-9])(?=.*[!@#$%^&*])[a-zA-Z0-9!@#$%^&*]{8,}$/.test(password)) {
-                alert("Password must be 8+ characters with a number and special character.");
+            if (!/^(?=.*[0-9])(?=.*[!@#$%^&*\-_])[a-zA-Z0-9!@#$%^&*\-_]{8,}$/.test(password)) {
+                alert("Password must be 8+ characters with a number and a special character (!@#$%^&*_-).");
                 return;
             }
 

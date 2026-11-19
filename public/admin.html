@@ -5,6 +5,7 @@
     availability, generating rollups, viewing history, and generating reports. The page also includes a login overlay
     that requires authentication before accessing the main content. Once logged in, admins can also see the last
     database backup date and create new user -->
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -117,6 +118,12 @@
             </div>
 
             <div class="card">
+                <h3>Indefinite Absences</h3>
+                <p>View and edit golfers who are indefinitely unavailable due to long-term reasons.</p>
+                <a href="indefinite_unavailable_golfers.html" class="btn">Manage Indefinite Absences</a>
+            </div>
+
+            <div class="card">
                 <h3>Availability Reports</h3>
                 <p>Generate the 24-session horizontal matrix for email updates.</p>
                 <a href="planner.html" class="btn btn-green">Go to Planner</a>
@@ -147,34 +154,23 @@
             </div>
 
             <div class="card">
-                <h3>Indefinite Absences</h3>
-                <p>View and edit golfers who are indefinitely unavailable due to long-term reasons.</p>
-                <a href="indefinite_unavailable_golfers.html" class="btn">Manage Indefinite Absences</a>
-            </div>
-
-            <div class="card">
                 <h3>Club Diary</h3>
                 <p>View upcoming club events, competitions, and important dates in the calendar.</p>
-                <a href="calendar.html" class="btn btn-green">View Calendar</a> 
+                <a href="calendar.html" class="btn btn-green">View Calendar</a>
             </div>
 
-        
+            <div class="footer">
+                <p>Golf Rollup System &bull; Running on Raspberry Pi</p>
+            </div>
+        </div>
 
-
-        
-
-    <div class="footer">
-        <p>Golf Rollup System &bull; Running on Raspberry Pi</p>
-    </div>
-    </div>
-
-    <script src="js/shared.js"></script>
-    <script>
-        // Simple helper to show today's date
-        document.getElementById('current-date').innerText = new Date().toLocaleDateString('en-GB', {
-            weekday: 'long', day: 'numeric', month: 'long'
-        });
-    </script>
+        <script src="js/shared.js"></script>
+        <script>
+            // Simple helper to show today's date
+            document.getElementById('current-date').innerText = new Date().toLocaleDateString('en-GB', {
+                weekday: 'long', day: 'numeric', month: 'long'
+            });
+        </script>
 </body>
 
 </html>
